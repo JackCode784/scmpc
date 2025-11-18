@@ -1,0 +1,13 @@
+#-----------------------------------------------------------
+# xsim v2020.2 (64-bit)
+# SW Build 3064766 on Wed Nov 18 09:12:45 MST 2020
+# IP Build 3064653 on Wed Nov 18 14:17:31 MST 2020
+# Start of session at: Wed Oct 19 10:46:02 2022
+# Process ID: 1496
+# Current directory: C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl
+# Command line: xsim.exe -mode tcl -source {xsim.dir/MPCwithMADS/xsim_script.tcl}
+# Log file: C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/xsim.log
+# Journal file: C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl\xsim.jou
+#-----------------------------------------------------------
+source xsim.dir/MPCwithMADS/xsim_script.tcl
+source MPCwithMADS.tcl

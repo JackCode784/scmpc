@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cdfg:DBCdfg xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:cdfg="http://www.autoesl.com/DBCdfg" timeStamp="1666168950000">
+  <ports id="1" name="x" type="PortType" originalName="__Val2__" coreId="539767593" bitwidth="51">
+    <dataOutputObjs>read</dataOutputObjs>
+  </ports>
+  <ports id="11" name="ap_return" direction="DirOut">
+    <dataInputObjs>ret</dataInputObjs>
+  </ports>
+  <edges id="20" source_obj="//@ports.0" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.0"/>
+  <edges id="21" source_obj="//@regions.0/@basic_blocks.0/@node_objs.0" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.1"/>
+  <edges id="24" source_obj="//@regions.0/@basic_blocks.0/@node_objs.0" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.2"/>
+  <edges id="25" source_obj="//@regions.0/@basic_blocks.0/@node_objs.2" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.3"/>
+  <edges id="28" source_obj="//@regions.0/@basic_blocks.0/@node_objs.3" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.4"/>
+  <edges id="35" source_obj="//@regions.0/@basic_blocks.0/@node_objs.0" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.5"/>
+  <edges id="38" source_obj="//@regions.0/@basic_blocks.0/@node_objs.5" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.6"/>
+  <edges id="39" source_obj="//@regions.0/@basic_blocks.0/@node_objs.4" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.6"/>
+  <edges id="40" source_obj="//@regions.0/@basic_blocks.0/@node_objs.1" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.6"/>
+  <edges id="41" source_obj="//@regions.0/@basic_blocks.0/@node_objs.6" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.7"/>
+  <edges id="42" source_obj="//@regions.0/@basic_blocks.0/@node_objs.7" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.8"/>
+  <edges id="47" source_obj="//@regions.0/@basic_blocks.0/@node_objs.8" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.9"/>
+  <edges id="54" source_obj="//@regions.0/@basic_blocks.0/@node_objs.9" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.10"/>
+  <edges id="57" source_obj="//@regions.0/@basic_blocks.0/@node_objs.10" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.11"/>
+  <edges id="58" source_obj="//@regions.0/@basic_blocks.0/@node_objs.5" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.12"/>
+  <edges id="59" source_obj="//@regions.0/@basic_blocks.0/@node_objs.11" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.12"/>
+  <edges id="60" source_obj="//@regions.0/@basic_blocks.0/@node_objs.10" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.12"/>
+  <edges id="61" source_obj="//@regions.0/@basic_blocks.0/@node_objs.12" sink_obj="//@regions.0/@basic_blocks.0/@node_objs.13"/>
+  <edges source_obj="//@regions.0/@basic_blocks.0/@node_objs.13" sink_obj="//@ports.1"/>
+  <regions anchor_node="-1" region_type="8" interval="1" typeName="Pipeline" id="74" pipe_depth="2" RegionName="round_fixed&lt;54, 15>">
+    <basic_blocks id="17" name="round_fixed&lt;54, 15>" type="BlockType">
+      <node_objs xsi:type="cdfg:CdfgNode" id="2" name="x_read" coreId="891905380" bitwidth="51" opcode="read" m_display="0" m_topoIndex="1" m_clusterGroupNumber="-1">
+        <dataInputObjs>x</dataInputObjs>
+        <dataOutputObjs>sext</dataOutputObjs>
+        <dataOutputObjs>sub</dataOutputObjs>
+        <dataOutputObjs>bitselect</dataOutputObjs>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="3" name="x_cast" rtlName="x_cast_fu_40_p1" coreId="1701080941" bitwidth="54" opcode="sext" m_display="0" m_topoIndex="2" m_clusterGroupNumber="1">
+        <dataInputObjs>read</dataInputObjs>
+        <dataOutputObjs>select</dataOutputObjs>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="5" name="p_Val2_s" lineNumber="703" originalName="__Val2__" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" fileDirectory=".." rtlName="p_Val2_s_fu_44_p2" coreName="Adder" implIndex="fabric" control="no" opType="sub" coreId="1" contextFuncName="operator_assign_55_16_true_AP_TRN_AP_WRAP_0" bitwidth="51" opcode="sub" m_display="0" m_delay="3.18" m_topoIndex="3" m_clusterGroupNumber="-1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" linenumber="703" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="operator=&amp;lt;55, 16, true, AP_TRN, AP_WRAP, 0&amp;gt;"/>
+        <dataInputObjs>read</dataInputObjs>
+        <dataOutputObjs>sext</dataOutputObjs>
+        <constName>empty</constName>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="6" name="sext_ln104" lineNumber="104" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_ref.h" fileDirectory=".." rtlName="sext_ln104_fu_50_p1" coreId="1701080941" contextFuncName="operator_assign" bitwidth="54" opcode="sext" m_display="0" m_topoIndex="4" m_clusterGroupNumber="1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_ref.h" linenumber="104" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="operator="/>
+        <dataInputObjs>sub</dataInputObjs>
+        <dataOutputObjs>bitset</dataOutputObjs>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="7" name="p_Result_s" lineNumber="104" originalName="__Result__" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_ref.h" fileDirectory=".." rtlName="p_Result_s_fu_54_p4" coreId="1701080941" contextFuncName="operator_assign" bitwidth="54" opcode="bitset" m_display="0" m_topoIndex="5" m_clusterGroupNumber="1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_ref.h" linenumber="104" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="operator="/>
+        <dataInputObjs>sext</dataInputObjs>
+        <dataOutputObjs>select</dataOutputObjs>
+        <constName>empty</constName>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="8" name="p_Result_1" lineNumber="99" originalName="__Result__" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_ref.h" fileDirectory=".." rtlName="p_Result_1_reg_117" coreId="1701080941" contextFuncName="operator_bool" bitwidth="1" opcode="bitselect" m_display="0" m_topoIndex="6" m_clusterGroupNumber="-1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_ref.h" linenumber="99" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="operator bool"/>
+        <dataInputObjs>read</dataInputObjs>
+        <dataOutputObjs>select</dataOutputObjs>
+        <dataOutputObjs>select</dataOutputObjs>
+        <constName>empty</constName>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="9" name="x_pos" lineNumber="180" originalName="x_pos" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h" fileDirectory=".." rtlName="x_pos_fu_72_p3" coreName="Sel" implIndex="auto_sel" control="no" opType="select" coreId="73" contextFuncName="fabs_fixed_54_15_s" bitwidth="54" opcode="select" m_display="0" m_topoIndex="7" m_clusterGroupNumber="1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h" linenumber="180" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="fabs_fixed&amp;lt;54, 15&amp;gt;"/>
+        <dataInputObjs>bitselect</dataInputObjs>
+        <dataInputObjs>bitset</dataInputObjs>
+        <dataInputObjs>sext</dataInputObjs>
+        <dataOutputObjs>zext</dataOutputObjs>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="10" name="zext_ln703" lineNumber="703" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" fileDirectory=".." rtlName="zext_ln703_fu_80_p1" coreId="1701080941" contextFuncName="operator_assign_54_15_false_AP_TRN_AP_WRAP_0" bitwidth="55" opcode="zext" m_display="0" m_topoIndex="8" m_clusterGroupNumber="1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" linenumber="703" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="operator=&amp;lt;54, 15, false, AP_TRN, AP_WRAP, 0&amp;gt;"/>
+        <dataInputObjs>select</dataInputObjs>
+        <dataOutputObjs>add</dataOutputObjs>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="11" name="ret_V" lineNumber="1192" originalName="ret.V" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" fileDirectory=".." rtlName="ret_V_fu_84_p2" coreName="Adder" implIndex="fabric" control="no" opType="add" coreId="1" contextFuncName="operator_add_1_0_false_AP_TRN_AP_WRAP_0" bitwidth="55" opcode="add" m_display="0" m_delay="3.26" m_topoIndex="9" m_clusterGroupNumber="1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" linenumber="1192" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="operator+&amp;lt;1, 0, false, AP_TRN, AP_WRAP, 0&amp;gt;"/>
+        <dataInputObjs>zext</dataInputObjs>
+        <dataOutputObjs>partset</dataOutputObjs>
+        <constName>empty</constName>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="12" name="p_Result_3" lineNumber="318" originalName="__Result__" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_ref.h" fileDirectory=".." rtlName="p_Result_3_fu_90_p5" coreId="891905380" contextFuncName="operator_assign" bitwidth="55" opcode="partset" m_display="0" m_topoIndex="10" m_clusterGroupNumber="-1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_ref.h" linenumber="318" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="operator="/>
+        <dataInputObjs>add</dataInputObjs>
+        <dataOutputObjs>trunc</dataOutputObjs>
+        <constName>empty</constName>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="13" name="trunc_ln703" lineNumber="703" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" fileDirectory=".." rtlName="trunc_ln703_fu_102_p1" coreId="1701080941" contextFuncName="operator_assign_56_17_true_AP_TRN_AP_WRAP_0" bitwidth="54" opcode="trunc" m_display="0" m_topoIndex="11" m_clusterGroupNumber="-1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" linenumber="703" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="operator=&amp;lt;56, 17, true, AP_TRN, AP_WRAP, 0&amp;gt;"/>
+        <dataInputObjs>partset</dataInputObjs>
+        <dataOutputObjs>sub</dataOutputObjs>
+        <dataOutputObjs>select</dataOutputObjs>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="14" name="sub_ln703" lineNumber="703" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" fileDirectory=".." rtlName="sub_ln703_fu_106_p2" coreName="Adder" implIndex="fabric" control="no" opType="sub" coreId="1" contextFuncName="operator_assign_56_17_true_AP_TRN_AP_WRAP_0" bitwidth="54" opcode="sub" nodeLabel="1.0" m_display="0" m_delay="3.26" m_topoIndex="12" m_clusterGroupNumber="-1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h" linenumber="703" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="operator=&amp;lt;56, 17, true, AP_TRN, AP_WRAP, 0&amp;gt;"/>
+        <dataInputObjs>trunc</dataInputObjs>
+        <dataOutputObjs>select</dataOutputObjs>
+        <constName>empty</constName>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="15" name="select_ln214" lineNumber="214" originalName="this.V" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h" fileDirectory=".." rtlName="ap_return" coreName="Sel" implIndex="auto_sel" control="no" opType="select" coreId="73" contextFuncName="round_fixed_54_15_s" bitwidth="54" opcode="select" nodeLabel="1.0" m_display="0" m_delay="0.94" m_topoIndex="13" m_clusterGroupNumber="-1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h" linenumber="214" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="round_fixed&amp;lt;54, 15&amp;gt;"/>
+        <dataInputObjs>bitselect</dataInputObjs>
+        <dataInputObjs>sub</dataInputObjs>
+        <dataInputObjs>trunc</dataInputObjs>
+        <dataOutputObjs>ret</dataOutputObjs>
+      </node_objs>
+      <node_objs xsi:type="cdfg:CdfgNode" id="16" name="_ln218" lineNumber="218" fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h" fileDirectory=".." coreId="1701080941" contextFuncName="round_fixed_54_15_s" opcode="ret" nodeLabel="1.0" m_display="0" m_topoIndex="14" m_clusterGroupNumber="-1">
+        <inlineStackInfo fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h" linenumber="218" fileDirectory="C:\Users\aless\Documents\NonlinearMPCwithMADS\boost" functionName="round_fixed&amp;lt;54, 15&amp;gt;"/>
+        <dataInputObjs>select</dataInputObjs>
+        <dataOutputObjs>ap_return</dataOutputObjs>
+      </node_objs>
+      <fileValidLineNumbers fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_base.h">
+        <validLinenumbers>703</validLinenumbers>
+        <validLinenumbers>1192</validLinenumbers>
+      </fileValidLineNumbers>
+      <fileValidLineNumbers fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h">
+        <validLinenumbers>180</validLinenumbers>
+        <validLinenumbers>214</validLinenumbers>
+        <validLinenumbers>218</validLinenumbers>
+      </fileValidLineNumbers>
+      <fileValidLineNumbers fileName="C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot\ap_fixed_ref.h">
+        <validLinenumbers>104</validLinenumbers>
+        <validLinenumbers>99</validLinenumbers>
+        <validLinenumbers>318</validLinenumbers>
+      </fileValidLineNumbers>
+    </basic_blocks>
+  </regions>
+  <ScheduleInfo time="0"/>
+  <ScheduleInfo time="1"/>
+  <regnodes realName="trunc_ln703_reg_122">
+    <nodeIds>13</nodeIds>
+  </regnodes>
+  <regnodes realName="p_Result_1_reg_117">
+    <nodeIds>8</nodeIds>
+  </regnodes>
+  <expressionNodes realName="p_Result_3_fu_90">
+    <nodeIds>12</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="x_cast_fu_40">
+    <nodeIds>3</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="p_Result_1_fu_64">
+    <nodeIds>8</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="trunc_ln703_fu_102">
+    <nodeIds>13</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="sub_ln703_fu_106">
+    <nodeIds>14</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="zext_ln703_fu_80">
+    <nodeIds>10</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="p_Result_s_fu_54">
+    <nodeIds>7</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="p_Val2_s_fu_44">
+    <nodeIds>5</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="select_ln214_fu_111">
+    <nodeIds>15</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="sext_ln104_fu_50">
+    <nodeIds>6</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="x_pos_fu_72">
+    <nodeIds>9</nodeIds>
+  </expressionNodes>
+  <expressionNodes realName="ret_V_fu_84">
+    <nodeIds>11</nodeIds>
+  </expressionNodes>
+  <ioNodes realName="x_read_read_fu_34">
+    <nodeIds>2</nodeIds>
+  </ioNodes>
+  <ioPorts name="x">
+    <contents name="read">
+      <nodeIds>2</nodeIds>
+    </contents>
+  </ioPorts>
+  <ioPorts name="ap_return">
+    <contents name="ret">
+      <nodeIds>16</nodeIds>
+    </contents>
+  </ioPorts>
+  <fsm>
+    <states id="1">
+      <operations id="2" stage="1" latency="1"/>
+      <operations id="3" stage="1" latency="1"/>
+      <operations id="5" stage="1" latency="1"/>
+      <operations id="6" stage="1" latency="1"/>
+      <operations id="7" stage="1" latency="1"/>
+      <operations id="8" stage="1" latency="1"/>
+      <operations id="9" stage="1" latency="1"/>
+      <operations id="10" stage="1" latency="1"/>
+      <operations id="11" stage="1" latency="1"/>
+      <operations id="12" stage="1" latency="1"/>
+      <operations id="13" stage="1" latency="1"/>
+    </states>
+    <states id="2">
+      <operations id="4" stage="1" latency="1"/>
+      <operations id="14" stage="1" latency="1"/>
+      <operations id="15" stage="1" latency="1"/>
+      <operations id="16" stage="1" latency="1"/>
+    </states>
+    <transitions inState="1" outState="2">
+      <condition id="-1"/>
+    </transitions>
+  </fsm>
+  <CFGRegionsRoot>
+    <cfgRegions mId="1" mTag="round_fixed_54_15_s" mII="1" mDepth="2" mMinTripCount="-1" mMaxTripCount="-1" mMinLatency="1" mMaxLatency="1">
+      <basicBlocks>17</basicBlocks>
+      <mDfPipe/>
+    </cfgRegions>
+  </CFGRegionsRoot>
+</cdfg:DBCdfg>

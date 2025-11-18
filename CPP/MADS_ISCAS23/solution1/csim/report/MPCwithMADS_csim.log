@@ -1,0 +1,14 @@
+INFO: [SIM 2] *************** CSIM start ***************
+INFO: [SIM 4] CSIM will launch GCC as the compiler.
+   Compiling ../../../testMain.cpp in debug mode
+   Compiling ../../../shiftOpt.cpp in debug mode
+   Compiling ../../../pseudoRand.cpp in debug mode
+   Compiling ../../../progressiveBarrierPolling.cpp in debug mode
+   Compiling ../../../generatePollMatrix.cpp in debug mode
+   Compiling ../../../generatePollDirections.cpp in debug mode
+   Compiling ../../../costFunction.cpp in debug mode
+   Compiling ../../../MPCwithMADS.cpp in debug mode
+   Compiling ../../../MADS.cpp in debug mode
+   Generating csim.exe
+INFO: [SIM 1] CSim done with 0 errors.
+INFO: [SIM 3] *************** CSIM finish ***************

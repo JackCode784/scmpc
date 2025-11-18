@@ -1,0 +1,135 @@
+
+
+================================================================
+== Vitis HLS Report for 'round_fixed_54_15_s'
+================================================================
+* Date:           Wed Oct 19 10:42:18 2022
+
+* Version:        2020.2 (Build 3064766 on Wed Nov 18 09:12:45 MST 2020)
+* Project:        MPCwithMADS_fxd
+* Solution:       solution1 (Vivado IP Flow Target)
+* Product family: zynq
+* Target device:  xc7z020-clg484-1
+
+
+================================================================
+== Performance Estimates
+================================================================
++ Timing: 
+    * Summary: 
+    +--------+----------+----------+------------+
+    |  Clock |  Target  | Estimated| Uncertainty|
+    +--------+----------+----------+------------+
+    |ap_clk  |  10.00 ns|  6.447 ns|     2.70 ns|
+    +--------+----------+----------+------------+
+
++ Latency: 
+    * Summary: 
+    +---------+---------+-----------+-----------+-----+-----+---------+
+    |  Latency (cycles) |   Latency (absolute)  |  Interval | Pipeline|
+    |   min   |   max   |    min    |    max    | min | max |   Type  |
+    +---------+---------+-----------+-----------+-----+-----+---------+
+    |        1|        1|  10.000 ns|  10.000 ns|    1|    1|      yes|
+    +---------+---------+-----------+-----------+-----+-----+---------+
+
+    + Detail: 
+        * Instance: 
+        N/A
+
+        * Loop: 
+        N/A
+
+============================================================
++ Verbose Summary: Synthesis Manager
+============================================================
+InlineROM: 1
+ExposeGlobal: 0
+============================================================
++ Verbose Summary: CDFG Model
+============================================================
+IsTopModel: 0
+ResetActiveHigh: 1
+IsCombinational: 0
+IsDatapathOnly: 0
+HasWiredReturn: 1
+HasMFsm: 2
+HasVarLatency: 0
+IsPipeline: 1
+IsRtlPipelined: 1
+IsInstanceOverlapped: 0
+IsDontTouch: 0
+HasImplIP: 0
+IsGatedGlobalClock: 0
+
++ Individual pipeline summary: 
+  * Pipeline-0: initiation interval (II) = 1, depth = 2
+
+
+============================================================
++ Verbose Summary: Schedule
+============================================================
+* Number of FSM states : 2
+* Pipeline : 1
+  Pipeline-0 : II = 1, D = 2, States = { 1 2 }
+* Dataflow Pipeline: 0
+
+* FSM state transitions: 
+1 --> 2 
+2 --> 
+
+* FSM state operations: 
+
+State 1 <SV = 0> <Delay = 6.44>
+ST_1 : Operation 3 [1/1] (0.00ns)   --->   "%x_read = read i51 @_ssdm_op_Read.ap_auto.i51, i51 %x"   --->   Operation 3 'read' 'x_read' <Predicate = true> <Delay = 0.00>
+ST_1 : Operation 4 [1/1] (0.00ns) (grouped into LUT with out node ret_V)   --->   "%x_cast = sext i51 %x_read"   --->   Operation 4 'sext' 'x_cast' <Predicate = true> <Delay = 0.00>
+ST_1 : Operation 5 [1/1] (3.18ns)   --->   "%p_Val2_s = sub i51 0, i51 %x_read"   --->   Operation 5 'sub' 'p_Val2_s' <Predicate = true> <Delay = 3.18> <CoreInst = "Adder">   --->   Core 1 'Adder' <Latency = 0> <II = 1> <Delay = 3.26> <FuncUnit> <Opcode : 'add' 'sub'> <InPorts = 2> <OutPorts = 1>
+ST_1 : Operation 6 [1/1] (0.00ns) (grouped into LUT with out node ret_V)   --->   "%sext_ln104 = sext i51 %p_Val2_s"   --->   Operation 6 'sext' 'sext_ln104' <Predicate = true> <Delay = 0.00>
+ST_1 : Operation 7 [1/1] (0.00ns) (grouped into LUT with out node ret_V)   --->   "%p_Result_s = bitset i54 @_ssdm_op_BitSet.i54.i54.i32.i1, i54 %sext_ln104, i32 53, i1 0"   --->   Operation 7 'bitset' 'p_Result_s' <Predicate = true> <Delay = 0.00>
+ST_1 : Operation 8 [1/1] (0.00ns)   --->   "%p_Result_1 = bitselect i1 @_ssdm_op_BitSelect.i1.i51.i32, i51 %x_read, i32 50"   --->   Operation 8 'bitselect' 'p_Result_1' <Predicate = true> <Delay = 0.00>
+ST_1 : Operation 9 [1/1] (0.00ns) (grouped into LUT with out node ret_V)   --->   "%x_pos = select i1 %p_Result_1, i54 %p_Result_s, i54 %x_cast" [C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h:180]   --->   Operation 9 'select' 'x_pos' <Predicate = true> <Delay = 0.00> <CoreInst = "Sel">   --->   Core 73 'Sel' <Latency = 0> <II = 1> <Delay = 0.94> <FuncUnit> <Opcode : 'select'> <InPorts = 3> <OutPorts = 1>
+ST_1 : Operation 10 [1/1] (0.00ns) (grouped into LUT with out node ret_V)   --->   "%zext_ln703 = zext i54 %x_pos"   --->   Operation 10 'zext' 'zext_ln703' <Predicate = true> <Delay = 0.00>
+ST_1 : Operation 11 [1/1] (3.26ns) (out node of the LUT)   --->   "%ret_V = add i55 %zext_ln703, i55 274877906944"   --->   Operation 11 'add' 'ret_V' <Predicate = true> <Delay = 3.26> <CoreInst = "Adder">   --->   Core 1 'Adder' <Latency = 0> <II = 1> <Delay = 3.26> <FuncUnit> <Opcode : 'add' 'sub'> <InPorts = 2> <OutPorts = 1>
+ST_1 : Operation 12 [1/1] (0.00ns)   --->   "%p_Result_3 = partset i55 @llvm.part.set.i55.i39, i55 %ret_V, i39 0, i32 0, i32 38"   --->   Operation 12 'partset' 'p_Result_3' <Predicate = true> <Delay = 0.00>
+ST_1 : Operation 13 [1/1] (0.00ns)   --->   "%trunc_ln703 = trunc i55 %p_Result_3"   --->   Operation 13 'trunc' 'trunc_ln703' <Predicate = true> <Delay = 0.00>
+
+State 2 <SV = 1> <Delay = 4.21>
+ST_2 : Operation 14 [1/1] (0.00ns)   --->   "%specpipeline_ln201 = specpipeline void @_ssdm_op_SpecPipeline, i32 4294967295, i32 0, i32 0, i32 0, void @empty_12" [C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h:201]   --->   Operation 14 'specpipeline' 'specpipeline_ln201' <Predicate = true> <Delay = 0.00>
+ST_2 : Operation 15 [1/1] (3.26ns)   --->   "%sub_ln703 = sub i54 0, i54 %trunc_ln703"   --->   Operation 15 'sub' 'sub_ln703' <Predicate = (p_Result_1)> <Delay = 3.26> <CoreInst = "Adder">   --->   Core 1 'Adder' <Latency = 0> <II = 1> <Delay = 3.26> <FuncUnit> <Opcode : 'add' 'sub'> <InPorts = 2> <OutPorts = 1>
+ST_2 : Operation 16 [1/1] (0.94ns)   --->   "%select_ln214 = select i1 %p_Result_1, i54 %sub_ln703, i54 %trunc_ln703" [C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h:214]   --->   Operation 16 'select' 'select_ln214' <Predicate = true> <Delay = 0.94> <CoreInst = "Sel">   --->   Core 73 'Sel' <Latency = 0> <II = 1> <Delay = 0.94> <FuncUnit> <Opcode : 'select'> <InPorts = 3> <OutPorts = 1>
+ST_2 : Operation 17 [1/1] (0.00ns)   --->   "%ret_ln218 = ret i54 %select_ln214" [C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h:218]   --->   Operation 17 'ret' 'ret_ln218' <Predicate = true> <Delay = 0.00>
+
+
+============================================================
++ Verbose Summary: Timing violations
+============================================================
+Target clock period: 10ns, clock uncertainty: 2.7ns.
+
+ <State 1>: 6.45ns
+The critical path consists of the following:
+	wire read on port 'x' [2]  (0 ns)
+	'sub' operation ('__Val2__') [5]  (3.18 ns)
+	'select' operation ('x_pos', C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h:180) [9]  (0 ns)
+	'add' operation ('ret.V') [11]  (3.26 ns)
+
+ <State 2>: 4.21ns
+The critical path consists of the following:
+	'sub' operation ('sub_ln703') [14]  (3.26 ns)
+	'select' operation ('this.V', C:/Xilinx/Vitis_HLS/2020.2/common/technology/autopilot/hls_round_copysign_apfixed.h:214) [15]  (0.948 ns)
+
+
+============================================================
++ Verbose Summary: Binding
+============================================================
+N/A
+* FSMD analyzer results:
+  - Output states:
+ - Input state : 
+  - Chain level:
+	State 1
+	State 2
+
+
+============================================================
++ Verbose Summary: Datapath Resource usage 
+============================================================
+N/A

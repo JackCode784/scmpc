@@ -1,0 +1,182 @@
+Vivado Simulator 2020.2
+Copyright 1986-1999, 2001-2020 Xilinx, Inc. All Rights Reserved.
+Running: C:/Xilinx/Vivado/2020.2/bin/unwrapped/win64.o/xelab.exe xil_defaultlib.apatb_MPCwithMADS_top glbl -prj MPCwithMADS.prj -L smartconnect_v1_0 -L axi_protocol_checker_v1_1_12 -L axi_protocol_checker_v1_1_13 -L axis_protocol_checker_v1_1_11 -L axis_protocol_checker_v1_1_12 -L xil_defaultlib -L unisims -L unisims_ver -L xpm -L floating_point_v7_0_18 -L floating_point_v7_1_11 --lib ieee_proposed=./ieee_proposed -s MPCwithMADS -debug wave 
+Multi-threading is on. Using 10 slave threads.
+Determining compilation order of HDL files.
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/glbl.v" into library work
+INFO: [VRFC 10-311] analyzing module glbl
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/AESL_sim_pkg.vhd" into library xil_defaultlib
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS.autotb.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'apatb_MPCwithMADS_top'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_ama_addmuladd_21s_19s_18s_32ns_32_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_ama_addmuladd_21s_19s_18s_32ns_32_4_0_DSP48_15'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_ama_addmuladd_21s_19s_18s_32ns_32_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_costFunction.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_costFunction'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_generatePollDirections.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_generatePollDirections'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_generatePollMatrix.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_generatePollMatrix'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_generatePollMatrix_directions.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_generatePollMatrix_directions_ram'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_generatePollMatrix_directions'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mac_muladd_16ns_18s_33s_33_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_16ns_18s_33s_33_4_0_DSP48_12'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_16ns_18s_33s_33_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mac_muladd_18s_14s_34s_34_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_14s_34s_34_4_0_DSP48_10'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_14s_34s_34_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mac_muladd_18s_18s_33ns_34_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_18s_33ns_34_4_0_DSP48_5'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_18s_33ns_34_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mac_muladd_18s_18s_33s_33_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_18s_33s_33_4_0_DSP48_13'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_18s_33s_33_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mac_muladd_18s_18s_34ns_34_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_18s_34ns_34_4_0_DSP48_9'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_18s_34ns_34_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mac_muladd_18s_18s_34s_34_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_18s_34s_34_4_0_DSP48_6'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mac_muladd_18s_18s_34s_34_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_26s_12s_26_1_1.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_26s_12s_26_1_1_Multiplier_3'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_26s_12s_26_1_1'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_34s_15ns_44_2_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_34s_15ns_44_2_0_Multiplier_0'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_34s_15ns_44_2_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_36ns_16s_51_2_1.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_36ns_16s_51_2_1_Multiplier_2'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_36ns_16s_51_2_1'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_36s_11ns_47_2_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_36s_11ns_47_2_0_Multiplier_1'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_36s_11ns_47_2_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_18s_13s_31_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_13s_31_4_0_DSP48_7'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_13s_31_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_18s_14s_32_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_14s_32_4_0_DSP48_4'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_14s_32_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_18s_16ns_34_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_16ns_34_4_0_DSP48_2'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_16ns_34_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_18s_16s_34_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_16s_34_4_0_DSP48_8'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_16s_34_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_18s_18s_29_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_29_4_0_DSP48_0'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_29_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_18s_18s_31_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_31_4_0_DSP48_14'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_31_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_18s_18s_33_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_33_4_0_DSP48_11'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_33_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_18s_18s_34_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_34_4_0_DSP48_3'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_34_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_18s_18s_36_4_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_36_4_0_DSP48_1'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_18s_18s_36_4_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_20s_18s_33_4_1.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_20s_18s_33_4_1_DSP48_16'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_20s_18s_33_4_1'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_mul_mul_20s_6ns_20_4_1.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_20s_6ns_20_4_1_DSP48_17'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_mul_mul_20s_6ns_20_4_1'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_pollMatrix_i.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_pollMatrix_i_ram'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_pollMatrix_i'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_round_fixed_54_15_s.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_round_fixed_54_15_s'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_sdiv_29ns_18s_13_33_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_sdiv_29ns_18s_13_33_0_div_u'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_sdiv_29ns_18s_13_33_0_div'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_sdiv_29ns_18s_13_33_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_sdiv_42s_18s_42_46_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_sdiv_42s_18s_42_46_0_div_u'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_sdiv_42s_18s_42_46_0_div'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_sdiv_42s_18s_42_46_0'
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Users/aless/Documents/NonlinearMPCwithMADS/boost/MPCwithMADS_fxd/solution1/sim/vhdl/MPCwithMADS_sdiv_47ns_18s_47_51_0.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_sdiv_47ns_18s_47_51_0_div_u'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_sdiv_47ns_18s_47_51_0_div'
+INFO: [VRFC 10-3107] analyzing entity 'MPCwithMADS_sdiv_47ns_18s_47_51_0'
+Starting static elaboration
+Pass Through NonSizing Optimizer
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling package std.standard
+Compiling package std.textio
+Compiling package ieee.std_logic_1164
+Compiling package ieee.std_logic_arith
+Compiling package ieee.std_logic_unsigned
+Compiling package ieee.numeric_std
+Compiling package ieee.std_logic_textio
+Compiling module work.glbl
+Compiling architecture rtl of entity xil_defaultlib.MPCwithMADS_pollMatrix_i_ram [mpcwithmads_pollmatrix_i_ram_def...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_pollMatrix_i [mpcwithmads_pollmatrix_i_default]
+Compiling architecture rtl of entity xil_defaultlib.MPCwithMADS_sdiv_42s_18s_42_46_0_div_u [\MPCwithMADS_sdiv_42s_18s_42_46_...]
+Compiling architecture rtl of entity xil_defaultlib.MPCwithMADS_sdiv_42s_18s_42_46_0_div [\MPCwithMADS_sdiv_42s_18s_42_46_...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_sdiv_42s_18s_42_46_0 [\MPCwithMADS_sdiv_42s_18s_42_46_...]
+Compiling architecture rtl of entity xil_defaultlib.MPCwithMADS_sdiv_47ns_18s_47_51_0_div_u [\MPCwithMADS_sdiv_47ns_18s_47_51...]
+Compiling architecture rtl of entity xil_defaultlib.MPCwithMADS_sdiv_47ns_18s_47_51_0_div [\MPCwithMADS_sdiv_47ns_18s_47_51...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_sdiv_47ns_18s_47_51_0 [\MPCwithMADS_sdiv_47ns_18s_47_51...]
+Compiling architecture rtl of entity xil_defaultlib.MPCwithMADS_sdiv_29ns_18s_13_33_0_div_u [\MPCwithMADS_sdiv_29ns_18s_13_33...]
+Compiling architecture rtl of entity xil_defaultlib.MPCwithMADS_sdiv_29ns_18s_13_33_0_div [\MPCwithMADS_sdiv_29ns_18s_13_33...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_sdiv_29ns_18s_13_33_0 [\MPCwithMADS_sdiv_29ns_18s_13_33...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_34s_15ns_44_2_0_Multiplier_0 [mpcwithmads_mul_34s_15ns_44_2_0_...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_34s_15ns_44_2_0 [\MPCwithMADS_mul_34s_15ns_44_2_0...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_36s_11ns_47_2_0_Multiplier_1 [mpcwithmads_mul_36s_11ns_47_2_0_...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_36s_11ns_47_2_0 [\MPCwithMADS_mul_36s_11ns_47_2_0...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_29_4_0_DSP48_0 [mpcwithmads_mul_mul_18s_18s_29_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_29_4_0 [\MPCwithMADS_mul_mul_18s_18s_29_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_36_4_0_DSP48_1 [mpcwithmads_mul_mul_18s_18s_36_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_36_4_0 [\MPCwithMADS_mul_mul_18s_18s_36_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_16ns_34_4_0_DSP48_2 [mpcwithmads_mul_mul_18s_16ns_34_...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_16ns_34_4_0 [\MPCwithMADS_mul_mul_18s_16ns_34...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_34_4_0_DSP48_3 [mpcwithmads_mul_mul_18s_18s_34_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_34_4_0 [\MPCwithMADS_mul_mul_18s_18s_34_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_14s_32_4_0_DSP48_4 [mpcwithmads_mul_mul_18s_14s_32_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_14s_32_4_0 [\MPCwithMADS_mul_mul_18s_14s_32_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_18s_33ns_34_4_0_DSP48_5 [mpcwithmads_mac_muladd_18s_18s_3...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_18s_33ns_34_4_0 [\MPCwithMADS_mac_muladd_18s_18s_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_18s_34s_34_4_0_DSP48_6 [mpcwithmads_mac_muladd_18s_18s_3...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_18s_34s_34_4_0 [\MPCwithMADS_mac_muladd_18s_18s_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_13s_31_4_0_DSP48_7 [mpcwithmads_mul_mul_18s_13s_31_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_13s_31_4_0 [\MPCwithMADS_mul_mul_18s_13s_31_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_16s_34_4_0_DSP48_8 [mpcwithmads_mul_mul_18s_16s_34_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_16s_34_4_0 [\MPCwithMADS_mul_mul_18s_16s_34_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_18s_34ns_34_4_0_DSP48_9 [mpcwithmads_mac_muladd_18s_18s_3...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_18s_34ns_34_4_0 [\MPCwithMADS_mac_muladd_18s_18s_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_14s_34s_34_4_0_DSP48_10 [mpcwithmads_mac_muladd_18s_14s_3...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_14s_34s_34_4_0 [\MPCwithMADS_mac_muladd_18s_14s_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_33_4_0_DSP48_11 [mpcwithmads_mul_mul_18s_18s_33_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_33_4_0 [\MPCwithMADS_mul_mul_18s_18s_33_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mac_muladd_16ns_18s_33s_33_4_0_DSP48_12 [mpcwithmads_mac_muladd_16ns_18s_...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mac_muladd_16ns_18s_33s_33_4_0 [\MPCwithMADS_mac_muladd_16ns_18s...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_18s_33s_33_4_0_DSP48_13 [mpcwithmads_mac_muladd_18s_18s_3...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mac_muladd_18s_18s_33s_33_4_0 [\MPCwithMADS_mac_muladd_18s_18s_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_31_4_0_DSP48_14 [mpcwithmads_mul_mul_18s_18s_31_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_18s_18s_31_4_0 [\MPCwithMADS_mul_mul_18s_18s_31_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_ama_addmuladd_21s_19s_18s_32ns_32_4_0_DSP48_15 [mpcwithmads_ama_addmuladd_21s_19...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_ama_addmuladd_21s_19s_18s_32ns_32_4_0 [\MPCwithMADS_ama_addmuladd_21s_1...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_costFunction [mpcwithmads_costfunction_default]
+Compiling architecture rtl of entity xil_defaultlib.MPCwithMADS_generatePollMatrix_directions_ram [mpcwithmads_generatepollmatrix_d...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_generatePollMatrix_directions [mpcwithmads_generatepollmatrix_d...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_round_fixed_54_15_s [mpcwithmads_round_fixed_54_15_s_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_36ns_16s_51_2_1_Multiplier_2 [mpcwithmads_mul_36ns_16s_51_2_1_...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_36ns_16s_51_2_1 [\MPCwithMADS_mul_36ns_16s_51_2_1...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_20s_18s_33_4_1_DSP48_16 [mpcwithmads_mul_mul_20s_18s_33_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_20s_18s_33_4_1 [\MPCwithMADS_mul_mul_20s_18s_33_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_generatePollDirections [mpcwithmads_generatepolldirectio...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_26s_12s_26_1_1_Multiplier_3 [mpcwithmads_mul_26s_12s_26_1_1_m...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_26s_12s_26_1_1 [\MPCwithMADS_mul_26s_12s_26_1_1(...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_mul_mul_20s_6ns_20_4_1_DSP48_17 [mpcwithmads_mul_mul_20s_6ns_20_4...]
+Compiling architecture arch of entity xil_defaultlib.MPCwithMADS_mul_mul_20s_6ns_20_4_1 [\MPCwithMADS_mul_mul_20s_6ns_20_...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS_generatePollMatrix [mpcwithmads_generatepollmatrix_d...]
+Compiling architecture behav of entity xil_defaultlib.MPCwithMADS [mpcwithmads_default]
+Compiling architecture behav of entity xil_defaultlib.apatb_mpcwithmads_top
+Built simulation snapshot MPCwithMADS
