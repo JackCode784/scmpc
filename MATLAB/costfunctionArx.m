@@ -1,40 +1,38 @@
-function J = costfunctionArx(arxObject, ySeq, u, uSeq, yref, Nhor, NhorU, Q, P, R)
-%   ySeq = [y(k-1) ... y(k-na)]
-%   uSeq = [u(k-1) ... u(k-nd) ... u(k-nd-nb+1)]
-%   u = [u(k+NHorU-1) ... u(k)]
-
-na = arxObject.na;
-nb = arxObject.nb;
-nd = arxObject.nd;
+function J = costfunctionArx(arxObject, yPast, u, uPast, yref, Nhor, NhorU, Q, P, R)
+% costfunctionArx       Returns the cost value for the given input
+% sequence u = [u(k+NhorU-1), ..., u(k)].
+%   yPast = [y(k-1) ... y(k-na)] are the past output samples (k-1, ...,
+%   k-na).
+%   uPast = [u(k-1) ... u(k-nd) ... u(k-nd-nb+1)] are the past input
+%   samples (k-1, ..., k-nb-nd+1).
 
 u = reshape(u, 1, NhorU);
+J = 0; % cost init
 
-% ucur = uSeq(NhorU); % current input sample u(k)
-% J = ucur' * R * ucur;
+% Vector approach
+% R = repmat({R}, 1, NhorU);
+% R = blkdiag(R{:});
+% J = J + u'*R*u;
 
-% No input after control horizon
-% uSeq = [zeros(1, Nhor-NhorU), uSeq];
-uSeq = [u, uSeq];
-
-% Optimizable?
+% C-like approach
 for k=1:NhorU
-    uSamples = uSeq(NhorU-k+1:NhorU-k+nb+nd);
-    y = arxObject.computeOutput(arxObject, ySeq, uSamples);
-    J = J + (y-yref)' * Q * (y-yref);
-    ucur = uSamples(1);         % input at this time instant
-    J = J + ucur' * R * ucur;
-    ySeq = [y, ySeq(1:end-1)];   % update past output samples
+    uSamples = [u(:,k), uPast];
+    y = arxObject.computeOutput(yPast, uSamples);
+    J = J + (y-yref)' * Q * (y-yref) + uSamples(1)'*R*uSamples(1);
+    yPast = [y, yPast(1:end-1)];   % update past output samples
+    uPast = [uSamples(1), uPast(1:end-1)];
 end
 
 for k=NhorU+1:Nhor-1
-    uSamples = [0, uSamples(1:end-1)];
-    y = arxObject.computeOutput(arxObject, ySeq, uSamples);
+    uSamples = [uPast(1), uPast];
+    y = arxObject.computeOutput(yPast, uSamples);
     J = J + (y-yref)' * Q * (y-yref);
-    ySeq = [y, ySeq(1:end-1)];
+    yPast = [y, yPast(1:end-1)];
+    uPast = [uSamples(1), uPast(1:end-1)];
 end
 
-uSamples = [0, uSamples(1:end-1)];
-y = arxObject.computeOutput(arxObject, ySeq, uSamples);
+uSamples = [uPast(1), uPast];
+y = arxObject.computeOutput(yPast, uSamples);
 J = J + (y-yref)' * P * (y-yref);
 
 end

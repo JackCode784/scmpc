@@ -1,0 +1,182 @@
+#ifndef _MADS_H_
+#define _MADS_H_
+
+// Library for fixed point number representation
+#include <ap_fixed.h>
+
+// Fixed point data representation for the circuit input
+typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> fxd_in;
+
+// Fixed point data representation for the circuit output
+typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> fxd_out;
+
+typedef ap_ufixed<32, 9, AP_RND_CONV, AP_SAT> data_cost;
+typedef ap_fixed<18, 3, AP_TRN, AP_WRAP> data_rand;
+typedef ap_ufixed<36, 12, AP_TRN, AP_WRAP> data_meshSize;
+typedef ap_int<6> data_meshExp;
+typedef ap_int<12> data_dir;
+
+// number of MADS iterations
+#define K 7
+#define MADS_ITER 7
+
+// Fixed point data representation for the data to convert input
+// from ADC range to actual (model range) and from actual range
+// to DAC range
+typedef ap_fixed<32, 14, AP_RND_CONV, AP_SAT> fxd_conv;
+
+// Fixed point data representation for every signal inside the algorithm
+typedef ap_fixed<18, 5> fxd;
+
+// Number of system states (x_k)
+#define nX 3
+#define nx 3
+
+// Number of system inputs (u_k)
+#define nU 1
+#define nu 1    // ARX assumption: SISO system
+
+// Rewritten for ARX: number of system output
+#define ny 1    // ARX assumption: SISO system
+
+// Number of system parameters (p_k)
+#define nP 0
+
+// Number of system unmeasurable inputs (d_k)
+#define nD 0
+
+// Prediction horizon
+#define N 5
+#define Nhor 5
+
+// Control horizon
+#define Nu 3
+#define NhorU 3
+
+// Number of reference inputs
+#define nRef 1
+#define ny_ref 1
+
+// Number of controller inputs [x_k; u_(k-1)]
+#define nX_CTRL 3
+
+#define nX_CTRL_sc 23
+
+#define nDim_CTRL 3
+
+// Maximum number of iterations
+#define max_iter 20
+
+#define TAU 1
+static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5; //2^-c
+#define C 1
+// initial frame size
+static const data_meshExp D[nX_CTRL] = { -8, -8 };
+// Index of the input to be tracked
+static const fxd ref_idx[nRef] = {0};
+
+// DA AGGIUNGERE MATLAB
+static const fxd UMIN[nU] = {
+-0.300000};
+static const float umin[nu] = {-0.3}; // rewritten for arx
+
+static const fxd UMAX[nU] = {
+0.300000};
+static const float umax[nu] = {-0.3}; // rewritten for arx
+
+static const fxd XMIN[nX] = {
+-8, -0.8, -0.300000};
+static const float ymin[ny] = {0}; // rewritten for arx
+
+static const fxd XMAX[nX] = {
+8, 0.8, 0.300000};
+static const float ymax[ny] = {0}; // rewritten for arx
+
+// Matrices of all scenarios
+static const float doubleIntegratorA[nx][nx] = {
+    {0, 1e3},
+    {0, 0}
+};
+
+static const float doubleIntegratorB[nx][nu] = {
+    {0},
+    {1e3}
+};
+
+static const float doubleIntegratorC[ny][nx] = {
+    {1, 0}
+};
+
+static const float doubleIntegratorD[ny][nu] = {
+    {0}
+};
+
+/*
+    ----------------------------------------
+    Matrices for cost function evaluation  
+    ----------------------------------------    
+*/
+// static const fxd P[nX][nX] = {
+// {1.000000, 0.000000, 0.000000},
+// {0.000000, 0.000000, 0.000000},
+// {0.000000, 0.000000, 0.000000} };
+static const float P[ny][ny] = {
+    {}
+}
+
+// static const fxd Q[nX][nX] = {
+// {1.000000, 0.000000, 0.000000},
+// {0.000000, 0.000000, 0.000000},
+// {0.000000, 0.000000, 0.000000} };
+
+// static const fxd R[nU][nU] = {
+// {10.000000} };
+
+// Default control
+static const fxd default_u[nU] = {0.000000};
+
+// Arrays to transform the inputs from their circuit range
+// to the actual (model) range:
+// x = (x_cir - sim_x_scale_bias).*sim_x_scale_gain
+static const fxd_conv sim_x_scale_bias[nX_CTRL] = {-8.000000, -0.800000};
+static const fxd_conv sim_x_scale_gain[nX_CTRL] = {0.003907, 0.000391};
+
+// Arrays to transform the outputs from their actual (model)
+// range to the actual circuit range:
+// u_cir = u.*sim_u_scale_gain + sim_u_scale_bias
+static const fxd_conv sim_u_scale_bias[nU] = {-0.300000};
+static const fxd_conv sim_u_scale_gain[nU] = {6825.000000};
+
+// Arrays to transform the reference signals from
+// their circuit range to the actual (model) range:
+// xref = (xref_cir - sim_xref_scale_bias).*sim_xref_scale_gain
+static const fxd_conv sim_xref_scale_bias[nRef] = {-8.000000};
+static const fxd_conv sim_xref_scale_gain[nRef] = {0.003907};
+
+void scaleX(fxd_in x_in[nX], fxd x_reg[nX]);
+void scaleRef(fxd_in ref_in[nRef], fxd ref_reg[nX]);
+void scaleU(fxd u_reg[nU], fxd_out u_opt[nU]);
+void augmentState(fxd x_reg[nX], fxd ref_reg[nX], fxd x_aug[nX_CTRL], fxd ref_aug[nX_CTRL], fxd u_old[nU]);
+void extractU(fxd z[nDim_CTRL], fxd u_reg[nU], fxd u_old[nU]);
+void control(fxd_in x_in[nX], fxd_out u_opt[nU], fxd_in ref_in[nRef]);
+
+void MADS(fxd z[nDim_CTRL], fxd x_aug[nX], fxd ref_aug[nRef]);
+
+void shiftOpt(fxd optimum[nDim_CTRL]);
+
+void costFunction(data_cost cost[2], fxd point[nDim_CTRL], fxd x[nX], fxd ref[nRef]);
+
+void generatePollDirections(data_rand randomVector[nDim_CTRL], data_meshExp frameIdx[nDim_CTRL], data_meshExp meshIdx[nDim_CTRL], data_dir directions[nDim_CTRL][2*nDim_CTRL]);
+
+void pseudoRand(data_rand randomVector[nDim_CTRL]);
+
+void generateHouseholderMatrix(data_rand v[nDim_CTRL], data_rand H[nDim_CTRL][nDim_CTRL]);
+
+void progressiveBarrierPolling(data_cost cost[2], fxd currentPoint[nDim_CTRL], fxd pollMatrix[nDim_CTRL][2*nDim_CTRL], data_meshExp frameSize[nDim_CTRL], fxd x[nX], fxd ref[nRef]);
+
+void generatePollMatrix(fxd currentPoint[nDim_CTRL], data_meshExp frameIdx[nDim_CTRL], data_meshExp meshIdx[nDim_CTRL], fxd pollMatrix[nDim_CTRL][2 * nDim_CTRL]);
+
+void integrateSystem(data_cost costFcn[1], const fxd A[nX][nX], const fxd B[nX][nU], const fxd G[nX], fxd point[nDim_CTRL], fxd x[nX], fxd ref[nRef]);
+
+
+#endif

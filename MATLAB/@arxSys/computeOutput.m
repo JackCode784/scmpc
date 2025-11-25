@@ -1,4 +1,4 @@
-function y = computeOutput(object, ySeq, uSeq)
+function y = computeOutput(object, yPast, uSamples)
 % computeOutput     Computes the output of the ARX model.
 % 
 % y = computeOutput(object, yPast, uPast)
@@ -10,15 +10,17 @@ function y = computeOutput(object, ySeq, uSeq)
 % yPast, uPast contain the past input/output samples and the current input,
 % ordered as
 %   yPast = [y(k-1) ... y(k-na)]
-%   uPast = [u(k) ... u(k-nd) ... u(k-nk-nb+1)]
+%   uSamples = [u(k) ... u(k-nd) ... u(k-nk-nb+1)]
 % 
-% yPast, uPast can be matrices, in which case this function returns a
+% yPast, uSamples can be matrices, in which case this function returns a
 % (column) vector of the outputs produced with the given values of 
 % input/output past and current samples.
 
-ySeq = reshape(ySeq, [], object.na);
-uSeq = uSeq(end-nb+1:end);
-uSeq = reshape(uSeq, [], object.nb);
-y = [ySeq, uSeq] * object.theta;
+nb = object.nb;
+
+yPast = reshape(yPast, [], object.na);
+uSamples = uSamples(:, end-nb+1:end); % keep oldest nb samples
+uSamples = reshape(uSamples, [], object.nb);
+y = [yPast, uSamples] * object.theta;
 
 end
