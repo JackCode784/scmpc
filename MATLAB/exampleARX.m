@@ -15,8 +15,8 @@ Ts = 1e-3;  % sampling time
 
 % Define system parameter vector
 na = 2;                             % number of output coefficients
-nb = 3;                             % number of input coefficients
-nd = 0;                             % number of system delay samples
+nb = 1;                             % number of input coefficients
+nd = 2;                             % number of system delay samples
 n = na + nb;                        % number of theta parameters
 % thetaNominal = -ones(n, 1) / 5;  % random parameter vector in [-1, 1]^n
 % thetaNominal = [0.792111637807507
@@ -26,8 +26,8 @@ n = na + nb;                        % number of theta parameters
 % 0.0441681636826590];
 A = 1e3;
 B = 1e3;
-thetaNominal = [2; -1; 0; 0; A*B*Ts^2];
-% thetaNominal = [2; -1; A*B*Ts^2];
+% thetaNominal = [2; -1; 0; 0; A*B*Ts^2];
+thetaNominal = [2; -1; A*B*Ts^2];
 
 % Create an ARX object
 arxModel = arxSys(na, nb, nd, thetaNominal, Ts);
@@ -60,8 +60,8 @@ Z0Gen = eye(n) / 10;    % zonotope generators matrix (stored as columns)
 for k=1:Nsc
     eta = 0.5*rand(1);
     Bk = 1e3*(1+eta);
-    thetaScen = [2; -1; 0; 0; A*Bk*Ts^2];
-    % thetaScen = [2; -1; A*Bk*Ts^2];
+    % thetaScen = [2; -1; 0; 0; A*Bk*Ts^2];
+    thetaScen = [2; -1; A*Bk*Ts^2];
     sysVec{k+1} = arxSys(na, nb, nd, thetaScen, Ts);
 end
 
