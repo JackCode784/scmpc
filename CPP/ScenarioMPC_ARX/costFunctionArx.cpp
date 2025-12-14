@@ -59,19 +59,15 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
             // Compute system's current output
             computeArxOutput(currY, yPast, uSamples, thetaScenarios[l]);
 
-            for (i = 0; i < ny; i++)
-                err[i] = currY[i] - yref[i];
+            // for (i = 0; i < ny; i++)
+            //     err[i] = currY[i] - yref[i];
 
-            for (i = 0; i < ny; i++)
-                for (j = 0; j < ny; j++)
-                    cost[0] += err[i] * Q[i][j] * err[j];
+            // for (i = 0; i < ny; i++)
+            //     for (j = 0; j < ny; j++)
+            //         cost[0] += err[i] * Q[i][j] * err[j];
 
             // Update constraint violation cost
-            if (currY > ymax)
-                cost[1] += currY - ymax;
-
-            if (currY < ymin)
-                cost[1] += ymin - currY;
+            updateConstraintViolation(cost, currY);
 
             // Update past output and input samples
             // Assumption: SISO system
@@ -80,9 +76,17 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
             // yPast[l][0] = currY[0];
         }
 
+        // Update cost (only nominal system contribution)
+        for (i = 0; i < ny; i++)
+                err[i] = currY[i] - yref[i];
+
+            for (i = 0; i < ny; i++)
+                for (j = 0; j < ny; j++)
+                    cost[0] += err[i] * Q[i][j] * err[j];
+
         for (i = 1; i < na; i++)
-                yPast[i] = yPast[i - 1];
-            yPast[0] = currY[0];
+            yPast[i] = yPast[i - 1];
+        yPast[0] = currY[0];
 
         for (i = 1; i < nb + nd - 1; i++)
             uPast[i] = uPast[i - 1];
@@ -118,11 +122,7 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
                     cost[0] += err[i] * Q[i][j] * err[j];
 
             // Update constraint violation cost
-            if (currY > ymax)
-                cost[1] += currY - ymax;
-
-            if (currY < ymin)
-                cost[1] += ymin - currY;
+            updateConstraintViolation(cost, currY);
 
             // Update past output and input samples
             // Assumption: SISO system
@@ -132,8 +132,8 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
         }
 
         for (i = 1; i < na; i++)
-                yPast[i] = yPast[i - 1];
-            yPast[0] = currY[0];
+            yPast[i] = yPast[i - 1];
+        yPast[0] = currY[0];
 
         for (i = 1; i < nb + nd - 1; i++)
             uPast[i] = uPast[i - 1];
@@ -157,10 +157,6 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
                 cost[0] += err[i] * Q[i][j] * err[j];
 
         // Update constraint violation cost
-        if (currY > ymax)
-            cost[1] += currY - ymax;
-
-        if (currY < ymin)
-            cost[1] += ymin - currY;
+        updateConstraintViolation(cost, currY);
     }
 }

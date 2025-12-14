@@ -1,12 +1,12 @@
 #include "setup.h"
 
 //
-void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOpt], output_type yPast[na], input_type uPast[nb + nd - 1], output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, input_type pollMatrix[nOpt][2 * nOpt], int frameSize[nOpt], theta_type thetaScenarios[Nscen+1][nTheta])
+void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOpt], output_type yPast[na], input_type uPast[nb + nd - 1], output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, input_type pollMatrix[nOpt][2 * nOpt], int frameSize[nOpt], theta_type thetaScenarios[Nscen + 1][nTheta])
 {
 	// #pragma HLS ALLOCATION instances=costFunction limit=6 function
 
 	// flag indicating if one of the polling points is better than the current one
-	static bool success = false;
+	bool success = false;
 
 	// point under test
 	input_type testPoint[nOpt];
@@ -14,17 +14,18 @@ void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOp
 
 	// cost function and constraints violation of the test point
 	cost_type costTest[2];
+	cost_type originalCost = cost[0];
 	// #pragma HLS ARRAY_PARTITION variable = costTest dim = 1 complete
 
 	for (int i = 0; i < 2 * nOpt; i++)
 	{
-#pragma HLS PIPELINE
+		// #pragma HLS PIPELINE
 		//		#pragma HLS UNROLL
 
 		// extract one point from the polling matrix
 		for (int j = 0; j < nOpt; j++)
 		{
-#pragma HLS UNROLL
+			// #pragma HLS UNROLL
 			testPoint[j] = pollMatrix[j][i];
 		}
 
@@ -33,7 +34,7 @@ void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOp
 
 		// if the constraints are violated "more" in the test point than
 		// the current point, skip to the next test point
-		if (cost[1] == 0 && costTest[0] < cost[0])
+		if (cost[1] == 0 && costTest[1] == 0 && costTest[0] < cost[0])
 		{
 			success = true;
 			for (int i = 0; i < nOpt; i++)
@@ -41,7 +42,7 @@ void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOp
 			cost[0] = costTest[0];
 			cost[1] = costTest[1];
 		}
-		else if (costTest[1] < cost[1] || (costTest[1] == cost[1] && costTest[0] < cost[0]))
+		else if (cost[1] > 0 && costTest[1] < cost[1] || (costTest[1] == cost[1] && costTest[0] < cost[0]))
 		{
 			success = true;
 			for (int i = 0; i < nOpt; i++)
@@ -76,11 +77,11 @@ void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOp
 	// update the frame size
 	if (success == true)
 	{
-		if (costTest[0] < cost[0])
+		if (costTest[0] < originalCost)
 		{
 			for (int i = 0; i < nOpt; i++)
 			{
-#pragma HLS UNROLL
+				// #pragma HLS UNROLL
 				frameSize[i] = frameSize[i] + TAU;
 			}
 		}
@@ -90,7 +91,7 @@ void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOp
 	{
 		for (int i = 0; i < nOpt; i++)
 		{
-#pragma HLS UNROLL
+			// #pragma HLS UNROLL
 			frameSize[i] = frameSize[i] - TAU;
 		}
 	}

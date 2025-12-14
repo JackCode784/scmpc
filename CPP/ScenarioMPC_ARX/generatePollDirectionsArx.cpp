@@ -20,16 +20,16 @@ void generatePollDirectionsArx(input_type randomVector[nOpt], int frameIdx[nOpt]
 	int frameMeshDiff[nOpt];
 	input_type mesh[nOpt];
 
-	for (int i = 0; i < nOpt; i++)
-	{
-		frameMeshDiff[i] = frameIdx[i] - meshIdx[i] + C;
-		mesh[i] = 1;
-		// // mesh[i] = mesh[i] << frameMeshDiff[i];
-		for (int j = 0; j < frameMeshDiff[i]; j++)
-		{
-			mesh[i] *= 2;
-		}
-	}
+	// for (int i = 0; i < nOpt; i++)
+	// {
+	// 	frameMeshDiff[i] = frameIdx[i] - meshIdx[i] + C;
+	// 	mesh[i] = 1;
+	// 	// // mesh[i] = mesh[i] << frameMeshDiff[i];
+	// 	for (int j = 0; j < frameMeshDiff[i]; j++)
+	// 	{
+	// 		mesh[i] *= 2;
+	// 	}
+	// }
 
 	// generate Householder matrix starting with a random vector
 	generateHouseholderMatrix(randomVector, H);
@@ -40,6 +40,14 @@ void generatePollDirectionsArx(input_type randomVector[nOpt], int frameIdx[nOpt]
 	// fill B matrix with polling directions
 	for (int i = 0; i < nOpt; i++)
 	{
+		frameMeshDiff[i] = frameIdx[i] - meshIdx[i] + C;
+		mesh[i] = 1;
+		// // mesh[i] = mesh[i] << frameMeshDiff[i];
+		for (int j = 0; j < frameMeshDiff[i]; j++)
+		{
+			mesh[i] *= 2;
+		}
+
 		for (int j = 0; j < nOpt; j++)
 		{
 			// Saturates householder matrix entries

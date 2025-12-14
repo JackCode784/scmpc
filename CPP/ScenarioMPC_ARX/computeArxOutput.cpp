@@ -12,5 +12,5 @@ void computeArxOutput(output_type yRes[], output_type yPast[na], input_type uSam
         yRes[0] += yPast[i] * theta[i];
 
     for(int i = na; i < nTheta; i++)
-        yRes[0] += uSamples[i-na] * theta[i];
+        yRes[0] += uSamples[i-na+nd] * theta[i];
 }

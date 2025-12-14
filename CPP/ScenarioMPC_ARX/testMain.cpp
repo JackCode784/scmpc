@@ -1,9 +1,13 @@
 #include "setup.h"
+#include <cstdlib>
 #include <stdio.h>
+#include <time.h>
 
 int main(void)
 {
-    printf("Test run ARX with MADS\n\n");
+    printf("\nTest run ARX with MADS\n\n");
+
+    srand(time(NULL)); // different random number each time
 
     int nSim = 50;
     output_type yInit[na] = {0};         // output past samples
@@ -52,7 +56,7 @@ int main(void)
     for (int k = 0; k < nSim; k++)
     {
         // for (int idxScen = 0; idxScen < Nscen + 1; idxScen++)
-        fprintf(fp, "%f %f ", uSim[k], ySim[k]);
+        fprintf(fp, "%lf %lf", uSim[k], ySim[k]);
         fprintf(fp, "\n");
     }
     fclose(fp);

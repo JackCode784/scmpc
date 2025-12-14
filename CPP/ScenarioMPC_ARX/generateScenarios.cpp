@@ -8,7 +8,7 @@ void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta])
 {
     theta_type thetaRange[nTheta];
 
-    srand(time(0)); // different random number each time
+    // srand(time(NULL)); // different random number each time
 
     for (int i = 0; i < nTheta; i++)
         thetaScenarios[Nscen][i] = thetaNominal[i];
