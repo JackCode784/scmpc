@@ -1,0 +1,137 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# debug information files
+*.dwo
+
+# vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+!*.code-workspace
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+# Vitis HLS
+*.swp
+*.so
+*.o
+*.log
+updategit.sh
+
+# -------------------------
+# Vitis HLS / Vivado outputs
+# -------------------------
+
+# HLS solution directories (synthesis/simulation/reports/builds)
+solution*/
+solution*/**/syn/
+solution*/**/impl/
+solution*/**/sim/
+solution*/**/csim.results/
+solution*/**/ref/
+solution*/**/report/
+
+# Vivado project / implementation artifacts
+*.cache/
+*.runs/
+*.sim/
+*.hw/
+*.ip_user_files/
+*.Xil/
+*.backup/
+*.str
+*.jou
+*.log
+*.wdb
+
+# xsim / simulator folders
+xsim.dir/
+*.pb
+*.jou
+
+# Generated IP/build artifacts
+*.xo
+*.xsa
+*.bit
+*.elf
+*.bin
+*.mcs
+
+# Common build artifacts
+build/
+dist/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+
+# Tool-specific temp / state
+*.tmp
+*.timestamp
+*.retry
+*.cache
+*.settings/
+
+# -------------------------
+# Editor / OS files
+# -------------------------
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python venv (optional, include if you have python build scripts)
+venv/
+.env/
+
+# Keep README or other docs even if placed in generated dirs:
+!*/README.md
