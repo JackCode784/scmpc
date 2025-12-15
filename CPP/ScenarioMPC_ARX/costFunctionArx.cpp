@@ -10,8 +10,17 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
     cost[1] = 0;
 
     input_type uSamples[nb + nd];
+    input_type uPastCurr[nb+nd-1];
     output_type currY[ny];
     output_type err[ny];
+    output_type yPastCurr[na];
+
+    // initialize internal copies of yPast, uPast
+    for(int i = 0; i < na; i++)
+        yPastCurr[i] = yPast[i];
+
+    for(int i = 0; i < nb + nd - 1; i++)
+        uPastCurr[i] = uPast[i];
 
     // Generic indexes
     int i, j;
@@ -43,7 +52,7 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
         // Fill uSamples
         uSamples[0] = currU[k];
         for (i = 1; i < nb + nd; i++)
-            uSamples[i] = uPast[i - 1];
+            uSamples[i] = uPastCurr[i - 1];
 
         //// Update cost
         // Assumption: SISO system
@@ -57,7 +66,7 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
         for (int l = 0; l < Nscen + 1; l++)
         {
             // Compute system's current output
-            computeArxOutput(currY, yPast, uSamples, thetaScenarios[l]);
+            computeArxOutput(currY, yPastCurr, uSamples, thetaScenarios[l]);
 
             // for (i = 0; i < ny; i++)
             //     err[i] = currY[i] - yref[i];
@@ -85,21 +94,21 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
                     cost[0] += err[i] * Q[i][j] * err[j];
 
         for (i = 1; i < na; i++)
-            yPast[i] = yPast[i - 1];
-        yPast[0] = currY[0];
+            yPastCurr[i] = yPastCurr[i - 1];
+        yPastCurr[0] = currY[0];
 
         for (i = 1; i < nb + nd - 1; i++)
-            uPast[i] = uPast[i - 1];
-        uPast[0] = uSamples[0]; // currU[k]
+            uPastCurr[i] = uPastCurr[i - 1];
+        uPastCurr[0] = uSamples[0]; // currU[k]
     }
 
     // Compute cost after control horizon
     for (int k = controlHzn; k < predictionHzn - 1; k++)
     {
         // Fill uSamples
-        uSamples[0] = uPast[0];
+        uSamples[0] = uPastCurr[0];
         for (i = 1; i < nb + nd; i++)
-            uSamples[i] = uPast[i - 1];
+            uSamples[i] = uPastCurr[i - 1];
 
         //// Update cost
         // Assumption: SISO system
@@ -112,7 +121,7 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
         for (int l = 0; l < Nscen + 1; l++)
         {
             // Compute system's current output
-            computeArxOutput(currY, yPast, uSamples, thetaScenarios[l]);
+            computeArxOutput(currY, yPastCurr, uSamples, thetaScenarios[l]);
 
             for (i = 0; i < ny; i++)
                 err[i] = currY[i] - yref[i];
@@ -132,22 +141,22 @@ void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[
         }
 
         for (i = 1; i < na; i++)
-            yPast[i] = yPast[i - 1];
-        yPast[0] = currY[0];
+            yPastCurr[i] = yPastCurr[i - 1];
+        yPastCurr[0] = currY[0];
 
         for (i = 1; i < nb + nd - 1; i++)
-            uPast[i] = uPast[i - 1];
-        uPast[0] = uSamples[0];
+            uPastCurr[i] = uPastCurr[i - 1];
+        uPastCurr[0] = uSamples[0];
     }
 
     // Last time instant (use P matrix)
-    uSamples[0] = uPast[0];
+    uSamples[0] = uPastCurr[0];
     for (i = 1; i < nb + nd; i++)
-        uSamples[i] = uPast[i - 1];
+        uSamples[i] = uPastCurr[i - 1];
 
     for (int l = 0; l < Nscen + 1; l++)
     {
-        computeArxOutput(currY, yPast, uSamples, thetaScenarios[l]);
+        computeArxOutput(currY, yPastCurr, uSamples, thetaScenarios[l]);
 
         for (i = 0; i < ny; i++)
             err[i] = currY[i] - yref[i];

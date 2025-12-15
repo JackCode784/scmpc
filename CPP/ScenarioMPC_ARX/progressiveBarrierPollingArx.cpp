@@ -1,7 +1,9 @@
 #include "setup.h"
 
-//
-void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOpt], output_type yPast[na], input_type uPast[nb + nd - 1], output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, input_type pollMatrix[nOpt][2 * nOpt], int frameSize[nOpt], theta_type thetaScenarios[Nscen + 1][nTheta])
+// This computes the next optimal point from the possible poll points in pollMatrix.
+// currentCost is the cost for currentPoint
+// currentPoint is updated when a new best point is found
+void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nOpt], output_type yPast[na], input_type uPast[nb + nd - 1], output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, input_type pollMatrix[nOpt][2 * nOpt], int frameSize[nOpt], theta_type thetaScenarios[Nscen + 1][nTheta])
 {
 	// #pragma HLS ALLOCATION instances=costFunction limit=6 function
 
@@ -13,8 +15,8 @@ void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOp
 	// #pragma HLS ARRAY_PARTITION variable = testPoint dim = 1 complete
 
 	// cost function and constraints violation of the test point
-	cost_type costTest[2];
-	cost_type originalCost = cost[0];
+	cost_type costTestPoint[2];
+	cost_type originalCost = bestCost[0];
 	// #pragma HLS ARRAY_PARTITION variable = costTest dim = 1 complete
 
 	for (int i = 0; i < 2 * nOpt; i++)
@@ -30,25 +32,25 @@ void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOp
 		}
 
 		// compute the cost function and the constraints violation in a test point
-		costFunctionArx(costTest, yPast, testPoint, uPast, yref, predictionHzn, controlHzn, thetaScenarios);
+		costFunctionArx(costTestPoint, yPast, testPoint, uPast, yref, predictionHzn, controlHzn, thetaScenarios);
 
 		// if the constraints are violated "more" in the test point than
 		// the current point, skip to the next test point
-		if (cost[1] == 0 && costTest[1] == 0 && costTest[0] < cost[0])
+		if (bestCost[1] == 0 && costTestPoint[1] == 0 && costTestPoint[0] < bestCost[0])
 		{
 			success = true;
 			for (int i = 0; i < nOpt; i++)
-				currentPoint[i] = testPoint[i];
-			cost[0] = costTest[0];
-			cost[1] = costTest[1];
+				bestPoint[i] = testPoint[i];
+			bestCost[0] = costTestPoint[0];
+			bestCost[1] = costTestPoint[1];
 		}
-		else if (cost[1] > 0 && costTest[1] < cost[1] || (costTest[1] == cost[1] && costTest[0] < cost[0]))
+		else if (bestCost[1] > 0 && costTestPoint[1] < bestCost[1] || (costTestPoint[1] == bestCost[1] && costTestPoint[0] < bestCost[0]))
 		{
 			success = true;
 			for (int i = 0; i < nOpt; i++)
-				currentPoint[i] = testPoint[i];
-			cost[0] = costTest[0];
-			cost[1] = costTest[1];
+				bestPoint[i] = testPoint[i];
+			bestCost[0] = costTestPoint[0];
+			bestCost[1] = costTestPoint[1];
 		}
 		// 		if (costTest[1] > cost[1])
 		// 		{
@@ -77,7 +79,7 @@ void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOp
 	// update the frame size
 	if (success == true)
 	{
-		if (costTest[0] < originalCost)
+		if (bestCost[0] < originalCost)
 		{
 			for (int i = 0; i < nOpt; i++)
 			{
