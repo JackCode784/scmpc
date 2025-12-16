@@ -3,13 +3,13 @@
 // Uses MADS alg to compute optimal input sequence for ARX system
 void MADSARX(input_type uOpt[nOpt], const input_type uInit[nb+nd-1], const output_type yInit[na], const output_type yref[ny], const theta_type thetaScenarios[Nscen][nTheta], hzn_type predictionHzn, hzn_type controlHzn)
 {
-	int frameIdx[nOpt];						// initial predefined frame size
-	int meshIdx[nOpt];						// mesh size
+	mesh_exp_type frameExp[nOpt];						// initial predefined frame size
+	mesh_exp_type meshExp[nOpt];						// mesh size
 	input_type pollMatrix[nOpt][2*nOpt];	// columns are poll points
 	cost_type initialCost[2];	 			// cost function and constraints violation
 
 	for (int i = 0; i < nOpt; i++)
-		frameIdx[i] = D[i];	// initialize frame exp
+		frameExp[i] = D[i];	// initialize frame exp
 
 	// Compute the cost function and the constraints violation in the initial point
 	costFunctionArx(initialCost, yInit, uOpt, uInit, yref, predictionHzn, controlHzn, thetaScenarios);
@@ -19,18 +19,18 @@ void MADSARX(input_type uOpt[nOpt], const input_type uInit[nb+nd-1], const outpu
 
 		// update mesh size
 		for (int i = 0; i < nOpt; i++) {
-			if (frameIdx[i] < -12) {
+			if (frameExp[i] < -12) {
 				break;
-			} else if (frameIdx[i] < 0) {
-				meshIdx[i] = frameIdx[i] + frameIdx[i];
+			} else if (frameExp[i] < 0) {
+				meshExp[i] = frameExp[i] + frameExp[i];
 			} else {
-				meshIdx[i] = frameIdx[i];
+				meshExp[i] = frameExp[i];
 			}
 		}
 
-		generatePollMatrixArx(uOpt, frameIdx, meshIdx, pollMatrix);
+		generatePollMatrixArx(uOpt, frameExp, meshExp, pollMatrix);
 
-		progressiveBarrierPollingArx(initialCost, uOpt, yInit, uInit, yref, predictionHzn, controlHzn, pollMatrix, frameIdx, thetaScenarios);
+		progressiveBarrierPollingArx(initialCost, uOpt, yInit, uInit, yref, predictionHzn, controlHzn, pollMatrix, frameExp, thetaScenarios);
 	}
 
 }

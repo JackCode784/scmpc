@@ -1,52 +1,34 @@
 #include "setup.h"
 #include <cmath>
-// #include "hls_math.h"
+#ifndef DEBUG_MATLAB
+#include "hls_math.h"
+#endif
 
-void generateHouseholderMatrix(const input_type v[nOpt], input_type H[nOpt][nOpt]);
+void generateHouseholderMatrix(const rand_type v[nOpt], input_type H[nOpt][nOpt]);
 
 // Genearte a matrix of directions to be summed to the current point in MADS iteration
-void generatePollDirectionsArx(const input_type randomVector[nOpt], const int frameIdx[nOpt], const int meshIdx[nOpt], input_type directions[nOpt][2 * nOpt])
+void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], direction_type directions[nOpt][2 * nOpt])
 {
 
 	// Householder matrix
 	input_type H[nOpt][nOpt] = {0};
 
-	// norms of every column of the Householder matrix
-	// input_type hMax[nOpt] = {0};
-
 	// columns are polling directions
-	input_type B[nOpt][nOpt];
+	direction_type B[nOpt][nOpt];
 
-	int frameMeshDiff[nOpt];
-	input_type mesh[nOpt];
-
-	// for (int i = 0; i < nOpt; i++)
-	// {
-	// 	frameMeshDiff[i] = frameIdx[i] - meshIdx[i] + C;
-	// 	mesh[i] = 1;
-	// 	// // mesh[i] = mesh[i] << frameMeshDiff[i];
-	// 	for (int j = 0; j < frameMeshDiff[i]; j++)
-	// 	{
-	// 		mesh[i] *= 2;
-	// 	}
-	// }
+	mesh_exp_type frameMeshDiff[nOpt];
+	mesh_type mesh[nOpt];
 
 	// generate Householder matrix starting with a random vector
 	generateHouseholderMatrix(randomVector, H);
-
-	// compute the infinity norm of every column of the Householder matrix
-	//	generateHMax(hMax, H);
 
 	// fill B matrix with polling directions
 	for (int i = 0; i < nOpt; i++)
 	{
 		frameMeshDiff[i] = frameIdx[i] - meshIdx[i] + C;
 		mesh[i] = 1;
-		// // mesh[i] = mesh[i] << frameMeshDiff[i];
 		for (int j = 0; j < frameMeshDiff[i]; j++)
-		{
 			mesh[i] *= 2;
-		}
 
 		for (int j = 0; j < nOpt; j++)
 		{
@@ -69,7 +51,7 @@ void generatePollDirectionsArx(const input_type randomVector[nOpt], const int fr
 }
 
 // generate the Householder matrix starting with a random vector
-void generateHouseholderMatrix(const input_type v[nOpt], input_type H[nOpt][nOpt])
+void generateHouseholderMatrix(const rand_type v[nOpt], input_type H[nOpt][nOpt])
 {
 	//	input_type norm = 0;
 	//

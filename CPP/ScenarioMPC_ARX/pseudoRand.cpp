@@ -3,13 +3,13 @@
 #include <time.h>
 
 // Check if correct, random vector is only 2-dimensional instead of nDim_CTRL
-void pseudoRandArx(input_type randomVector[nOpt])
+void pseudoRandArx(rand_type randomVector[nOpt])
 {
     // srand(time(NULL)); // different random number each time
 
 	for(int i = 0; i < nOpt; i++)
 	{
-		randomVector[i] = static_cast <input_type> (rand()) / (static_cast <input_type> (RAND_MAX)); // random number in [0, 1]
+		randomVector[i] = static_cast <rand_type> (rand()) / (static_cast <rand_type> (RAND_MAX)); // random number in [0, 1]
 		randomVector[i] *= 2;	// random number in [0, 2]
 		randomVector[i] -= 1;	// random number in [-1, 1]
 	}

@@ -1,9 +1,11 @@
-#ifndef _MADS_H_
-#define _MADS_H_
+#define DEBUG_MATLAB
 
+#ifndef DEBUG_MATLAB
 // Library for fixed point number representation
-// #include <ap_fixed.h>
+#include <ap_fixed.h>
+#endif
 
+#ifndef DEBUG_MATLAB
 /*
     ----------------------------------------
     Data types definitions  
@@ -11,34 +13,42 @@
 */
 
 // Fixed point data representation for the circuit input
-// typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> fxd_in;
+typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> input_type;
 
 // Fixed point data representation for the circuit output
-// typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> fxd_out;
+typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> output_type;
 
-// typedef ap_ufixed<32, 9, AP_RND_CONV, AP_SAT> data_cost;
-// typedef ap_fixed<18, 3, AP_TRN, AP_WRAP> data_rand;
-// typedef ap_ufixed<36, 12, AP_TRN, AP_WRAP> data_meshSize;
-// typedef ap_int<6> data_meshExp;
-// typedef ap_int<12> data_dir;
+typedef ap_ufixed<32, 9, AP_RND_CONV, AP_SAT> cost_type;
+typedef ap_fixed<18, 3, AP_TRN, AP_WRAP> rand_type;
+typedef ap_ufixed<36, 12, AP_TRN, AP_WRAP> mesh_type;
+typedef ap_int<6> mesh_exp_type;
+typedef ap_int<12> direction_type;
 
 // Fixed point data representation for the data to convert input
 // from ADC range to actual (model range) and from actual range
 // to DAC range
-// typedef ap_fixed<32, 14, AP_RND_CONV, AP_SAT> fxd_conv;
+typedef ap_fixed<32, 14, AP_RND_CONV, AP_SAT> conv_type;
 
 // Fixed point data representation for every signal inside the algorithm
-// typedef ap_fixed<18, 5> fxd;
-
+typedef ap_fixed<18, 5> alg_type;
+#else
 /* --------------------------------------------------------------------- */
 /*  Datatypes for debugging in VS Code  */
 /* --------------------------------------------------------------------- */
+typedef int mesh_exp_type;  // datatype for mesh exponents
+typedef double rand_type;   // datatype for random vectors
+typedef double alg_type;    // datatype for algorithm signals
+typedef double mesh_type;   // datatype for mesh points (same as input_type)
 typedef double output_type; // datatype for output samples
 typedef double input_type;  // datatype for input samples
 typedef double cost_type;   // datatype for cost function value
 typedef float weights_type; // datatype for weights matrices
 typedef float theta_type;   // datatype for theta ARX parameters
 typedef short hzn_type;     // datatype for horizons values
+typedef int direction_type; // datatype for directions matrix
+typedef double conv_type;   // datatype for DAC
+typedef double err_type;    // datatype for output-reference difference
+#endif
 
 /*
     ----------------------------------------
@@ -46,11 +56,9 @@ typedef short hzn_type;     // datatype for horizons values
     ----------------------------------------    
 */
 // Number of system states (x_k)
-// #define nX 3
-#define nx 2
+// #define nx 2
 
 // Number of system inputs (u_k)
-// #define nU 1
 #define nu 1    // ARX assumption: SISO system
 
 // Rewritten for ARX: number of system output
@@ -63,7 +71,6 @@ typedef short hzn_type;     // datatype for horizons values
 // #define nD 0
 
 // Number of reference inputs
-// #define nRef 1
 #define ny_ref 1
 
 /*
@@ -72,11 +79,9 @@ typedef short hzn_type;     // datatype for horizons values
     ----------------------------------------    
 */
 // Prediction horizon
-// #define N 5
 #define Nhor 5
 
 // Control horizon
-// #define Nu 3
 #define NhorU 3
 
 // Number of scenarios
@@ -85,19 +90,19 @@ typedef short hzn_type;     // datatype for horizons values
 // MPC saturation constraints
 // static const fxd UMIN[nU] = {
 // -0.300000};
-static const double umin[nu] = {-0.3}; // rewritten for arx
+static const alg_type UMIN[nu] = {-0.3}; // rewritten for arx
 
 // static const fxd UMAX[nU] = {
 // 0.300000};
-static const double umax[nu] = {0.3}; // rewritten for arx
+static const alg_type UMAX[nu] = {0.3}; // rewritten for arx
 
 // static const fxd XMIN[nX] = {
 // -8, -0.8, -0.300000};
-static const double ymin[ny] = {0}; // rewritten for arx
+static const alg_type YMIN[ny] = {0}; // rewritten for arx
 
 // static const fxd XMAX[nX] = {
 // 8, 0.8, 0.300000};
-static const double ymax[ny] = {8}; // rewritten for arx
+static const alg_type YMAX[ny] = {8}; // rewritten for arx
 
 // Number of optimization variables (nu * NhorU)
 static const int nOpt = nu * NhorU;
@@ -105,56 +110,45 @@ static const int nOpt = nu * NhorU;
 // Number of controller inputs [x_k; u_(k-1)]
 // #define nX_CTRL 3
 
-// #define nX_CTRL_sc 23
-
-// #define nDim_CTRL 3
-
-// Maximum number of iterations
-// #define max_iter 20
-
-// Index of the input to be tracked
-// static const fxd ref_idx[nRef] = {0};
-
 /*
     ----------------------------------------
     MADS params  
     ----------------------------------------    
 */
-// #define K 7
 #define MADS_ITER 7
 #define TAU 1
 #define C 1
-// static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5; //2^-c
-static const float expC = 0.5;
+#ifndef DEBUG_MATLAB
+static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5; //2^-c
+#else
+static const input_type expC = 0.5;
+#endif
 
 // initial frame size
-// static const data_meshExp D[nX_CTRL] = { -8, -8 };
-static const int D[nOpt] = {-8, -8, -8};
+static const mesh_exp_type D[nOpt] = {-8, -8, -8};
 
 /*
     ----------------------------------------
-    Matrices for all scenarios  
+    State space-representation  
     ----------------------------------------    
 */
+// static const float doubleIntegratorA[nx][nx] = {
+//     {0, 1e3},
+//     {0, 0}
+// };
 
-// State-space representation
-static const float doubleIntegratorA[nx][nx] = {
-    {0, 1e3},
-    {0, 0}
-};
+// static const float doubleIntegratorB[nx][nu] = {
+//     {0},
+//     {1e3}
+// };
 
-static const float doubleIntegratorB[nx][nu] = {
-    {0},
-    {1e3}
-};
+// static const float doubleIntegratorC[ny][nx] = {
+//     {1, 0}
+// };
 
-static const float doubleIntegratorC[ny][nx] = {
-    {1, 0}
-};
-
-static const float doubleIntegratorD[ny][nu] = {
-    {0}
-};
+// static const float doubleIntegratorD[ny][nu] = {
+//     {0}
+// };
 
 /*
     ----------------------------------------
@@ -201,7 +195,7 @@ static const weights_type R[nu][nu] = {
 
 // Default control
 // static const fxd default_u[nU] = {0.000000};
-static const float default_u[nOpt] = {0.0};
+static const input_type default_u[nOpt] = {0.0};
 
 // Arrays to transform the inputs from their circuit range
 // to the actual (model) range:
@@ -253,13 +247,11 @@ static const float default_u[nOpt] = {0.0};
 */
 void computeArxOutput(output_type yRes[], const output_type yPast[na], const input_type uSamples[nb+nd], const theta_type theta[nTheta]);
 void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, const theta_type thetaScenarios[Nscen + 1][nTheta]);
-void generatePollDirectionsArx(const input_type randomVector[nOpt], const int frameIdx[nOpt], const int meshIdx[nOpt], input_type directions[nOpt][2 * nOpt]);
-void generatePollMatrixArx(const input_type currU[nOpt], const int frameIdx[nOpt], const int meshIdx[nOpt], input_type pollMatrix[nOpt][2 * nOpt]);
+void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], direction_type directions[nOpt][2 * nOpt]);
+void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], input_type pollMatrix[nOpt][2 * nOpt]);
 void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta]);
 void generateSCMPCControl(input_type uOpt[NhorU], theta_type thetaScenarios[Nscen+1][nTheta], const output_type yInit[na], const input_type uInit[nb+nd-1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn);
 void MADSARX(input_type uOpt[nOpt], const input_type uInit[nb+nd-1], const output_type yInit[na], const output_type yref[ny], const theta_type thetaScenarios[Nscen][nTheta], hzn_type predictionHzn, hzn_type controlHzn);
-void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nOpt], const output_type yPast[na], const input_type uPast[nb + nd - 1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, const input_type pollMatrix[nOpt][2 * nOpt], int frameSize[nOpt], const theta_type thetaScenarios[Nscen + 1][nTheta]);
-void pseudoRandArx(input_type randomVector[nOpt]);
+void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nOpt], const output_type yPast[na], const input_type uPast[nb + nd - 1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, const input_type pollMatrix[nOpt][2 * nOpt], mesh_exp_type frameSize[nOpt], const theta_type thetaScenarios[Nscen + 1][nTheta]);
+void pseudoRandArx(rand_type randomVector[nOpt]);
 void updateConstraintViolation(cost_type cost[2], const output_type currY[]);
-
-#endif
