@@ -4,7 +4,7 @@
 // Computes ARX ***nominal*** model output using past output and input samples.
 // ARX output is the scalar product between past output/input samples and theta
 // parameters
-void computeArxOutput(output_type yRes[], output_type yPast[na], input_type uSamples[nb+nd], theta_type theta[nTheta])
+void computeArxOutput(output_type yRes[], const output_type yPast[na], const input_type uSamples[nb+nd], const theta_type theta[nTheta])
 {
     yRes[0] = 0;
 

@@ -251,15 +251,15 @@ static const float default_u[nOpt] = {0.0};
     Functions prototypes  
     ----------------------------------------    
 */
-void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[nOpt], input_type uPast[nb + nd - 1], output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, theta_type thetaScenarios[Nscen + 1][nTheta]);
-void computeArxOutput(output_type yRes[], output_type yPast[na], input_type uSamples[nb+nd], theta_type theta[nTheta]);
-void generateScenarios(theta_type thetaScenarios[Nscen+1][nTheta]);
-void generateSCMPCControl(input_type uOpt[NhorU], theta_type thetaScenarios[Nscen+1][nTheta], output_type yInit[na], input_type uInit[nb+nd-1], output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn);
-void MADSARX(input_type uOpt[nOpt], input_type uInit[nb+nd-1], output_type yInit[na], output_type yref[ny], theta_type thetaScenarios[Nscen][nTheta], hzn_type predictionHzn, hzn_type controlHzn);
-void generatePollMatrixArx(input_type currU[nOpt], int frameIdx[nOpt], int meshIdx[nOpt], input_type pollMatrix[nOpt][2*nOpt]);
-void progressiveBarrierPollingArx(cost_type cost[2], input_type currentPoint[nOpt], output_type yPast[na], input_type uPast[nb + nd - 1], output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, input_type pollMatrix[nOpt][2 * nOpt], int frameSize[nOpt], theta_type thetaScenarios[Nscen+1][nTheta]);
-void generatePollDirectionsArx(input_type randomVector[nOpt], int frameIdx[nOpt], int meshIdx[nOpt], input_type directions[nOpt][2 * nOpt]);
+void computeArxOutput(output_type yRes[], const output_type yPast[na], const input_type uSamples[nb+nd], const theta_type theta[nTheta]);
+void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, const theta_type thetaScenarios[Nscen + 1][nTheta]);
+void generatePollDirectionsArx(const input_type randomVector[nOpt], const int frameIdx[nOpt], const int meshIdx[nOpt], input_type directions[nOpt][2 * nOpt]);
+void generatePollMatrixArx(const input_type currU[nOpt], const int frameIdx[nOpt], const int meshIdx[nOpt], input_type pollMatrix[nOpt][2 * nOpt]);
+void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta]);
+void generateSCMPCControl(input_type uOpt[NhorU], theta_type thetaScenarios[Nscen+1][nTheta], const output_type yInit[na], const input_type uInit[nb+nd-1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn);
+void MADSARX(input_type uOpt[nOpt], const input_type uInit[nb+nd-1], const output_type yInit[na], const output_type yref[ny], const theta_type thetaScenarios[Nscen][nTheta], hzn_type predictionHzn, hzn_type controlHzn);
+void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nOpt], const output_type yPast[na], const input_type uPast[nb + nd - 1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, const input_type pollMatrix[nOpt][2 * nOpt], int frameSize[nOpt], const theta_type thetaScenarios[Nscen + 1][nTheta]);
 void pseudoRandArx(input_type randomVector[nOpt]);
-void updateConstraintViolation(cost_type cost[2], output_type currY[]);
+void updateConstraintViolation(cost_type cost[2], const output_type currY[]);
 
 #endif

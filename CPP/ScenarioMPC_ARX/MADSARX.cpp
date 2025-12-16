@@ -1,7 +1,7 @@
 #include "setup.h"
 
 // Uses MADS alg to compute optimal input sequence for ARX system
-void MADSARX(input_type uOpt[nOpt], input_type uInit[nb+nd-1], output_type yInit[na], output_type yref[ny], theta_type thetaScenarios[Nscen][nTheta], hzn_type predictionHzn, hzn_type controlHzn)
+void MADSARX(input_type uOpt[nOpt], const input_type uInit[nb+nd-1], const output_type yInit[na], const output_type yref[ny], const theta_type thetaScenarios[Nscen][nTheta], hzn_type predictionHzn, hzn_type controlHzn)
 {
 	int frameIdx[nOpt];						// initial predefined frame size
 	int meshIdx[nOpt];						// mesh size

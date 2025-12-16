@@ -2,7 +2,7 @@
 #include "math.h"
 
 // Generate matrix whose columns are poll points for the computation of cost function in MADS alg
-void generatePollMatrixArx(input_type currU[nOpt], int frameIdx[nOpt], int meshIdx[nOpt], input_type pollMatrix[nOpt][2 * nOpt])
+void generatePollMatrixArx(const input_type currU[nOpt], const int frameIdx[nOpt], const int meshIdx[nOpt], input_type pollMatrix[nOpt][2 * nOpt])
 {
 	// internal copy of the current point
 	input_type currU_int[nOpt];

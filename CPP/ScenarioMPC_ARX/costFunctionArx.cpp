@@ -3,7 +3,7 @@
 
 // costFunctionArx computes the cost for the current point currU.
 // ARX system assumption: system is SISO (single input single output), i.e. nu = ny = 1
-void costFunctionArx(cost_type cost[2], output_type yPast[na], input_type currU[nOpt], input_type uPast[nb + nd - 1], output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, theta_type thetaScenarios[Nscen + 1][nTheta])
+void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, const theta_type thetaScenarios[Nscen + 1][nTheta])
 {
     // Following MATLAB implementation
     cost[0] = 0; // cost init

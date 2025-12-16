@@ -2,10 +2,10 @@
 #include <cmath>
 // #include "hls_math.h"
 
-void generateHouseholderMatrix(input_type v[nOpt], input_type H[nOpt][nOpt]);
+void generateHouseholderMatrix(const input_type v[nOpt], input_type H[nOpt][nOpt]);
 
 // Genearte a matrix of directions to be summed to the current point in MADS iteration
-void generatePollDirectionsArx(input_type randomVector[nOpt], int frameIdx[nOpt], int meshIdx[nOpt], input_type directions[nOpt][2 * nOpt])
+void generatePollDirectionsArx(const input_type randomVector[nOpt], const int frameIdx[nOpt], const int meshIdx[nOpt], input_type directions[nOpt][2 * nOpt])
 {
 
 	// Householder matrix
@@ -69,7 +69,7 @@ void generatePollDirectionsArx(input_type randomVector[nOpt], int frameIdx[nOpt]
 }
 
 // generate the Householder matrix starting with a random vector
-void generateHouseholderMatrix(input_type v[nOpt], input_type H[nOpt][nOpt])
+void generateHouseholderMatrix(const input_type v[nOpt], input_type H[nOpt][nOpt])
 {
 	//	input_type norm = 0;
 	//
