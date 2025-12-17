@@ -12,12 +12,8 @@
     ----------------------------------------    
 */
 
-// Fixed point data representation for the circuit input
-typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> input_type;
-
-// Fixed point data representation for the circuit output
-typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> output_type;
-
+typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> digital_input_type;  // Fixed point data representation for the circuit input
+typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT> digital_output_type; // Fixed point data representation for the circuit output 
 typedef ap_ufixed<32, 9, AP_RND_CONV, AP_SAT> cost_type;
 typedef ap_fixed<18, 3, AP_TRN, AP_WRAP> rand_type;
 typedef ap_ufixed<36, 12, AP_TRN, AP_WRAP> mesh_type;
@@ -28,26 +24,38 @@ typedef ap_int<12> direction_type;
 // from ADC range to actual (model range) and from actual range
 // to DAC range
 typedef ap_fixed<32, 14, AP_RND_CONV, AP_SAT> conv_type;
+typedef ap_fixed<18, 5> alg_type; // Fixed point data representation for every signal inside the algorithm
 
-// Fixed point data representation for every signal inside the algorithm
-typedef ap_fixed<18, 5> alg_type;
+// The following are alg_type in fixed point
+typedef alg_type output_type;
+typedef alg_type input_type;
+typedef alg_type weights_type;
+typedef alg_type theta_type;
+typedef alg_type err_type;
+
 #else
 /* --------------------------------------------------------------------- */
 /*  Datatypes for debugging in VS Code  */
 /* --------------------------------------------------------------------- */
-typedef int mesh_exp_type;  // datatype for mesh exponents
+typedef int digital_input_type;     // datatype for digital input {0, ..., 2^12-1}
+typedef int digital_output_type;    // datatype for digital output {0, ..., 2^12-1}
+typedef double cost_type;   // datatype for cost function value
 typedef double rand_type;   // datatype for random vectors
-typedef double alg_type;    // datatype for algorithm signals
 typedef double mesh_type;   // datatype for mesh points (same as input_type)
+typedef int mesh_exp_type;  // datatype for mesh exponents
+typedef int direction_type; // datatype for directions matrix
+typedef float conv_type;    // WIP
+typedef double alg_type;    // datatype for algorithm signals
+
+// The following are alg_type in fixed point
 typedef double output_type; // datatype for output samples
 typedef double input_type;  // datatype for input samples
-typedef double cost_type;   // datatype for cost function value
 typedef float weights_type; // datatype for weights matrices
 typedef float theta_type;   // datatype for theta ARX parameters
-typedef short hzn_type;     // datatype for horizons values
-typedef int direction_type; // datatype for directions matrix
-typedef double conv_type;   // datatype for DAC
 typedef double err_type;    // datatype for output-reference difference
+
+// To be deleted?
+typedef short hzn_type;     // datatype for horizons values
 #endif
 
 /*

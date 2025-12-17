@@ -26,16 +26,22 @@ void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type fra
 
 		if (meshIdx[i] < 0)
 		{
-			// mesh[i] = mesh[i] >> (-meshIdx[i]);
+			#ifndef DEBUG_MATLAB
+			mesh[i] = mesh[i] >> (-meshIdx[i]);
+			#else
 			for (int j = 0; j < -meshIdx[i]; j++)
 				mesh[i] /= 2;
+			#endif
 		}
 		else
 		{
-			// mesh[i] = mesh[i] << meshIdx[i];
+			#ifndef DEBUG_MATLAB
+			mesh[i] = mesh[i] << meshIdx[i];
+			#else
 			for (int j = 0; j < meshIdx[i]; j++)
 				mesh[i] *= 2;
-		}
+			#endif
+			}
 
 		for (int j = 0; j < 2 * nOpt; j++)
 		{
