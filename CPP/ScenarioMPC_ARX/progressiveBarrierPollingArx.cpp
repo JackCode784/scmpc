@@ -3,7 +3,7 @@
 // This computes the next optimal point from the possible poll points in pollMatrix.
 // currentCost is the cost for currentPoint
 // currentPoint is updated when a new best point is found
-void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nOpt], const output_type yPast[na], const input_type uPast[nb + nd - 1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, const input_type pollMatrix[nOpt][2 * nOpt], mesh_exp_type frameExp[nOpt], const theta_type thetaScenarios[Nscen + 1][nTheta])
+void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nOpt], const output_type yPast[na], const input_type uPast[nb + nd - 1], const output_type yref, const input_type pollMatrix[nOpt][2 * nOpt], mesh_exp_type frameExp[nOpt], const theta_type thetaScenarios[Nscen + 1][nTheta])
 {
 	// #pragma HLS ALLOCATION instances=costFunction limit=6 function
 
@@ -32,7 +32,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nO
 		}
 
 		// compute the cost function and the constraints violation in a test point
-		costFunctionArx(costTestPoint, yPast, testPoint, uPast, yref, predictionHzn, controlHzn, thetaScenarios);
+		costFunctionArx(costTestPoint, yPast, testPoint, uPast, yref, thetaScenarios);
 
 		// if the constraints are violated "more" in the test point than
 		// the current point, skip to the next test point

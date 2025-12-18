@@ -5,15 +5,15 @@
 
 // costFunctionArx computes the cost for the current point currU.
 // ARX system assumption: system is SISO (single input single output), i.e. nu = ny = 1
-void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 1], const output_type yref[ny], hzn_type predictionHzn, hzn_type controlHzn, const theta_type thetaScenarios[Nscen + 1][nTheta])
+void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 1], const output_type yref, const theta_type thetaScenarios[Nscen + 1][nTheta])
 {
-    cost[0] = 0;    // cost init
-    cost[1] = 0;    // cost init
+    cost[0] = 0; // cost init
+    cost[1] = 0; // cost init
 
     input_type uSamples[nb + nd];
     input_type uPastCurr[nb + nd - 1];
-    output_type currY[ny];
-    err_type err[ny];
+    output_type currY;
+    err_type err;
     output_type yPastCurr[na];
 
     // initialize internal copies of yPast, uPast
@@ -26,7 +26,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
     // Input constraint violation
     for (int i = 0; i < nOpt; i++)
     {
-        if (currU[i] < UMIN[i] || currU[i] > UMAX[i])
+        if (currU[i] < UMIN || currU[i] > UMAX)
         {
             cost[1] = 500;
             break;
@@ -45,7 +45,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
     // }
 
     // Compute cost during control horizon
-    for (int k = 0; k < controlHzn; k++)
+    for (int k = 0; k < NhorU; k++)
     {
         // Fill uSamples
         uSamples[0] = currU[k];
@@ -53,7 +53,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
             uSamples[i] = uPastCurr[i - 1];
 
         // Cost contribution (current input)
-        cost[0] += uSamples[0] * R[0][0] * uSamples[0];
+        cost[0] += uSamples[0] * R * uSamples[0];
         // for(i = 0; i < nu; i++)
         //     for(j = 0; j < nu; j++)
         //         cost += uSamples[i][0] * R[i][j] * uSamples[j][0];
@@ -62,7 +62,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
         for (int l = 0; l < Nscen + 1; l++)
         {
             // Compute system's current output
-            computeArxOutput(currY, yPastCurr, uSamples, thetaScenarios[l]);
+            currY = computeArxOutput(yPastCurr, uSamples, thetaScenarios[l]);
 
             // Cost contribution (all sceanrios)
             // for (int i = 0; i < ny; i++)
@@ -77,17 +77,14 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
         }
 
         // Update cost (only nominal system contribution)
-        for (int i = 0; i < ny; i++)
-            err[i] = currY[i] - yref[i];
+        err = currY - yref;
 
-        for (int i = 0; i < ny; i++)
-            for (int j = 0; j < ny; j++)
-                cost[0] += err[i] * Q[i][j] * err[j];
+        cost[0] += err * Q * err;
 
         // Update initial conditions for next output
         for (int i = 1; i < na; i++)
             yPastCurr[i] = yPastCurr[i - 1];
-        yPastCurr[0] = currY[0];
+        yPastCurr[0] = currY;
 
         for (int i = 1; i < nb + nd - 1; i++)
             uPastCurr[i] = uPastCurr[i - 1];
@@ -95,7 +92,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
     }
 
     // Compute cost after control horizon
-    for (int k = controlHzn; k < predictionHzn - 1; k++)
+    for (int k = NhorU; k < Nhor - 1; k++)
     {
         // Fill uSamples
         uSamples[0] = uPastCurr[0];
@@ -103,7 +100,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
             uSamples[i] = uPastCurr[i - 1];
 
         // Cost contribution (current input)
-        cost[0] += uSamples[0] * R[0][0] * uSamples[0];
+        cost[0] += uSamples[0] * R * uSamples[0];
 
         // for(i = 0; i < nu; i++)
         //     for(j = 0; j < nu; j++)
@@ -112,7 +109,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
         for (int l = 0; l < Nscen + 1; l++)
         {
             // Compute system's current output
-            computeArxOutput(currY, yPastCurr, uSamples, thetaScenarios[l]);
+            currY = computeArxOutput(yPastCurr, uSamples, thetaScenarios[l]);
 
             // Cost contribution (all scenarios)
             // for (int i = 0; i < ny; i++)
@@ -127,17 +124,14 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
         }
 
         // Cost contribution (only nominal system)
-        for (int i = 0; i < ny; i++)
-            err[i] = currY[i] - yref[i];
+        err = currY - yref;
 
-        for (int i = 0; i < ny; i++)
-            for (int j = 0; j < ny; j++)
-                cost[0] += err[i] * Q[i][j] * err[j];
+        cost[0] += err * Q * err;
 
         // Update initial conditions for next output
         for (int i = 1; i < na; i++)
             yPastCurr[i] = yPastCurr[i - 1];
-        yPastCurr[0] = currY[0];
+        yPastCurr[0] = currY;
 
         for (int i = 1; i < nb + nd - 1; i++)
             uPastCurr[i] = uPastCurr[i - 1];
@@ -150,7 +144,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
     uSamples[0] = uPastCurr[0];
     for (int i = 1; i < nb + nd; i++)
         uSamples[i] = uPastCurr[i - 1];
-    
+
     // Cost contribution (current input)
     // cost[0] += uSamples[0] * R[0][0] * uSamples[0];
 
@@ -161,7 +155,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
     for (int l = 0; l < Nscen + 1; l++)
     {
         // Compute output for each scenario
-        computeArxOutput(currY, yPastCurr, uSamples, thetaScenarios[l]);
+        currY = computeArxOutput(yPastCurr, uSamples, thetaScenarios[l]);
 
         // Cost contribution (all scenarios)
         // for (int i = 0; i < ny; i++)
@@ -176,10 +170,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
     }
 
     // Cost contribution (only nominal system)
-    for (int i = 0; i < ny; i++)
-        err[i] = currY[i] - yref[i];
+    err = currY - yref;
 
-    for (int i = 0; i < ny; i++)
-        for (int j = 0; j < ny; j++)
-            cost[0] += err[i] * P[i][j] * err[j];
+    cost[0] += err * P * err;
 }

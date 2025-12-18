@@ -1,10 +1,10 @@
 #include "setup.h"
 
-void updateConstraintViolation(cost_type cost[2], const output_type currY[])
+void updateConstraintViolation(cost_type cost[2], output_type currY)
 {
-    if (currY[0] > YMAX[0])
-        cost[1] += currY[0] - YMAX[0];
+    if (currY > YMAX)
+        cost[1] += currY - YMAX;
 
-    if (currY[0] < YMIN[0])
-        cost[1] += YMIN[0] - currY[0];
+    if (currY < YMIN)
+        cost[1] += YMIN - currY;
 }
