@@ -1,5 +1,5 @@
 #include "setup.h"
-#ifndef DEBUG_MATLAB
+#ifndef DEBUG_MODE
 #include "hls_math.h"
 #endif
 

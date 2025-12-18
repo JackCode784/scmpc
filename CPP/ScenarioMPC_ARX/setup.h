@@ -1,11 +1,13 @@
-#define DEBUG_MATLAB
+#define DEBUG_MODE
 
-#ifndef DEBUG_MATLAB
+#ifdef DEBUG_MODE
+#define CONVERSIONS_MODE
+#else
 // Library for fixed point number representation
 #include <ap_fixed.h>
 #endif
 
-#ifndef DEBUG_MATLAB
+#ifndef DEBUG_MODE
 /*
     ----------------------------------------
     Data types definitions  
@@ -117,7 +119,7 @@ static const output_type YMAX = 8; // rewritten for arx
 #define MADS_ITER 7
 #define TAU 1
 #define C 1
-#ifndef DEBUG_MATLAB
+#ifndef DEBUG_MODE
 static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5; //2^-c
 #else
 static const input_type expC = 0.5;
@@ -186,16 +188,17 @@ static const weights_type Q = 1;
 // {10.000000} };
 static const weights_type R = 10;
 
-// #ifndef DEBUG_MATLAB
+// #ifndef DEBUG_MODE
 #define ADCMax 4095
 #define ADCMin 0
 #define ADCRange (ADCMax - ADCMin)
+
 #define YADCGain (ADCRange / (YMAX - YMIN))
 #define YDACGain (1 / YADCGain)
 #define YBias 0
 #define UADCGain (ADCRange / (UMAX - UMIN))
 #define UDACGain (1 / UADCGain)
-#define UBias 0
+#define UBias 2048
 // #endif
 
 // Default control
@@ -241,6 +244,9 @@ digital_output_type ADConvertY(output_type yAn);
 output_type DAConvertY(digital_output_type yDig);
 digital_input_type ADConvertU(input_type uAn);
 input_type DAConvertU(digital_input_type uDig);
+
+// Complete function
+void controller(digital_input_type uOptDig[NhorU], theta_type thetaScenarios[Nscen + 1][nTheta], const digital_output_type yInitDig[na], const digital_input_type uInitDig[nb + nd - 1], const digital_output_type yrefDig);
 
 // void extractU(fxd z[nDim_CTRL], fxd u_reg[nU], fxd u_old[nU]);
 // void shiftOpt(fxd optimum[nDim_CTRL]);

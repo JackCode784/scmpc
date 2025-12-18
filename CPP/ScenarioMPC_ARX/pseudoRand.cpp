@@ -5,7 +5,7 @@
 // Check if correct, random vector is only 2-dimensional instead of nDim_CTRL
 void pseudoRandArx(rand_type randomVector[nOpt])
 {
-	#ifdef DEBUG_MATLAB
+	#ifdef DEBUG_MODE
 	for(int i = 0; i < nOpt; i++)
 	{
 		randomVector[i] = static_cast <rand_type> (rand()) / (static_cast <rand_type> (RAND_MAX)); // random number in [0, 1]

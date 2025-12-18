@@ -1,6 +1,6 @@
 #include "setup.h"
 #include <cmath>
-#ifndef DEBUG_MATLAB
+#ifndef DEBUG_MODE
 #include "hls_math.h"
 #endif
 
