@@ -1,6 +1,8 @@
 #include "setup.h"
+#ifdef DEBUG_MODE
 #include <cstdlib> // rand()
 #include <ctime>   // time()
+#endif
 
 // Generalized way of creating new scenarios
 // Returns one theta row vector for each scenario. First row is nominal value for theta
@@ -11,6 +13,7 @@ void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta])
     for (int i = 0; i < nTheta; i++)
         thetaScenarios[Nscen][i] = thetaNominal[i];
 
+    #ifdef DEBUG_MODE
     for (int i = 0; i < nTheta; i++)
     {
         thetaRange[i] = thetaMax[i] - thetaMin[i];
@@ -21,4 +24,7 @@ void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta])
             thetaScenarios[j][i] += thetaMin[i];                                                          // random vector in [thetaMin, thetaMax]
         }
     }
+    #else 
+    // WIP
+    #endif
 }

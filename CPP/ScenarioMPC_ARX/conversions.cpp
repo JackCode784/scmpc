@@ -1,6 +1,5 @@
 #include "setup.h"
 
-// #ifndef DEBUG_MATLAB
 /*
  *	Each of these convert an input/output sample to digital or analogue
  */
@@ -27,4 +26,3 @@ input_type DAConvertU(digital_input_type uDig)
 	input_type uAn = (uDig - UBias) * UDACGain;
 	return uAn;
 }
-// #endif

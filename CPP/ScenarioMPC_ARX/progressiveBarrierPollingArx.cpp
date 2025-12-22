@@ -52,28 +52,6 @@ void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nO
 			bestCost[0] = costTestPoint[0];
 			bestCost[1] = costTestPoint[1];
 		}
-		// 		if (costTest[1] > cost[1])
-		// 		{
-		// 			continue;
-		// 		}
-		// 		// if the cost function is smaller in the test point than the
-		// 		// current point, or if the constraints are violated "less" in
-		// 		// the test point than the current point, then the iteration
-		// 		// is successful
-		// 		else if (costTest[0] < cost[0])
-		// 		{
-
-		// 			// this test point becomes the new optimum
-		// 			for (int j = 0; j < nOpt; j++)
-		// 			{
-		// #pragma HLS UNROLL
-		// 				currentPoint[j] = testPoint[j];
-		// 			}
-		// 			cost[0] = costTest[0];
-		// 			cost[1] = costTest[1];
-		// 			success = true;
-		// 			// break;
-		// 		}
 	}
 
 	// update the frame size

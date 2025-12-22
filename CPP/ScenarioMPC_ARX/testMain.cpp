@@ -1,19 +1,27 @@
 #include "setup.h"
+#include <stdio.h>
 #ifdef DEBUG_MODE
 #include <cstdlib>
-#include <stdio.h>
 #include <time.h>
 #endif
 
 int main(void)
 {
-    int nSim = 50;
-
     #ifdef DEBUG_MODE
     printf("\nTest run ARX with MADS\n\n");
 
     srand(time(NULL)); // different random number each time
 
+    // rand_type r[nOpt];
+    // for(int i = 0; i < 100; i++)
+    // {
+    //     pseudoRandArx(r);
+    //     for(int j = 0; j < nOpt; j++)
+    //         printf("%lf ", r[j]);
+    //     printf("\n");
+    // }
+    #endif
+    int nSim = 50;
     output_type yInit[na] = {0};         // output past samples
     output_type yref = 5;          // output reference signal
     output_type ySim[nSim] = {0};        // output simulation samples
@@ -24,7 +32,7 @@ int main(void)
     input_type uSamples[nb + nd];        // past and current input samples
     theta_type thetaScenarios[Nscen + 1][nTheta];
 
-    #ifdef CONVERSIONS_MODE
+    #if defined(CONVERSIONS_MODE) || !defined(DEBUG_MODE)
     // From analog to digital signals conversions
     digital_input_type uSimDig[nSim] = {0};
     digital_output_type ySimDig[nSim] = {0};
@@ -44,7 +52,6 @@ int main(void)
 
     yrefDig = ADConvertY(yref);
     #endif
-    #endif
 
     /* Simulation */
     // For each simulation instant, generate new scenarios and
@@ -52,8 +59,7 @@ int main(void)
     // constraint satisfaction for the newly-generated scenarios
     for (int k = 0; k < nSim; k++)
     {
-        #ifdef DEBUG_MODE
-        #ifdef CONVERSIONS_MODE
+        #if defined(CONVERSIONS_MODE) || !defined(DEBUG_MODE)
         controller(uOptDig, thetaScenarios, yInitDig, uInitDig, yrefDig);
 
         uSimDig[k] = uOptDig[0];    // receding horizon implementation
@@ -85,7 +91,7 @@ int main(void)
             uInit[i] = uInit[i - 1];
         uInit[0] = uSamples[0]; // uSamples[0] == uSim[k]
 
-        #ifdef CONVERSIONS_MODE
+        #if defined(CONVERSIONS_MODE) || !defined(DEBUG_MODE)
         // Memorize digital conversion of current output
         ySimDig[k] = ADConvertY(yCurr);
         
@@ -98,31 +104,23 @@ int main(void)
             uInitDig[i] = uInitDig[i - 1];
         uInitDig[0] = uSimDig[k]; // uSamples[0] == uSim[k]
         #endif
-
-        #else
-        // Not in DEBUG_MODE
-
-        #endif
     }
 
     /* Output file creation and writing */
-    #ifdef DEBUG_MODE
-    
     FILE *fp;
     fp = fopen("output.txt", "w");
     for (int k = 0; k < nSim; k++)
     {
-        #ifndef CONVERSIONS_MODE
+        #if defined(DEBUG_MODE) && !defined(CONVERSIONS_MODE)
         fprintf(fp, "%lf %lf", uSim[k], ySim[k]);
+        #elifdef CONVERSIONS_MODE
+        fprintf(fp, "%f %f %d %d", uSim[k], ySim[k], uSimDig[k], ySimDig[k]);
         #else
-        fprintf(fp, "%lf %lf %d %d", uSim[k], ySim[k], uSimDig[k], ySimDig[k]);
+        fprintf(fp, "%f %f %f %f", uSim[k].to_float(), ySim[k].to_float(), uSimDig[k].to_float(), ySimDig[k].to_float());
         #endif
         
         fprintf(fp, "\n");
     }
     fclose(fp);
-
-    #endif
-    
     return 0;
 }

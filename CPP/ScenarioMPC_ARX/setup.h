@@ -1,5 +1,4 @@
 #define DEBUG_MODE
-
 #ifdef DEBUG_MODE
 #define CONVERSIONS_MODE
 #else
@@ -92,7 +91,7 @@ typedef double err_type;    // datatype for output-reference difference
 // Prediction horizon
 #define Nhor 5
 
-// Control horizon
+// Control horizon <= prediction horizon
 #define NhorU 3
 
 // Number of scenarios
@@ -188,7 +187,10 @@ static const weights_type Q = 1;
 // {10.000000} };
 static const weights_type R = 10;
 
-// #ifndef DEBUG_MODE
+/*  
+*   ADC and DAC converters parameters
+*/
+
 #define ADCMax 4095
 #define ADCMin 0
 #define ADCRange (ADCMax - ADCMin)
@@ -199,7 +201,6 @@ static const weights_type R = 10;
 #define UADCGain (ADCRange / (UMAX - UMIN))
 #define UDACGain (1 / UADCGain)
 #define UBias 2048
-// #endif
 
 // Default control
 // static const fxd default_u[nU] = {0.000000};

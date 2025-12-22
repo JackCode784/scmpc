@@ -1,8 +1,7 @@
 %% Plot output data from CPP MADS ARX implementation
 % 
 close all;
-path = "C:\Users\jackf\Documents\MPC\ARXforVITIS\VitisProj\ARX\solution1\csim\build\output.txt";
-res = "output.txt";
+path = C:\Users\jackf\Documents\MPC\ARXforVITIS\VitisProj\ARX\solution1\csim\build\
 load output.txt;
 figure; subplot(2,1,1);
 hold on;

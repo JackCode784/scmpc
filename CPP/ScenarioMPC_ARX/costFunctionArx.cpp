@@ -54,9 +54,6 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
 
         // Cost contribution (current input)
         cost[0] += uSamples[0] * R * uSamples[0];
-        // for(i = 0; i < nu; i++)
-        //     for(j = 0; j < nu; j++)
-        //         cost += uSamples[i][0] * R[i][j] * uSamples[j][0];
 
         // For each scenario compute output sequence and constraints violation
         for (int l = 0; l < Nscen + 1; l++)
@@ -65,12 +62,8 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
             currY = computeArxOutput(yPastCurr, uSamples, thetaScenarios[l]);
 
             // Cost contribution (all sceanrios)
-            // for (int i = 0; i < ny; i++)
-            //     err[i] = currY[i] - yref[i];
-
-            // for (int i = 0; i < ny; i++)
-            //     for (int j = 0; j < ny; j++)
-            //         cost[0] += err[i] * Q[i][j] * err[j];
+            // err = currY - yref;
+            // cost[0] += err * Q * err;
 
             // Update constraint violation cost
             updateConstraintViolation(cost, currY);
@@ -102,22 +95,14 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
         // Cost contribution (current input)
         cost[0] += uSamples[0] * R * uSamples[0];
 
-        // for(i = 0; i < nu; i++)
-        //     for(j = 0; j < nu; j++)
-        //         cost += uSamples[i][0] * R[i][j] * uSamples[j][0];
-
         for (int l = 0; l < Nscen + 1; l++)
         {
             // Compute system's current output
             currY = computeArxOutput(yPastCurr, uSamples, thetaScenarios[l]);
 
             // Cost contribution (all scenarios)
-            // for (int i = 0; i < ny; i++)
-            //     err[i] = currY[i] - yref[i];
-
-            // for (int i = 0; i < ny; i++)
-            //     for (int j = 0; j < ny; j++)
-            //         cost[0] += err[i] * Q[i][j] * err[j];
+            // err = currY - yref;
+            // cost[0] += err * Q * err;
 
             // Update constraint violation cost
             updateConstraintViolation(cost, currY);
@@ -146,11 +131,7 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
         uSamples[i] = uPastCurr[i - 1];
 
     // Cost contribution (current input)
-    // cost[0] += uSamples[0] * R[0][0] * uSamples[0];
-
-    // for(i = 0; i < nu; i++)
-    //     for(j = 0; j < nu; j++)
-    //         cost += uSamples[i][0] * R[i][j] * uSamples[j][0];
+    // cost[0] += uSamples[0] * R * uSamples[0];
 
     for (int l = 0; l < Nscen + 1; l++)
     {
@@ -158,12 +139,8 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
         currY = computeArxOutput(yPastCurr, uSamples, thetaScenarios[l]);
 
         // Cost contribution (all scenarios)
-        // for (int i = 0; i < ny; i++)
-        //     err[i] = currY[i] - yref[i];
-
-        // for (int i = 0; i < ny; i++)
-        //     for (int j = 0; j < ny; j++)
-        //         cost[0] += err[i] * Q[i][j] * err[j];
+        // err = currY - yref;
+        // cost[0] += err * Q * err;
 
         // Update constraint violation cost
         updateConstraintViolation(cost, currY);
@@ -171,6 +148,5 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
 
     // Cost contribution (only nominal system)
     err = currY - yref;
-
     cost[0] += err * P * err;
 }

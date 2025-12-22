@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vivadoHLSLog:LogRoot xmlns:vivadoHLSLog="www.xilinx.com/vivadoHLSLog">
+  <errorLogs>
+    <logs>
+      <csimLog>
+        <logs message="ERROR: [SIM 211-100] CSim file generation failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T16:33:16.813+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T14:44:44.573+0100"/>
+        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2025-12-22T14:40:50.849+0100"/>
+        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2025-12-22T14:33:36.592+0100"/>
+        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2025-12-22T14:29:18.858+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T14:28:10.612+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T14:27:34.517+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T14:26:48.269+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T12:44:28.053+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T11:53:13.096+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T11:52:09.604+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T11:49:22.851+0100"/>
+      </csimLog>
+    </logs>
+  </errorLogs>
+  <warningLogs>
+    <logs>
+      <csimLog>
+        <logs message="WARNING: Bitsize mismatch for ap_[u]int^=ap_[u]int." projectName="ARX" solutionName="solution1" date="2025-12-22T14:52:39.569+0100" type="Warning"/>
+        <logs message="WARNING: Bitsize mismatch for ap_[u]int^=ap_[u]int." projectName="ARX" solutionName="solution1" date="2025-12-22T14:48:30.144+0100" type="Warning"/>
+        <logs message="WARNING: Bitsize mismatch for ap_[u]int^=ap_[u]int." projectName="ARX" solutionName="solution1" date="2025-12-22T14:45:15.363+0100" type="Warning"/>
+      </csimLog>
+    </logs>
+  </warningLogs>
+</vivadoHLSLog:LogRoot>

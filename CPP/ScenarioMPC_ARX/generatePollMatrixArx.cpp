@@ -1,5 +1,7 @@
 #include "setup.h"
+#ifdef DEBUG_MODE
 #include "math.h"
+#endif
 
 // Generate matrix whose columns are poll points for the computation of cost function in MADS alg
 void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], input_type pollMatrix[nOpt][2 * nOpt])
