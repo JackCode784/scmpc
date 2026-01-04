@@ -11,17 +11,20 @@ int main(void)
     printf("\nTest run ARX with MADS\n\n");
 
     srand(time(NULL)); // different random number each time
-
-    // rand_type r[nOpt];
-    // for(int i = 0; i < 100; i++)
-    // {
-    //     pseudoRandArx(r);
-    //     for(int j = 0; j < nOpt; j++)
-    //         printf("%lf ", r[j]);
-    //     printf("\n");
-    // }
     #endif
-    int nSim = 50;
+
+    #ifdef DEBUG_MODE
+    rand_type v[nOpt];
+    for(int i = 0; i < 100; i++)
+    {
+        pseudoRandArx(v);
+        for(int k = 0; k < nOpt; k++)
+            printf("%f ", v[k]);
+        printf("\n");
+    }
+    #endif
+
+    short nSim = 50;
     output_type yInit[na] = {0};         // output past samples
     output_type yref = 5;          // output reference signal
     output_type ySim[nSim] = {0};        // output simulation samples
@@ -31,6 +34,20 @@ int main(void)
     input_type uOpt[NhorU] = {0};        // input optimal values at each time instant
     input_type uSamples[nb + nd];        // past and current input samples
     theta_type thetaScenarios[Nscen + 1][nTheta];
+
+    #ifdef DEBUG_MODE
+    for(int i = 0; i < 30; i++)
+    {
+        generateScenarios(thetaScenarios);
+        for(int j = 0; j < Nscen+1; j++)
+        {
+            for(int k = 0; k < nTheta; k++)
+                printf("%f ", thetaScenarios[j][k]);
+            printf("\n");
+        }
+        printf("\n");
+    }
+    #endif
 
     #if defined(CONVERSIONS_MODE) || !defined(DEBUG_MODE)
     // From analog to digital signals conversions
@@ -61,7 +78,6 @@ int main(void)
     {
         #if defined(CONVERSIONS_MODE) || !defined(DEBUG_MODE)
         controller(uOptDig, thetaScenarios, yInitDig, uInitDig, yrefDig);
-
         uSimDig[k] = uOptDig[0];    // receding horizon implementation
         
         for(int i = 0; i < NhorU; i++)
@@ -113,7 +129,8 @@ int main(void)
     {
         #if defined(DEBUG_MODE) && !defined(CONVERSIONS_MODE)
         fprintf(fp, "%lf %lf", uSim[k], ySim[k]);
-        #elifdef CONVERSIONS_MODE
+        #endif 
+        #if !defined(DEBUG_MODE) || defined(CONVERSIONS_MODE)
         fprintf(fp, "%f %f %d %d", uSim[k], ySim[k], uSimDig[k], ySimDig[k]);
         #else
         fprintf(fp, "%f %f %f %f", uSim[k].to_float(), ySim[k].to_float(), uSimDig[k].to_float(), ySimDig[k].to_float());

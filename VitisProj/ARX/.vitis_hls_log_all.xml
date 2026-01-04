@@ -3,6 +3,14 @@
   <errorLogs>
     <logs>
       <csimLog>
+        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2026-01-04T20:57:52.366+0100"/>
+        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2026-01-04T18:50:51.790+0100"/>
+        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2026-01-04T18:46:13.247+0100"/>
+        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2026-01-04T18:44:08.782+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2026-01-03T20:51:44.401+0100"/>
+        <logs message="ERROR: [SIM 211-100] CSim file generation failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-28T19:53:15.019+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-28T19:08:44.283+0100"/>
+        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-28T19:01:10.496+0100"/>
         <logs message="ERROR: [SIM 211-100] CSim file generation failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T16:33:16.813+0100"/>
         <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T14:44:44.573+0100"/>
         <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2025-12-22T14:40:50.849+0100"/>

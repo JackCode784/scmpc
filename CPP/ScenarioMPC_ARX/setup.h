@@ -238,6 +238,7 @@ void generateSCMPCControl(input_type uOpt[NhorU], theta_type thetaScenarios[Nsce
 void MADSARX(input_type uOpt[nOpt], const input_type uInit[nb+nd-1], const output_type yInit[na], const output_type yref, const theta_type thetaScenarios[Nscen][nTheta]);
 void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nOpt], const output_type yPast[na], const input_type uPast[nb + nd - 1], const output_type yref, const input_type pollMatrix[nOpt][2 * nOpt], mesh_exp_type frameExp[nOpt], const theta_type thetaScenarios[Nscen + 1][nTheta]);
 void pseudoRandArx(rand_type randomVector[nOpt]);
+void pseudoRandArx(theta_type thetaRow[nTheta], theta_type thetaRange[nTheta]);
 void updateConstraintViolation(cost_type cost[2], output_type currY);
 
 // Conversions
@@ -251,4 +252,3 @@ void controller(digital_input_type uOptDig[NhorU], theta_type thetaScenarios[Nsc
 
 // void extractU(fxd z[nDim_CTRL], fxd u_reg[nU], fxd u_old[nU]);
 // void shiftOpt(fxd optimum[nDim_CTRL]);
-// void pseudoRand(data_rand randomVector[nDim_CTRL]);
