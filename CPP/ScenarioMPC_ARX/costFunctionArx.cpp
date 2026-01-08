@@ -1,5 +1,5 @@
 #include "setup.h"
-#ifndef DEBUG_MODE
+#ifdef FIXED
 #include "hls_math.h"
 #endif
 
@@ -68,6 +68,9 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
             // Update constraint violation cost
             updateConstraintViolation(cost, currY);
         }
+#ifndef __SYNTHESIS__
+		// float currYf = currY.to_float();
+#endif
 
         // Update cost (only nominal system contribution)
         err = currY - yref;

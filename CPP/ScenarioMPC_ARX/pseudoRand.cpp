@@ -3,7 +3,7 @@
 #include <cstdlib> // rand()
 #endif
 
-#ifdef DEBUG_MODE
+#ifndef DEBUG_MODE
 static unsigned int random_state = 0xAAAAAAAAu;
 
 inline void pseudoRandSeed(unsigned int seed)
@@ -25,7 +25,7 @@ inline unsigned int xorshift32Step()
 // Check if correct, random vector is only 2-dimensional instead of nDim_CTRL
 void pseudoRandArx(rand_type randomVector[nOpt])
 {
-	#ifndef DEBUG_MODE
+	#ifdef DEBUG_MODE
 	for(int i = 0; i < nOpt; i++)
 	{
 		randomVector[i] = static_cast <rand_type> (rand()) / (static_cast <rand_type> (RAND_MAX)); // random number in [0, 1]
@@ -38,8 +38,14 @@ void pseudoRandArx(rand_type randomVector[nOpt])
 	{
 		// #pragma HLS pipeline II=1
 		unsigned int r = xorshift32Step();
-		unsigned int u16 = (r >> 16) & 0xFFFFu;
-		rand_type frac = rand_type(u16) / rand_type(65536u);
+		u16_type u16 = (r >> 16) & 0xFFFFu;
+		frac_type frac = u16 >> 16;
+
+#ifdef FIXED
+		float fracf = frac.to_float();
+#endif
+
+		// rand_type frac = rand_type(u16) / rand_type(65536u);
 		randomVector[i] = (rand_type(2) * frac) - rand_type(1);
 	}
 	#endif
@@ -47,7 +53,7 @@ void pseudoRandArx(rand_type randomVector[nOpt])
 
 void pseudoRandArx(theta_type thetaRow[nTheta], theta_type thetaRange[nTheta])
 {
-	#ifndef DEBUG_MODE
+	#ifdef DEBUG_MODE
     for (int i = 0; i < nTheta; i++)
     {
         thetaRow[i] = static_cast<theta_type>(rand()) / (static_cast<theta_type>(RAND_MAX)); // random number in [0, 1]
@@ -59,8 +65,14 @@ void pseudoRandArx(theta_type thetaRow[nTheta], theta_type thetaRange[nTheta])
 	{
 		// #pragma HLS pipeline II=1
 		unsigned int r = xorshift32Step();
-		unsigned int u16 = (r >> 16) & 0xFFFFu;
-		theta_type frac = theta_type(u16) / theta_type(65536u);
+		u16_type u16 = ((r >> 16) & 0xFFFFu);
+		frac_type frac = u16 >> 16;
+
+#ifdef FIXED
+		float fracf = frac.to_float();
+#endif
+
+		// theta_type frac = theta_type(u16) / theta_type(65536u);
 		thetaRow[i] = (thetaRange[i] * frac) + thetaMin[i];
 	}
 	#endif

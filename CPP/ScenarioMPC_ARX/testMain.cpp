@@ -7,52 +7,62 @@
 
 int main(void)
 {
-    #ifdef DEBUG_MODE
     printf("\nTest run ARX with MADS\n\n");
 
+    #ifdef DEBUG_MODE
     srand(time(NULL)); // different random number each time
     #endif
 
-    #ifdef DEBUG_MODE
-    rand_type v[nOpt];
-    for(int i = 0; i < 100; i++)
-    {
-        pseudoRandArx(v);
-        for(int k = 0; k < nOpt; k++)
-            printf("%f ", v[k]);
-        printf("\n");
-    }
-    #endif
+     #ifdef FIXED
+     rand_type v[nOpt];
+     for(int i = 0; i < 100; i++)
+     {
+         pseudoRandArx(v);
+         for(int k = 0; k < nOpt; k++)
+             printf("%f ", v[k].to_float());
+         printf("\n");
+     }
+     #endif
 
-    short nSim = 50;
+    int nSim = 50;
     output_type yInit[na] = {0};         // output past samples
     output_type yref = 5;          // output reference signal
-    output_type ySim[nSim] = {0};        // output simulation samples
+    output_type ySim[nSim];        // output simulation samples
     output_type yCurr;               // output temporary sample
     input_type uInit[nb + nd - 1] = {0}; // input past samples
-    input_type uSim[nSim] = {0};         // input simulation samples
+    input_type uSim[nSim];         // input simulation samples
     input_type uOpt[NhorU] = {0};        // input optimal values at each time instant
     input_type uSamples[nb + nd];        // past and current input samples
     theta_type thetaScenarios[Nscen + 1][nTheta];
 
-    #ifdef DEBUG_MODE
-    for(int i = 0; i < 30; i++)
-    {
-        generateScenarios(thetaScenarios);
-        for(int j = 0; j < Nscen+1; j++)
-        {
-            for(int k = 0; k < nTheta; k++)
-                printf("%f ", thetaScenarios[j][k]);
-            printf("\n");
-        }
-        printf("\n");
-    }
-    #endif
+    for(int i = 0; i < na; i++)
+        yInit[i] = 0;
 
-    #if defined(CONVERSIONS_MODE) || !defined(DEBUG_MODE)
+    for(int i = 0; i < nb + nd - 1; i++)
+        uInit[i] = 0;
+
+    for(int i = 0; i < NhorU; i++)
+        uOpt[i] = 0;
+
+
+     #ifdef FIXED
+     for(int i = 0; i < 30; i++)
+     {
+         generateScenarios(thetaScenarios);
+         for(int j = 0; j < Nscen+1; j++)
+         {
+             for(int k = 0; k < nTheta; k++)
+                 printf("%f ", thetaScenarios[j][k].to_float());
+             printf("\n");
+         }
+         printf("\n");
+     }
+     #endif
+
+    #if defined(FIXED) || defined(CONVERSIONS_MODE)
     // From analog to digital signals conversions
-    digital_input_type uSimDig[nSim] = {0};
-    digital_output_type ySimDig[nSim] = {0};
+    digital_input_type uSimDig[nSim];
+    digital_output_type ySimDig[nSim];
     digital_output_type yInitDig[na];
     digital_output_type yrefDig;
     digital_input_type uInitDig[nb+nd-1];
@@ -76,7 +86,7 @@ int main(void)
     // constraint satisfaction for the newly-generated scenarios
     for (int k = 0; k < nSim; k++)
     {
-        #if defined(CONVERSIONS_MODE) || !defined(DEBUG_MODE)
+        #if defined(CONVERSIONS_MODE) || defined(FIXED)
         controller(uOptDig, thetaScenarios, yInitDig, uInitDig, yrefDig);
         uSimDig[k] = uOptDig[0];    // receding horizon implementation
         
@@ -107,7 +117,7 @@ int main(void)
             uInit[i] = uInit[i - 1];
         uInit[0] = uSamples[0]; // uSamples[0] == uSim[k]
 
-        #if defined(CONVERSIONS_MODE) || !defined(DEBUG_MODE)
+        #if defined(CONVERSIONS_MODE) || defined(FIXED)
         // Memorize digital conversion of current output
         ySimDig[k] = ADConvertY(yCurr);
         
@@ -127,15 +137,15 @@ int main(void)
     fp = fopen("output.txt", "w");
     for (int k = 0; k < nSim; k++)
     {
-        #if defined(DEBUG_MODE) && !defined(CONVERSIONS_MODE)
-        fprintf(fp, "%lf %lf", uSim[k], ySim[k]);
-        #endif 
-        #if !defined(DEBUG_MODE) || defined(CONVERSIONS_MODE)
-        fprintf(fp, "%f %f %d %d", uSim[k], ySim[k], uSimDig[k], ySimDig[k]);
-        #else
+        #ifdef FIXED
         fprintf(fp, "%f %f %f %f", uSim[k].to_float(), ySim[k].to_float(), uSimDig[k].to_float(), ySimDig[k].to_float());
+        #endif 
+        #if !defined(FIXED) && defined(CONVERSIONS_MODE)
+        fprintf(fp, "%f %f %d %d", uSim[k], ySim[k], uSimDig[k], ySimDig[k]);
         #endif
-        
+        #if !defined(FIXED) && !defined(CONVERSIONS_MODE)
+        fprintf(fp, "%f %f", uSim[k], ySim[k]);
+        #endif
         fprintf(fp, "\n");
     }
     fclose(fp);

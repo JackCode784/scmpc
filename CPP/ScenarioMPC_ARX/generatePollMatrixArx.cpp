@@ -25,7 +25,7 @@ void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type fra
 
 		if (meshIdx[i] < 0)
 		{
-			#ifndef DEBUG_MODE
+			#ifdef FIXED
 			mesh[i] = mesh[i] >> (-meshIdx[i]);
 			#else
 			for (int j = 0; j < -meshIdx[i]; j++)
@@ -34,7 +34,7 @@ void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type fra
 		}
 		else
 		{
-			#ifndef DEBUG_MODE
+			#ifdef FIXED
 			mesh[i] = mesh[i] << meshIdx[i];
 			#else
 			for (int j = 0; j < meshIdx[i]; j++)

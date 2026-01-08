@@ -34,6 +34,11 @@ void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nO
 		// compute the cost function and the constraints violation in a test point
 		costFunctionArx(costTestPoint, yPast, testPoint, uPast, yref, thetaScenarios);
 
+#ifndef __SYNTHESIS__
+		// float costTestPointF = costTestPoint[0].to_float();
+		// float bestCostF = bestCost[0].to_float();
+#endif
+
 		// if the constraints are violated "more" in the test point than
 		// the current point, skip to the next test point
 		if (bestCost[1] == 0 && costTestPoint[1] == 0 && costTestPoint[0] < bestCost[0])

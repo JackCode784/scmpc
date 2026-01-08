@@ -17,6 +17,10 @@ void MADSARX(input_type uOpt[nOpt], const input_type uInit[nb+nd-1], const outpu
 	// MADS alg iterates K times
 	for (int iter = 0; iter < MADS_ITER; iter++) {
 
+#ifndef __SYNTHESIS__
+		// float cost = initialCost[0].to_float();
+#endif
+
 		// update mesh size
 		for (int i = 0; i < nOpt; i++) {
 			if (frameExp[i] < -12) {

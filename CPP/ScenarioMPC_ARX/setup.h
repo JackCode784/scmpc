@@ -1,12 +1,25 @@
+/* setup.h */
+/*
+*   Everything to properly setup SCMPC for an ARX model.
+*   FIXED               : fixed points are used (simulations run in Vitis HLS)
+*   DEBUG_MODE          : use rand() for random values generation
+*   CONVERSIONS_MODE    : use AD and DA conversion functions
+*/
+
+// (Un)comment the following lines accordingly with the intended use
+
+#define FIXED
+#ifndef FIXED
 #define DEBUG_MODE
-#ifdef DEBUG_MODE
 #define CONVERSIONS_MODE
-#else
+#endif
+
+#ifdef FIXED
 // Library for fixed point number representation
 #include <ap_fixed.h>
 #endif
 
-#ifndef DEBUG_MODE
+#ifdef FIXED
 /*
     ----------------------------------------
     Data types definitions  
@@ -26,6 +39,8 @@ typedef ap_int<12> direction_type;
 // to DAC range
 typedef ap_fixed<32, 14, AP_RND_CONV, AP_SAT> conv_type;
 typedef ap_fixed<18, 5> alg_type; // Fixed point data representation for every signal inside the algorithm
+typedef ap_ufixed<18, 2> frac_type;
+typedef ap_ufixed<32,16> u16_type;
 
 // The following are alg_type in fixed point
 typedef alg_type output_type;
@@ -55,6 +70,8 @@ typedef double input_type;  // datatype for input samples
 typedef float weights_type; // datatype for weights matrices
 typedef float theta_type;   // datatype for theta ARX parameters
 typedef double err_type;    // datatype for output-reference difference
+typedef double frac_type;    // datatype for pseudorand function
+typedef unsigned int u16_type;
 
 // To be deleted?
 // typedef short hzn_type;     // datatype for horizons values, unused
@@ -118,7 +135,7 @@ static const output_type YMAX = 8; // rewritten for arx
 #define MADS_ITER 7
 #define TAU 1
 #define C 1
-#ifndef DEBUG_MODE
+#ifdef FIXED
 static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5; //2^-c
 #else
 static const input_type expC = 0.5;
@@ -191,6 +208,7 @@ static const weights_type R = 10;
 *   ADC and DAC converters parameters
 */
 
+#ifndef FIXED
 #define ADCMax 4095
 #define ADCMin 0
 #define ADCRange (ADCMax - ADCMin)
@@ -201,6 +219,16 @@ static const weights_type R = 10;
 #define UADCGain (ADCRange / (UMAX - UMIN))
 #define UDACGain (1 / UADCGain)
 #define UBias 2048
+#else
+static const conv_type YADCGain = 4095 / 8;
+static const conv_type YDACGain = 0.0019536019536019536019536019536;
+static const conv_type YBias = 0;
+
+static const conv_type UADCGain = 4095 / 0.6;
+static const conv_type UDACGain = 0.6 / 4095;
+static const conv_type UBias = 2048;
+#endif
+#define FRAC2_16 0.0000152587890625
 
 // Default control
 // static const fxd default_u[nU] = {0.000000};

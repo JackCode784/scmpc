@@ -1,8 +1,11 @@
 %% Plot output data from CPP MADS ARX implementation
-%
+
 close all;
 path = "";
-path = "C:\Users\jackf\Documents\MPC\ARXforVITIS\VitisProj\ARX\solution1\csim\build\"
+
+% Comment this to print VSCode simulation, otherwise -> Vitis's results
+path = "C:\Users\jackf\Documents\MPC\ARXforVITIS\VitisProj\ARX\solution1\csim\build\";
+
 load(append(path, "output.txt"));
 figure; subplot(2,1,1);
 hold on;

@@ -1,6 +1,6 @@
 #include "setup.h"
-#ifdef DEBUG_MODE
-#include <cmath>
+#ifndef FIXED
+#include <cmath>	// useless?
 #else
 #include "hls_math.h"
 #endif
@@ -28,7 +28,7 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 	{
 		frameMeshDiff[i] = frameIdx[i] - meshIdx[i] + C;
 		mesh[i] = 1;
-		#ifndef DEBUG_MODE
+		#ifdef FIXED
 		mesh[i] = mesh[i] << frameMeshDiff[i];
 		#else
 		for (int j = 0; j < frameMeshDiff[i]; j++)
@@ -47,7 +47,7 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 				H[i][j] = -expC;
 			}
 			// H[i][j] /= hMax[j];
-			#ifndef DEBUG_MODE
+			#ifdef FIXED
 			B[i][j] = hls::round(mesh[i] * H[i][j]);
 			#else
 			B[i][j] = round(mesh[i] * H[i][j]);

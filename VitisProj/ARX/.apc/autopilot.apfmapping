@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <autopilotfilemapping:AutoPilotFileMapping xmlns:autopilotfilemapping="www.autoesl.com/autopilotfilemapping">
   <source>
-    <originFiles name="MADSARX.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\MADSARX.cpp"/>
-    <originFiles name="computeArxOutput.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\computeArxOutput.cpp"/>
-    <originFiles name="controller.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\controller.cpp"/>
-    <originFiles name="conversions.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\conversions.cpp"/>
-    <originFiles name="costFunctionArx.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\costFunctionArx.cpp"/>
-    <originFiles name="generatePollDirectionsArx.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\generatePollDirectionsArx.cpp"/>
-    <originFiles name="generatePollMatrixArx.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\generatePollMatrixArx.cpp"/>
-    <originFiles name="generateSCMPCControl.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\generateSCMPCControl.cpp"/>
-    <originFiles name="generateScenarios.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\generateScenarios.cpp"/>
-    <originFiles name="progressiveBarrierPollingArx.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\progressiveBarrierPollingArx.cpp"/>
-    <originFiles name="pseudoRand.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\pseudoRand.cpp"/>
-    <originFiles name="setup.h" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\setup.h"/>
     <originFiles name="updateConstraintViolation.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\updateConstraintViolation.cpp"/>
+    <originFiles name="setup.h" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\setup.h"/>
+    <originFiles name="pseudoRand.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\pseudoRand.cpp"/>
+    <originFiles name="progressiveBarrierPollingArx.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\progressiveBarrierPollingArx.cpp"/>
+    <originFiles name="generateScenarios.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\generateScenarios.cpp"/>
+    <originFiles name="generateSCMPCControl.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\generateSCMPCControl.cpp"/>
+    <originFiles name="generatePollMatrixArx.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\generatePollMatrixArx.cpp"/>
+    <originFiles name="generatePollDirectionsArx.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\generatePollDirectionsArx.cpp"/>
+    <originFiles name="costFunctionArx.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\costFunctionArx.cpp"/>
+    <originFiles name="conversions.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\conversions.cpp"/>
+    <originFiles name="controller.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\controller.cpp"/>
+    <originFiles name="computeArxOutput.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\computeArxOutput.cpp"/>
+    <originFiles name="MADSARX.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\MADSARX.cpp"/>
   </source>
   <testbench>
     <originFiles name="testMain.cpp" path="C:\Users\jackf\Documents\MPC\ARXforVITIS\CPP\ScenarioMPC_ARX\testMain.cpp"/>
