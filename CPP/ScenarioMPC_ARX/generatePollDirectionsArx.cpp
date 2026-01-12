@@ -26,6 +26,10 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 	// fill B matrix with polling directions
 	for (int i = 0; i < nOpt; i++)
 	{
+		#ifdef PRAGMAS	
+		// #pragma HLS UNROLL
+		#endif
+
 		frameMeshDiff[i] = frameIdx[i] - meshIdx[i] + C;
 		mesh[i] = 1;
 		#ifdef FIXED
@@ -37,6 +41,9 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 
 		for (int j = 0; j < nOpt; j++)
 		{
+			#ifdef PRAGMAS
+			#pragma HLS UNROLL
+			#endif
 			// Saturates householder matrix entries
 			if (H[i][j] > expC)
 			{
@@ -69,8 +76,16 @@ void generateHouseholderMatrix(const rand_type v[nOpt], input_type H[nOpt][nOpt]
 
 	for (int i = 0; i < nOpt; i++)
 	{
+		#ifdef PRAGMAS
+		#pragma HLS UNROLL
+		#endif
+
 		for (int j = 0; j < nOpt; j++)
 		{
+		#ifdef PRAGMAS
+		#pragma HLS UNROLL
+		#endif
+		
 			H[i][j] = -2 * v[i] * v[j];
 			if (i == j)
 			{

@@ -2,6 +2,8 @@
 /*
 *   Everything to properly setup SCMPC for an ARX model.
 *   FIXED               : fixed points are used (simulations run in Vitis HLS)
+*   PRAGMAS             : use pragmas in certain part of code to optimize synthesis
+                          (if not, let Vitis take care of it fully automatically)
 *   DEBUG_MODE          : use rand() for random values generation
 *   CONVERSIONS_MODE    : use AD and DA conversion functions
 */
@@ -9,7 +11,10 @@
 // (Un)comment the following lines accordingly with the intended use
 
 #define FIXED
-#ifndef FIXED
+
+#ifdef FIXED
+#define PRAGMAS
+#else
 #define DEBUG_MODE
 #define CONVERSIONS_MODE
 #endif
@@ -37,10 +42,10 @@ typedef ap_int<12> direction_type;
 // Fixed point data representation for the data to convert input
 // from ADC range to actual (model range) and from actual range
 // to DAC range
-typedef ap_fixed<32, 14, AP_RND_CONV, AP_SAT> conv_type;
+typedef ap_ufixed<32, 14, AP_RND_CONV, AP_SAT> conv_type;
 typedef ap_fixed<18, 5> alg_type; // Fixed point data representation for every signal inside the algorithm
-typedef ap_ufixed<18, 2> frac_type;
-typedef ap_ufixed<32,16> u16_type;
+typedef ap_ufixed<18, 2> frac_type; // pseudorand specific type
+typedef ap_ufixed<32,16> u16_type;  // pseudorand specific types
 
 // The following are alg_type in fixed point
 typedef alg_type output_type;
@@ -112,7 +117,7 @@ typedef unsigned int u16_type;
 #define NhorU 3
 
 // Number of scenarios
-#define Nscen 2
+#define Nscen 10
 
 // MPC saturation constraints
 static const input_type UMIN = -0.3; // rewritten for arx

@@ -36,16 +36,17 @@ void pseudoRandArx(rand_type randomVector[nOpt])
     // Random number generator implementation
 	for(int i = 0; i < nOpt; i++)
 	{
+		#ifdef PRAGMAS
 		// #pragma HLS pipeline II=1
+		#endif
 		unsigned int r = xorshift32Step();
 		u16_type u16 = (r >> 16) & 0xFFFFu;
 		frac_type frac = u16 >> 16;
 
-#ifdef FIXED
-		float fracf = frac.to_float();
-#endif
+		// #ifdef FIXED
+		// 		float fracf = frac.to_float();
+		// #endif
 
-		// rand_type frac = rand_type(u16) / rand_type(65536u);
 		randomVector[i] = (rand_type(2) * frac) - rand_type(1);
 	}
 	#endif
@@ -63,16 +64,17 @@ void pseudoRandArx(theta_type thetaRow[nTheta], theta_type thetaRange[nTheta])
 	#else
 	for(int i = 0; i < nTheta; i++)
 	{
+		#ifdef PRAGMAS
 		// #pragma HLS pipeline II=1
+		#endif
 		unsigned int r = xorshift32Step();
 		u16_type u16 = ((r >> 16) & 0xFFFFu);
 		frac_type frac = u16 >> 16;
 
-#ifdef FIXED
-		float fracf = frac.to_float();
-#endif
+		// #ifdef FIXED
+		// 		float fracf = frac.to_float();
+		// #endif
 
-		// theta_type frac = theta_type(u16) / theta_type(65536u);
 		thetaRow[i] = (thetaRange[i] * frac) + thetaMin[i];
 	}
 	#endif

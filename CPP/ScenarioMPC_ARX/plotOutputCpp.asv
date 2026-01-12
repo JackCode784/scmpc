@@ -40,18 +40,15 @@ occupationPercs = [0, 27, 10, 36, 0;
 
 % Latencies
 figure;
-subplot(2,1,1);
-stem(latencies, 'Marker','x', 'MarkerSize',10, 'LineWidth',1.5);
-set(gca, Xtick=1:length(nscenarios), XTickLabel=nscenarios);
+stem(latencies, 'x');
+set(gca,Xtick = nscenarios,XTickLabel = x)
 xlabel('Number of scenarios');
 ylabel('Latency [clock cycles]');
 grid on;
 
 % Occupation percentages
-subplot(2,1,2);
-bar(occupationPercs);
-set(gca, Xtick=1:length(nscenarios), XTickLabel=nscenarios);
-set(gca, XTickLabel=nscenarios);
+figure;
+bar(nscenarios, occupationPercs);
 xlabel('Number of scenarios');
 ylabel('Percentages');
 legend('BRAM', 'DSP', 'FF', 'LUT', 'URAM');

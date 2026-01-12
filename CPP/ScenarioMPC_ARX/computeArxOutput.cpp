@@ -6,13 +6,31 @@
 // parameters
 output_type computeArxOutput(const output_type yPast[na], const input_type uSamples[nb+nd], const theta_type theta[nTheta])
 {
+#ifdef PRAGMAS
+// #pragma HLS INLINE
+#endif
     output_type yRes = 0;
 
+
+    #ifdef PRAGMAS
+    #pragma HLS array_partition variable=theta dim=1 complete
+    #pragma HLS array_partition variable=yPast dim=1 complete
+    #pragma HLS array_partition variable=uSamples dim=1 complete
+    #endif 
+
     for(int i = 0; i < na; i++)
+    {
+        #ifdef PRAGMAS
+        #endif
         yRes += yPast[i] * theta[i];
+    }
 
     for(int i = na; i < nTheta; i++)
+    {
+        #ifdef PRAGMAS
+        #endif
         yRes += uSamples[i-na+nd] * theta[i];
+    }
 
     return yRes;
 }

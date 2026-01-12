@@ -2,40 +2,45 @@
 <vivadoHLSLog:LogRoot xmlns:vivadoHLSLog="www.xilinx.com/vivadoHLSLog">
   <errorLogs>
     <logs>
-      <csimLog>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2026-01-07T15:25:35.141+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2026-01-06T19:28:23.965+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2026-01-04T21:10:30.529+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2026-01-04T20:57:52.366+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2026-01-04T18:50:51.790+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2026-01-04T18:46:13.247+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2026-01-04T18:44:08.782+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2026-01-03T20:51:44.401+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim file generation failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-28T19:53:15.019+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-28T19:08:44.283+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-28T19:01:10.496+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim file generation failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T16:33:16.813+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T14:44:44.573+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2025-12-22T14:40:50.849+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2025-12-22T14:33:36.592+0100"/>
-        <logs message="ERROR: [SIM 211-100] CSim failed with errors." projectName="ARX" solutionName="solution1" date="2025-12-22T14:29:18.858+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T14:28:10.612+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T14:27:34.517+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T14:26:48.269+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T12:44:28.053+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T11:53:13.096+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T11:52:09.604+0100"/>
-        <logs message="ERROR: [SIM 211-100] 'csim_design' failed: compilation error(s)." projectName="ARX" solutionName="solution1" date="2025-12-22T11:49:22.851+0100"/>
-      </csimLog>
+      <synLog/>
+      <simLog/>
+      <mgLog/>
+      <packageLog/>
+      <csimLog/>
     </logs>
   </errorLogs>
   <warningLogs>
     <logs>
-      <csimLog>
-        <logs message="WARNING: Bitsize mismatch for ap_[u]int^=ap_[u]int." projectName="ARX" solutionName="solution1" date="2025-12-22T14:52:39.569+0100" type="Warning"/>
-        <logs message="WARNING: Bitsize mismatch for ap_[u]int^=ap_[u]int." projectName="ARX" solutionName="solution1" date="2025-12-22T14:48:30.144+0100" type="Warning"/>
-        <logs message="WARNING: Bitsize mismatch for ap_[u]int^=ap_[u]int." projectName="ARX" solutionName="solution1" date="2025-12-22T14:45:15.363+0100" type="Warning"/>
-      </csimLog>
+      <synLog>
+        <logs message="WARNING: [RTGEN 206-101] Register 'random_state' is power-on initialization." projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:35.017+0100" type="Warning"/>
+        <logs message="WARNING: [RTGEN 206-101] RTL name 'mux_32_6_1_1' is changed to 'mux_32_6_1_1_x' due to conflict." projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:29.238+0100" type="Warning"/>
+        <logs message="WARNING: [RTGEN 206-101] RTL name 'mux_32_18_1_1' is changed to 'mux_32_18_1_1_x' due to conflict." projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:22.587+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 200-1016] The critical path in module 'progressiveBarrierPollingArx2' consists of the following:&#x9;'call' operation ('call_ret1', ../CPP/ScenarioMPC_ARX/progressiveBarrierPollingArx.cpp:45) to 'costFunctionArx4' [105]  (1.96 ns)&#xD;&#xA;&#x9;'icmp' operation ('icmp_ln1548_1') [110]  (2.47 ns)&#xD;&#xA;&#x9;'and' operation ('and_ln62_1', ../CPP/ScenarioMPC_ARX/progressiveBarrierPollingArx.cpp:62) [120]  (0.978 ns)&#xD;&#xA;&#x9;blocking operation 2.57 ns on control path)&#xD;&#xA;&#xA;&#xD;&#xA;Resolution: For help on HLS 200-1016 see www.xilinx.com/cgi-bin/docs/rdoc?v=2021.1;t=hls+guidance;d=200-1016.html" projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:13.921+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 200-871] Estimated clock period (7.973ns) exceeds the target (target clock period: 10ns, clock uncertainty: 2.7ns, effective delay budget: 7.3ns).&#xD;&#xA;Resolution: For help on HLS 200-871 see www.xilinx.com/cgi-bin/docs/rdoc?v=2021.1;t=hls+guidance;d=200-871.html" projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:13.869+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 200-1016] The critical path in module 'generatePollDirectionsArx' consists of the following:&#x9;'load' operation ('H_V_load_1') on array 'H.V', ../CPP/ScenarioMPC_ARX/generatePollDirectionsArx.cpp:15 [125]  (2.32 ns)&#xD;&#xA;&#x9;'icmp' operation ('icmp_ln1548') [129]  (2.43 ns)&#xD;&#xA;&#x9;multiplexor before 'phi' operation ('empty_72') with incoming values : ('H_V_load_1') [138]  (1.71 ns)&#xD;&#xA;&#x9;blocking operation 1.59 ns on control path)&#xD;&#xA;&#xA;&#xD;&#xA;Resolution: For help on HLS 200-1016 see www.xilinx.com/cgi-bin/docs/rdoc?v=2021.1;t=hls+guidance;d=200-1016.html" projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:11.540+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 200-871] Estimated clock period (8.0565ns) exceeds the target (target clock period: 10ns, clock uncertainty: 2.7ns, effective delay budget: 7.3ns).&#xD;&#xA;Resolution: For help on HLS 200-871 see www.xilinx.com/cgi-bin/docs/rdoc?v=2021.1;t=hls+guidance;d=200-871.html" projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:11.491+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 200-885] The II Violation in module 'costFunctionArx4_Pipeline_VITIS_LOOP_170_15' (loop 'VITIS_LOOP_170_15'): Unable to schedule 'load' operation ('thetaScenarios_load_3') on array 'thetaScenarios' due to limited memory ports (II = 1). Please consider using a memory core with more ports or partitioning the array 'thetaScenarios'.&#xD;&#xA;Resolution: For help on HLS 200-885 see www.xilinx.com/cgi-bin/docs/rdoc?v=2021.1;t=hls+guidance;d=200-885.html" projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:08.561+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 200-885] The II Violation in module 'costFunctionArx4_Pipeline_VITIS_LOOP_128_11' (loop 'VITIS_LOOP_128_11'): Unable to schedule 'load' operation ('thetaScenarios_load_3') on array 'thetaScenarios' due to limited memory ports (II = 1). Please consider using a memory core with more ports or partitioning the array 'thetaScenarios'.&#xD;&#xA;Resolution: For help on HLS 200-885 see www.xilinx.com/cgi-bin/docs/rdoc?v=2021.1;t=hls+guidance;d=200-885.html" projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:07.027+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 200-885] The II Violation in module 'costFunctionArx4_Pipeline_VITIS_LOOP_83_6' (loop 'VITIS_LOOP_83_6'): Unable to schedule 'load' operation ('thetaScenarios_load_1') on array 'thetaScenarios' due to limited memory ports (II = 1). Please consider using a memory core with more ports or partitioning the array 'thetaScenarios'.&#xD;&#xA;Resolution: For help on HLS 200-885 see www.xilinx.com/cgi-bin/docs/rdoc?v=2021.1;t=hls+guidance;d=200-885.html" projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:05.470+0100" type="Warning"/>
+        <logs message="WARNING: [SYN 201-103] Legalizing function name 'round_fixed&lt;54, 17>' to 'round_fixed_54_17_s'." projectName="ARX" solutionName="solution1" date="2026-01-12T15:01:00.375+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 200-960] Cannot flatten loop 'VITIS_LOOP_68_4' (../CPP/ScenarioMPC_ARX/costFunctionArx.cpp:68:31) in function 'costFunctionArx' more than one sub loop.&#xD;&#xA;Resolution: For help on HLS 200-960 see www.xilinx.com/cgi-bin/docs/rdoc?v=2021.1;t=hls+guidance;d=200-960.html" projectName="ARX" solutionName="solution1" date="2026-01-12T15:00:59.215+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T15:00:31.592+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T15:00:28.249+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T15:00:24.496+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T15:00:20.997+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T15:00:17.748+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T15:00:14.555+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T15:00:10.973+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T14:59:50.422+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T14:59:31.189+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T14:59:27.609+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T14:59:24.194+0100" type="Warning"/>
+        <logs message="WARNING: [HLS 207-5301] unused parameter 'print': C:/Xilinx/Vitis_HLS/2021.1/common/technology/autopilot\ap_int_base.h:792:16" projectName="ARX" solutionName="solution1" date="2026-01-12T14:59:20.792+0100" type="Warning"/>
+      </synLog>
+      <simLog/>
+      <mgLog/>
+      <packageLog/>
+      <csimLog/>
     </logs>
   </warningLogs>
 </vivadoHLSLog:LogRoot>
