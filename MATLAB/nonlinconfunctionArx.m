@@ -8,13 +8,13 @@ function [c, ceq] = nonlinconfunctionArx(sysVec, u, yPast, uPast, Nhor, NhorU, N
 %   <=> ymin <= [ySamples, uSamples] * theta <= ymax
 % 
 % Constraints for all scenarios must be considered and applied for each
-% time instant (k, k+1, ..., k+Nhor). 
+% time instant (k+1, k+2, ..., k+Nhor). 
 % 
-%   yPast = [y1(k-1) ... y1(k-na)
-%            y2(k-1) ... y2(k-na)
+%   yPast = [y1(k) ... y1(k-na+1)
+%            y2(k) ... y2(k-na+1)
 %                    ...            
-%            ynscn(k-1) ... ynscn(k-na)] initial conditions for all scenarios
-%   uPast = [u(k-1) ... u(k-nd) ... u(k-nd-nb+1)] initial conditions for 
+%            ynscn(k) ... ynscn(k-na+1)] initial conditions for all scenarios
+%   uPast = [u(k-1) ... u(k-nd) ... u(k-nd-nb+2)] initial conditions for 
 % all scenarios
 %   u = [u(k+NHorU-1) ... u(k)] optimization variable(s)
 
@@ -32,24 +32,22 @@ ceq = [];
 %   ymin <= y <= ymax
 %   ymin <= Phi * theta <= ymax
 
-yPast = repmat(yPast,Nscen,1);
-
 for k=1:NhorU
     uSamples = [u(:,k), uPast];
-    for i=1:Nscen
-        yScen = sysVec{i}.computeOutput(yPast(i,:), uSamples);
+    for l=1:Nscen+1
+        yScen = sysVec{l}.computeOutput(yPast(l,:), uSamples);
         c = [c; yScen - ymax; -yScen + ymin];
-        yPast(i,:) = [yScen, yPast(i, 1:end-1)];
+        yPast(l,:) = [yScen, yPast(l, 1:end-1)];
     end    
     uPast = [uSamples(1), uPast(1:end-1)];
 end
 
 for k=NhorU+1:Nhor
     uSamples = [uPast(1), uPast];
-    for i=1:Nscen
-        yScen = sysVec{i}.computeOutput(yPast(i,:), uSamples);
+    for l=1:Nscen+1
+        yScen = sysVec{l}.computeOutput(yPast(l,:), uSamples);
         c = [c; yScen - ymax; -yScen + ymin];
-        yPast(i,:) = [yScen, yPast(i, 1:end-1)];
+        yPast(l,:) = [yScen, yPast(l, 1:end-1)];
     end    
     uPast = [uSamples(1), uPast(1:end-1)];
 end

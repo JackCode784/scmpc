@@ -1,5 +1,6 @@
 #include "setup.h"
 
+#ifndef PL
 // Generalized way of creating new scenarios
 // Returns one theta row vector for each scenario. First row is nominal value for theta
 void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta])
@@ -16,3 +17,30 @@ void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta])
         pseudoRandArx(thetaScenarios[i], thetaRange);
     }
 }
+#else
+// This is only used with passive learning
+// generators points to the generator matrix, the columns of which are the generators
+void generateScenarios(theta_type thetaScenarios[Nscen+1][nTheta])
+{
+    rand_type coeffs[nTheta];
+
+    for(int i = 0; i < nTheta; i++)
+    {
+        thetaScenarios[Nscen][i] = thetaNominal[i]; // last row is the nominal system
+    }
+
+    for(int i = 0; i < Nscen; i++)
+    {
+        pseudoRandArx(coeffs, nTheta);   // nGens numbers in [-1, 1]
+
+        for(int j = 0; j < nTheta; j++)
+        {
+            thetaScenarios[i][j] = thetaNominal[j];
+            for(int k = 0; k < nTheta; k++)
+            {
+                thetaScenarios[i][j] += generators[j][k] * coeffs[k];
+            }
+        }
+    }
+}
+#endif

@@ -4,7 +4,7 @@ close all;
 path = "";
 
 % Comment this to print VSCode simulation, otherwise -> Vitis's results
-path = "C:\Users\jackf\Documents\MPC\ARXforVITIS\VitisProj\ARX\solution1\csim\build\";
+% path = "C:\Users\jackf\Documents\MPC\ARXforsetVITIS\VitisProj\ARX\solution1\csim\build\";
 
 load(append(path, "output.txt"));
 figure; subplot(2,1,1);

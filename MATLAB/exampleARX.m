@@ -7,8 +7,10 @@ close all;
 
 %% System model as ARX
 % MPC is applied for a generic ARX-modeled system.
-% y(k) = a_1 * y(k-1) + ... + a_na * y(k-na) + b_1 * u(k-nd) + ... +
-%        b_nb * u(k-nd-nb+1)
+% Assumption: there is no algebric dependence between input and output,
+% hence nd > 0. We will optimize u(k) after measuring y(k).
+% y(k) = a_1 * y(k-1) + ... + a_na * y(k-na) + 
+%        b_1 * u(k-nd) + ... + b_nb * u(k-nd-nb+1)
 %      = Phi * theta
 
 Ts = 1e-3;  % sampling time
@@ -28,6 +30,8 @@ A = 1e3;
 B = 1e3;
 % thetaNominal = [2; -1; 0; 0; A*B*Ts^2];
 thetaNominal = [2; -1; A*B*Ts^2];
+
+realSys = arxSys(na, nb, nd, [2; -1; 1.1], Ts);
 
 % Create an ARX object
 arxModel = arxSys(na, nb, nd, thetaNominal, Ts);
@@ -50,28 +54,21 @@ umax = 0.3; % maximum input constraint
 
 %% Robust MPC
 
-Nsc = 2;   % number of scenarios
-sysVec = cell(Nsc+1,1);
+Nscen = 2;   % number of scenarios
+sysVec = cell(Nscen+1,1); % scenarios + nominal system
 sysVec{1} = arxModel;
 
 % Generation of scenarios
 Z0c = thetaNominal;     % zonotope (box) center
 Z0Gen = eye(n) / 10;    % zonotope generators matrix (stored as columns)
-for k=1:Nsc
-    eta = 0.5*rand(1);
-    Bk = 1e3*(1+eta);
-    % thetaScen = [2; -1; 0; 0; A*Bk*Ts^2];
-    thetaScen = [2; -1; A*Bk*Ts^2];
-    sysVec{k+1} = arxSys(na, nb, nd, thetaScen, Ts);
-end
 
 %% Choose if using normal or robust MPC
 % robust = 1;
 
 %% Closed-loop simulation with MPC controller
 % Define an initial condition
-yPast = zeros(Nsc+1, na); % output initial conditions for each scenario
-uPast = zeros(Nsc+1, nb+nd-1); % input initial condition, same for all scenarios
+yPast = zeros(1, na); % output initial conditions for each scenario
+uPast = zeros(1, nb+nd-2); % input initial condition, same for all scenarios
 
 % Define a reference output
 yref = 5;
@@ -81,23 +78,18 @@ Tsim = 50e-3;
 
 % Closed-loop simulation
 t = 0:Ts:Tsim;                   % every time instant in which control is given, time axis
-uSim = zeros(Nsc+1, length(t));      % record of resulting inputs
-ySim = zeros(Nsc+1, length(t));  % record of resulting outputs
+uSim = zeros(1, length(t));      % record of resulting input
+ySim = zeros(1, length(t));  % record of resulting outputs
 
+uSamples = [0, uPast]; % [u(k-1), ..., u(k-nb-nd+1)]
 for k=1:length(t) % for each simulation time instant
-    % First, compute optimal input, then compute consequent output
-    for l=1:Nsc+1
-        uOpt_k = generateSCMPCControl(sysVec, yPast(l,:), uPast(l,:), yref, Nhor, NhorU, Q, P, R, umax, umin, ymax, ymin);
-        uSim(l,k) = uOpt_k(1);              % effective input
-        uSamples = [uSim(l,k) uPast(l,:)];  % initial conditions update
+    % First, measure current output y(k) from [u(k-1), ..., u(k-nb-nd+1)]
+    ySim(k) = arxModel.computeOutput(yPast, uSamples);    
 
-        % Compute every scenario's output
-        ySim(l,k) = sysVec{l}.computeOutput(yPast(l,:), uSamples);
-
-        % New initial conditions
-        yPast(l,:) = [ySim(l,k) yPast(l, 1:end-1)];
-        uPast(l,:) = uSamples(1:end-1);
-    end
+    % Then, compute optimal input u(k)
+    % internally update initial conditions for each scenario
+    [uOpt, yPast, uSamples] = generateSCMPCControl(arxModel, ySim(k), yPast, uSamples, yref, Nhor, NhorU, Q, P, R, umax, umin, ymax, ymin, Nscen);
+    uSim(k) = uOpt(1);  % optimized input
 end
 
 % Plots for nominal system
@@ -117,41 +109,29 @@ title('Nominal system output');
 
 subplot(2,1,2);
 hold on;
-stairs(t, uSim(1,:), 'LineWidth',1.5);
-plot(t, 0*uSim(1,:)+umax, '--k');
-plot(t, 0*uSim(1,:)+umin, '--k');
+stairs(t, uSim, 'LineWidth',1.5);
+plot(t, 0*uSim+umax, '--k');
+plot(t, 0*uSim+umin, '--k');
 legend('u(k)', 'umax', 'umin');
 grid on;
 hold off;
 xlabel('Time instant');
-ylabel('ARX input');
+ylabel('Optimized input at instant k');
 
 %% Simulate on different systems
 % Plots for all scenarios
 
-figure;
-subplot(2,1,1);
-hold on;
-plot(t, ySim(2:end, :), 'LineWidth',1.5);
-plot([t(1), t(end)], [ymin, ymin], '--k');
-plot([t(1), t(end)], [ymax, ymax], '--k');
-plot([t(1), t(end)], [yref, yref], '--r');
-hold off;
-grid on;
-xlabel('Time [s]');
-ylabel("Signal output");
-title(append(num2str(Nsc), " scenarios' outputs"));
-
-subplot(2,1,2);
-hold on;
-for i = 2:Nsc+1
-    stairs(t, uSim(i,:), 'LineWidth',1.5);
-end
-plot([t(1), t(end)], [umin, umin], '--k');
-plot([t(1), t(end)], [umax, umax], '--k');
-xlabel('Time [s]');
-ylabel('Input signal');
-grid on;
+% figure;
+% hold on;
+% plot(t, ySim(2:end, :), 'LineWidth',1.5);
+% plot([t(1), t(end)], [ymin, ymin], '--k');
+% plot([t(1), t(end)], [ymax, ymax], '--k');
+% plot([t(1), t(end)], [yref, yref], '--r');
+% hold off;
+% grid on;
+% xlabel('Time [s]');
+% ylabel("Signal output");
+% title(append(num2str(Nscen), " scenarios' outputs"));
 
 %% Generate Simulink model
 

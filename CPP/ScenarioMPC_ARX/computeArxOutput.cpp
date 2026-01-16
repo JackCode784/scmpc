@@ -4,7 +4,7 @@
 // Computes ARX ***nominal*** model output using past output and input samples.
 // ARX output is the scalar product between past output/input samples and theta
 // parameters
-output_type computeArxOutput(const output_type yPast[na], const input_type uSamples[nb+nd], const theta_type theta[nTheta])
+output_type computeArxOutput(const output_type yPast[na], const input_type uSamples[nb+nd-1], const theta_type theta[nTheta])
 {
 #ifdef PRAGMAS
 // #pragma HLS INLINE
@@ -29,7 +29,7 @@ output_type computeArxOutput(const output_type yPast[na], const input_type uSamp
     {
         #ifdef PRAGMAS
         #endif
-        yRes += uSamples[i-na+nd] * theta[i];
+        yRes += uSamples[i - na + nd - 1] * theta[i];
     }
 
     return yRes;

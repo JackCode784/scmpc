@@ -10,7 +10,7 @@ function y = computeOutput(object, yPast, uSamples)
 % yPast, uPast contain the past input/output samples and the current input,
 % ordered as
 %   yPast = [y(k-1) ... y(k-na)]
-%   uSamples = [u(k) ... u(k-nd) ... u(k-nk-nb+1)]
+%   uSamples = [u(k-1) ... u(k-nd) ... u(k-nk-nb+1)]
 % 
 % yPast, uSamples can be matrices, in which case this function returns a
 % (column) vector of the outputs produced with the given values of 

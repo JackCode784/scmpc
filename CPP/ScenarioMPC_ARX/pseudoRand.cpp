@@ -52,6 +52,7 @@ void pseudoRandArx(rand_type randomVector[nOpt])
 	#endif
 }
 
+#ifndef PL
 void pseudoRandArx(theta_type thetaRow[nTheta], theta_type thetaRange[nTheta])
 {
 	#ifdef DEBUG_MODE
@@ -79,3 +80,35 @@ void pseudoRandArx(theta_type thetaRow[nTheta], theta_type thetaRange[nTheta])
 	}
 	#endif
 }
+
+#else
+// Overloading for a generic [-1, 1] vector of coefficients for passive learning
+void pseudoRandArx(rand_type coeffs[], const int nGens)
+{
+	#ifdef DEBUG_MODE
+	for (int i = 0; i < nGens; i++)
+    {
+        coeffs[i] = static_cast<rand_type> (rand()) / (static_cast<rand_type>(RAND_MAX)); // random number in [0, 1]
+		coeffs[i] *= 2;
+		coeffs[i] -= 1;
+    }
+	#else
+	// Random number generator implementation
+	for(int i = 0; i < nGens; i++)
+	{
+		#ifdef PRAGMAS
+		// #pragma HLS pipeline II=1
+		#endif
+		unsigned int r = xorshift32Step();
+		u16_type u16 = (r >> 16) & 0xFFFFu;
+		frac_type frac = u16 >> 16;
+
+		// #ifdef FIXED
+		// 		float fracf = frac.to_float();
+		// #endif
+
+		randomVector[i] = (rand_type(2) * frac) - rand_type(1);
+	}
+	#endif
+}
+#endif
