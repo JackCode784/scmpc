@@ -46,3 +46,19 @@ input_type DAConvertU(digital_input_type uDig)
 	input_type uAn = (uDig - UBias) * UDACGain;
 	return uAn;
 }
+
+void shiftRightY(output_type yArr[], int size, output_type yNew)
+{
+	for(int i = size - 1; i > 0; i--)
+		yArr[i] = yArr[i-1];
+	yArr[0] = yNew;
+	return;
+}
+
+void shiftRightU(input_type uArr[], int size, input_type uNew)
+{
+	for(int i = size - 1; i > 0; i--)
+		uArr[i] = uArr[i-1];
+	uArr[0] = uNew;
+	return;
+}

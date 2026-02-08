@@ -1,15 +1,14 @@
 #include "setup.h"
 
-#ifndef PL
+#ifndef CMPLSYS
 // Generalized way of creating new scenarios
 // Returns one theta row vector for each scenario. First row is nominal value for theta
-void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta])
+void generateScenarios(theta_type thetaScenarios[Nscen][nTheta])
 {
     theta_type thetaRange[nTheta];
 
     for (int i = 0; i < nTheta; i++)
     {
-        thetaScenarios[Nscen][i] = thetaNominal[i];
         thetaRange[i] = thetaMax[i] - thetaMin[i];
     }
     for(int i = 0; i < Nscen; i++)
@@ -20,14 +19,9 @@ void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta])
 #else
 // This is only used with passive learning
 // generators points to the generator matrix, the columns of which are the generators
-void generateScenarios(theta_type thetaScenarios[Nscen+1][nTheta])
+void generateScenarios(theta_type thetaScenarios[Nscen][nTheta])
 {
     rand_type coeffs[nTheta];
-
-    for(int i = 0; i < nTheta; i++)
-    {
-        thetaScenarios[Nscen][i] = thetaNominal[i]; // last row is the nominal system
-    }
 
     for(int i = 0; i < Nscen; i++)
     {

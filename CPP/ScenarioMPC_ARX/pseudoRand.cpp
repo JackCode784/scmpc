@@ -52,7 +52,7 @@ void pseudoRandArx(rand_type randomVector[nOpt])
 	#endif
 }
 
-#ifndef PL
+#ifndef CMPLSYS
 void pseudoRandArx(theta_type thetaRow[nTheta], theta_type thetaRange[nTheta])
 {
 	#ifdef DEBUG_MODE

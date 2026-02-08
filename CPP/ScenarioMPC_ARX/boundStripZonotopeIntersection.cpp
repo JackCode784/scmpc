@@ -1,4 +1,5 @@
 #include "setup.h"
+#ifdef PL
 
 // Bounds the intersection of a strip and a zonotope with another zonotope,
 // the size of which is optimized with an analytic formula for a lambda parameter
@@ -81,3 +82,4 @@ void boundStripZonotopeIntersection(const output_type yCurr, const output_type y
 
     return;
 }
+#endif

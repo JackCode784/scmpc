@@ -1,8 +1,9 @@
 /* setup.h */
 /*
 *   Everything to properly setup SCMPC for an ARX model.
-*   FIXED               : fixed points are used (simulations run in Vitis HLS)
+*   CMPLSYS             : use more complicated system
 *   PL                  : use passive learning technique
+*   FIXED               : fixed points are used (simulations run in Vitis HLS)
 *   PRAGMAS             : use pragmas in certain part of code to optimize synthesis
                           (if not, let Vitis take care of it fully automatically)
 *   DEBUG_MODE          : use rand() for random values generation
@@ -11,13 +12,14 @@
 
 // (Un)comment the following lines accordingly with the intended use
 
+// #define CMPLSYS
+// #define PL
 // #define FIXED
-#define PL
 
 #ifdef FIXED
 #define PRAGMAS
 #else
-#define DEBUG_MODE
+// #define DEBUG_MODE
 #define CONVERSIONS_MODE
 #endif
 
@@ -68,14 +70,14 @@ typedef double mesh_type;        // datatype for mesh points (same as input_type
 typedef int mesh_exp_type;       // datatype for mesh exponents
 typedef int direction_type;      // datatype for directions matrix
 
-typedef float conv_type; // WIP
+typedef double conv_type; // WIP
 typedef double alg_type; // datatype for algorithm signals
 
 // The following are alg_type in fixed point
 typedef double output_type; // datatype for output samples
 typedef double input_type;  // datatype for input samples
-typedef float weights_type; // datatype for weights matrices
-typedef float theta_type;   // datatype for theta ARX parameters
+typedef double weights_type; // datatype for weights matrices
+typedef double theta_type;   // datatype for theta ARX parameters
 typedef double err_type;    // datatype for output-reference difference
 typedef double frac_type;   // datatype for pseudorand function
 typedef unsigned int u16_type;
@@ -93,8 +95,9 @@ typedef unsigned int u16_type;
 // Control horizon <= prediction horizon
 #define NhorU 3
 
-// Number of scenarios (convenient if it's a power of 2 minus one)
+// Number of scenarios, WITHOUT the nominal system (convenient if it's a power of 2)
 #define Nscen 2
+#define LOG2NSCEN 1
 
 // Passive learning only
 #ifdef PL
@@ -110,9 +113,6 @@ static const output_type YMAX = 8; // rewritten for arx
 
 // Number of optimization variables
 #define nOpt NhorU
-
-// Number of controller inputs [x_k; u_(k-1)]
-// #define nX_CTRL 3
 
 /*
     ----------------------------------------
@@ -137,7 +137,7 @@ static const mesh_exp_type D[nOpt] = {-8, -8, -8};
     ----------------------------------------
 */
 
-#ifndef PL
+#ifndef CMPLSYS
 #define na 2
 #define nb 1
 #define nd 2
@@ -149,10 +149,10 @@ static const mesh_exp_type D[nOpt] = {-8, -8, -8};
 
 #define nTheta (na + nb)
 
-static output_type yInit[na] = {0};
-static input_type uSamples[nb + nd - 1] = {0}; // y(k) depends on u(k-1), ..., u(k-nb-nd+1)
+extern output_type yInit[na];
+extern input_type uSamples[nb + nd - 1]; // y(k) depends on u(k-1), ..., u(k-nb-nd+1)
 
-#ifndef PL
+#ifndef CMPLSYS
 static theta_type thetaNominal[nTheta] = {2, -1, 1};
 
 // Ranges for other scenarios' theta
@@ -160,15 +160,8 @@ static const theta_type thetaMax[nTheta] = {2, -1, 1.5};
 static const theta_type thetaMin[nTheta] = {2, -1, 0.5};
 
 #else
-static theta_type thetaNominal[nTheta] = {0.7921, 0.1524, -0.1668, 0.0842, 0.0442, 0.0860};
-static theta_type generators[nTheta][nTheta] = {
-    {-0.8959, -0.4594, -0.0026, -0.0027, -0.0187, 0.0080},
-    {1.3452, -0.1401, 0.0030, 0.0111, -0.0283, 0.0079},
-    {-0.5326, 0.4275, -0.0051, 0.0289, -0.0362, 0.0077},
-    {-0.0082, 0.0028, 0.0524, 0.0788, 0.0367, 0.0085},
-    {0.0859, 0.0502, -0.1015, -0.0126, 0.0271, 0.0086},
-    {0.0021, 0.1180, 0.0538, -0.0985, 0.0126, 0.0086}
-};
+extern theta_type thetaNominal[nTheta];
+extern theta_type generators[nTheta][nTheta];
 #endif
 
 /*
@@ -223,13 +216,12 @@ static const conv_type UBias = 2048;
     ----------------------------------------
 */
 output_type computeArxOutput(const output_type yPast[na], const input_type uSamples[nb+nd-1], const theta_type theta[nTheta]);
-void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 2], const output_type yref, const theta_type thetaScenarios[Nscen + 1][nTheta]);
+void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 2], const output_type yref, const theta_type thetaScenarios[Nscen][nTheta]);
 void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], direction_type directions[nOpt][2 * nOpt]);
 void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], input_type pollMatrix[nOpt][2 * nOpt]);
-void generateScenarios(theta_type thetaScenarios[Nscen + 1][nTheta]);
-void generateSCMPCControl(input_type uOpt[NhorU], theta_type thetaScenarios[Nscen + 1][nTheta], const output_type yInit[na], const input_type uInit[nb + nd - 1], const output_type yref);
+void generateScenarios(theta_type thetaScenarios[Nscen][nTheta]);
 void MADSARX(input_type uOpt[nOpt], const input_type uInit[nb+nd-2], const output_type yInit[na], const output_type yref, const theta_type thetaScenarios[Nscen][nTheta]);
-void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nOpt], const output_type yPast[na], const input_type uPast[nb + nd - 2], const output_type yref, const input_type pollMatrix[nOpt][2 * nOpt], mesh_exp_type frameExp[nOpt], const theta_type thetaScenarios[Nscen + 1][nTheta]);
+void progressiveBarrierPollingArx(cost_type bestCost[2], input_type bestPoint[nOpt], const output_type yPast[na], const input_type uPast[nb + nd - 2], const output_type yref, const input_type pollMatrix[nOpt][2 * nOpt], mesh_exp_type frameExp[nOpt], const theta_type thetaScenarios[Nscen][nTheta]);
 void pseudoRandArx(rand_type randomVector[nOpt]);
 void pseudoRandArx(theta_type thetaRow[nTheta], theta_type thetaRange[nTheta]);
 void pseudoRandArx(rand_type coeffs[], const int nGens);

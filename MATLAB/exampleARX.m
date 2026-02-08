@@ -60,7 +60,7 @@ sysVec{1} = arxModel;
 
 % Generation of scenarios
 Z0c = thetaNominal;     % zonotope (box) center
-Z0Gen = eye(n) / 10;    % zonotope generators matrix (stored as columns)
+Z0Gen = diag(thetaNominal) / 10;    % zonotope generators matrix (stored as columns)
 
 %% Choose if using normal or robust MPC
 % robust = 1;
@@ -84,7 +84,7 @@ ySim = zeros(1, length(t));  % record of resulting outputs
 uSamples = [0, uPast]; % [u(k-1), ..., u(k-nb-nd+1)]
 for k=1:length(t) % for each simulation time instant
     % First, measure current output y(k) from [u(k-1), ..., u(k-nb-nd+1)]
-    ySim(k) = arxModel.computeOutput(yPast, uSamples);    
+    ySim(k) = arxModel.computeOutput(yPast, uSamples);
 
     % Then, compute optimal input u(k)
     % internally update initial conditions for each scenario

@@ -7,15 +7,19 @@ void intervalHull(theta_type newCenter[nTheta], theta_type newGens[nTheta][nThet
     for(int i = 0; i < nTheta; i++)
     {
         newCenter[i] = oldCenter[i];
-
-        for(int j = 0;  j < nTheta; j++)
-        {   
+        
+        for(int j = 0; j < nTheta; j++)
+        {
             newGens[i][j] = 0;
-            newGens[i][i] += (oldGens[i][j] > 0) ? oldGens[i][j] : -oldGens[i][j];
+        }
+
+        for(int j = 0; j < nTheta + 1; j++)
+        {   
+            newGens[i][i] += (oldGens[i][j] < 0) ? -oldGens[i][j] : oldGens[i][j];
         }
 
         // Last term missing
-        newGens[i][i] += (oldGens[i][nTheta] > 0) ? oldGens[i][nTheta] : -oldGens[i][nTheta];
+        // newGens[i][i] += (oldGens[i][nTheta] < 0) ? -oldGens[i][nTheta] : oldGens[i][nTheta];
     }
     return;
 }

@@ -5,7 +5,7 @@
 
 // costFunctionArx computes the cost for the current point currU.
 // ARX model assumption: system is SISO (single input single output), i.e. nu = ny = 1
-void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 2], const output_type yref, const theta_type thetaScenarios[Nscen][nTheta])
+void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 2], const output_type yref, const theta_type thetaScenarios[Nscen][nTheta])
 {
     #ifdef PRAGMAS
     // #pragma HLS INLINE
@@ -55,8 +55,22 @@ void costFunctionArx(cost_type cost[2], const output_type yPast[na], const input
         }
     }
 
+    // Input contribution to cost function
+    for(int k = 0; k < NhorU; k++)
+        cost[0] += currU[k] * currU[k];
+    
+    for(int k = 0; k < Nhor - NhorU - 1; k++)
+        cost[0] += currU[nOpt-1] * currU[nOpt-1];
+    
+    cost[0] *= R;
+
+
+    /*
+        Idea: scenariosContrib accumulates all scenarios + nominal system contributions for all k=0,..., Nhor-1, then the scenarios strictly should be divided by Nscen (or equivalently shifted by LOG2NSCEN) and then everything (nominal system too) should be multiplied by Q (or P). This could cause overflow if error is large or Nscen is high (=> saturation?). The loops from k=0,...,NhorU-1 and k=NhorU,...,Nhor-1 cannot be parallelized since the latter depends on the former (output initial conditions must be computed and updated at every step). Also, since the contribution of the nominal system and the scenarios differ by a division by Nscen (but share the multiplication by Q), they should be computed separately and then summed. 
+    */
+   
     // Compute cost during control horizon
-for (int k = 0; k < NhorU; k++)
+    for (int k = 0; k < NhorU; k++)
     {
         #ifdef PRAGMAS
         #pragma HLS UNROLL
@@ -64,9 +78,6 @@ for (int k = 0; k < NhorU; k++)
 
         // Fill uSamples
         uSamples[0] = currU[k]; // u(k)
-
-        // Cost contribution (current input)
-        cost[0] += uSamples[0] * R * uSamples[0];
         scenariosContrib = 0;
 
         // For each scenario compute output sequence and constraints violation
