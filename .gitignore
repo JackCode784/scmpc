@@ -135,3 +135,7 @@ venv/
 
 # Keep README or other docs even if placed in generated dirs:
 !*/README.md
+
+# Third-party softwares
+CORA/
+tbxmanager/
