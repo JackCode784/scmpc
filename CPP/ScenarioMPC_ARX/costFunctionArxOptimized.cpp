@@ -5,7 +5,7 @@
 
 // costFunctionArx computes the cost for the current point currU.
 // ARX model assumption: system is SISO (single input single output), i.e. nu = ny = 1
-void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nd - 2], const output_type yref, const theta_type thetaScenarios[Nscen][nTheta])
+void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], const input_type currU[nOpt], const input_type uPast[nb + nk - 2], const output_type yref, const theta_type thetaScenarios[Nscen][nTheta])
 {
     #ifdef PRAGMAS
     // #pragma HLS INLINE
@@ -14,9 +14,9 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
     cost[0] = 0; // cost init
     cost[1] = 0; // cost init
 
-    // input_type uPastCurr[nb + nd - 2];  // local copy of uPast
+    // input_type uPastCurr[nb + nk - 2];  // local copy of uPast
     output_type yPastCurr[na];          // local copy of yPast
-    input_type uSamples[nb + nd - 1];
+    input_type uSamples[nb + nk - 1];
     output_type yNext;
     err_type err;
     cost_type scenariosContrib;
@@ -34,7 +34,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
         yPastCurr[i] = yPast[i];
     }
 
-    for (int i = 0; i < nb + nd - 2; i++)
+    for (int i = 0; i < nb + nk - 2; i++)
     {
         #ifdef PRAGMAS
         // #pragma HLS UNROLL
@@ -87,7 +87,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
             // #pragma HLS UNROLL
             #endif
 
-            // Compute system's next output y(k+1) from y(k), ..., y(k-na+1), u(k), ..., u(k-nb-nd+2)
+            // Compute system's next output y(k+1) from y(k), ..., y(k-na+1), u(k), ..., u(k-nb-nk+2)
             yNext = computeArxOutput(yPastCurr, uSamples, thetaScenarios[l]);
 
             #ifdef PL
@@ -109,7 +109,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
         #endif
 
         // Update cost (only nominal system contribution)
-        yNext = computeArxOutput(yPastCurr, uSamples, thetaNominal);
+        yNext = computeArxOutput(yPastCurr, uSamples, thetaCenter);
         err = yNext - yref;
         cost[0] += Q * (err * err + scenariosContrib);
 
@@ -118,7 +118,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
             yPastCurr[i] = yPastCurr[i - 1];
         yPastCurr[0] = yNext;
 
-        for (int i = nb + nd - 2; i > 0; i--)
+        for (int i = nb + nk - 2; i > 0; i--)
             uSamples[i] = uSamples[i - 1];
     }
 
@@ -164,7 +164,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
         #endif
 
         // Update cost (only nominal system contribution)
-        yNext = computeArxOutput(yPastCurr, uSamples, thetaNominal);
+        yNext = computeArxOutput(yPastCurr, uSamples, thetaCenter);
         err = yNext - yref;
         cost[0] += Q * (err * err + scenariosContrib);
 
@@ -173,7 +173,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
             yPastCurr[i] = yPastCurr[i - 1];
         yPastCurr[0] = yNext;
 
-        for (int i = nb + nd - 2; i > 0; i--)
+        for (int i = nb + nk - 2; i > 0; i--)
             uSamples[i] = uSamples[i - 1];
     }
 
@@ -214,7 +214,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
     #endif
 
     // Update cost (only nominal system contribution)
-    yNext = computeArxOutput(yPastCurr, uSamples, thetaNominal);
+    yNext = computeArxOutput(yPastCurr, uSamples, thetaCenter);
     err = yNext - yref;
     cost[0] += err * P * err + Q * scenariosContrib;
 

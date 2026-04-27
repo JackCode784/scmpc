@@ -1,9 +1,9 @@
 #include "setup.h"
-#ifdef DEBUG_MODE
+#ifdef PRNG_STDLIB
 #include <cstdlib> // rand()
 #endif
 
-#ifndef DEBUG_MODE
+#ifndef PRNG_STDLIB
 static unsigned int random_state = 0xAAAAAAAAu;
 
 inline void pseudoRandSeed(unsigned int seed)
@@ -22,75 +22,67 @@ inline unsigned int xorshift32Step()
 }
 #endif
 
-// Check if correct, random vector is only 2-dimensional instead of nDim_CTRL
-void pseudoRandArx(rand_type randomVector[nOpt])
+/* Return one random sample in [-1, 1] */
+rand_type pseudoRandArx()
 {
-	#ifdef DEBUG_MODE
-	for(int i = 0; i < nOpt; i++)
-	{
-		randomVector[i] = static_cast <rand_type> (rand()) / (static_cast <rand_type> (RAND_MAX)); // random number in [0, 1]
-		randomVector[i] *= 2;	// random number in [0, 2]
-		randomVector[i] -= 1;	// random number in [-1, 1]
-	}
+	rand_type res;
+	#ifdef PRNG_STDLIB
+	res = (rand_type)2 * ((rand_type)rand() / (rand_type)RAND_MAX) - (rand_type)1;
 	#else
-    // Random number generator implementation
-	for(int i = 0; i < nOpt; i++)
-	{
-		#ifdef PRAGMAS
-		// #pragma HLS pipeline II=1
-		#endif
-		unsigned int r = xorshift32Step();
-		u16_type u16 = (r >> 16) & 0xFFFFu;
-		frac_type frac = u16 >> 16;
-
-		// #ifdef FIXED
-		// 		float fracf = frac.to_float();
-		// #endif
-
-		randomVector[i] = (rand_type(2) * frac) - rand_type(1);
-	}
+	unsigned int r = xorshift32Step();
+	u16_type u16 = (r >> 16) & 0xFFFFu;
+	#ifdef FIXED
+	frac_type frac = u16 >> 16;
+	#else
+	frac_type frac = u16 / 65536.0;
 	#endif
+
+	res = rand_type(2) * (rand_type)(frac) - rand_type(1);
+	#endif
+	
+	return res;
 }
 
-#ifndef CMPLSYS
-void pseudoRandArx(theta_type thetaRow[nTheta], theta_type thetaRange[nTheta])
+// // Check if correct, random vector is only 2-dimensional instead of nDim_CTRL
+// void pseudoRandArx(rand_type randomVector[nOpt])
+// {
+// 	#ifdef PRNG_STDLIB
+// 	for(int i = 0; i < nOpt; i++)
+// 	{
+// 		randomVector[i] = (rand_type)2 * ((rand_type)rand() / (rand_type)RAND_MAX) - (rand_type)1;
+// 	}
+// 	#else
+//     // Random number generator implementation
+// 	for(int i = 0; i < nOpt; i++)
+// 	{
+// 		#ifdef PRAGMAS
+// 		// #pragma HLS pipeline II=1
+// 		#endif
+// 		unsigned int r = xorshift32Step();
+// 		u16_type u16 = (r >> 16) & 0xFFFFu;
+// 		#ifdef FIXED
+// 		frac_type frac = u16 >> 16;
+// 		#else
+// 		frac_type frac = u16 / 65536.0;
+// 		#endif
+
+// 		// #ifdef FIXED
+// 		// 		float fracf = frac.to_float();
+// 		// #endif
+
+// 		randomVector[i] = (rand_type(2) * (rand_type)(frac)) - rand_type(1);
+// 	}
+// 	#endif
+// }
+
+
+ // Overloading for a generic [-1, 1] vector of coefficients for passive learning
+void pseudoRandArx(rand_type coeffs[nGens])
 {
-	#ifdef DEBUG_MODE
-    for (int i = 0; i < nTheta; i++)
-    {
-        thetaRow[i] = static_cast<theta_type>(rand()) / (static_cast<theta_type>(RAND_MAX)); // random number in [0, 1]
-		thetaRow[i] *= thetaRange[i];                                                        // random vector in [0, thetaMax-thetaMin]
-		thetaRow[i] += thetaMin[i];                                                          // random vector in [thetaMin, thetaMax]
-    }
-	#else
-	for(int i = 0; i < nTheta; i++)
-	{
-		#ifdef PRAGMAS
-		// #pragma HLS pipeline II=1
-		#endif
-		unsigned int r = xorshift32Step();
-		u16_type u16 = ((r >> 16) & 0xFFFFu);
-		frac_type frac = u16 >> 16;
-
-		// #ifdef FIXED
-		// 		float fracf = frac.to_float();
-		// #endif
-
-		thetaRow[i] = (thetaRange[i] * frac) + thetaMin[i];
-	}
-	#endif
-}
-
-#else
-// Overloading for a generic [-1, 1] vector of coefficients for passive learning
-void pseudoRandArx(rand_type coeffs[], const int nGens)
-{
-	#ifdef DEBUG_MODE
+	#ifdef PRNG_STDLIB
 	for (int i = 0; i < nGens; i++)
     {
-        coeffs[i] = static_cast<rand_type> (rand()) / (static_cast<rand_type>(RAND_MAX)); // random number in [0, 1]
-		coeffs[i] *= 2;
-		coeffs[i] -= 1;
+		randomVector[i] = (rand_type)2 * ((rand_type)rand() / (rand_type)RAND_MAX)- (rand_type)1;
     }
 	#else
 	// Random number generator implementation
@@ -101,14 +93,16 @@ void pseudoRandArx(rand_type coeffs[], const int nGens)
 		#endif
 		unsigned int r = xorshift32Step();
 		u16_type u16 = (r >> 16) & 0xFFFFu;
+		#ifdef FIXED
 		frac_type frac = u16 >> 16;
+		#else
+		frac_type frac = u16 / 65536.0;
+		#endif
 
 		// #ifdef FIXED
 		// 		float fracf = frac.to_float();
 		// #endif
-
-		randomVector[i] = (rand_type(2) * frac) - rand_type(1);
+		coeffs[i] = (rand_type(2) * (rand_type)(frac)) - rand_type(1);
 	}
 	#endif
 }
-#endif

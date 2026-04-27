@@ -3,7 +3,7 @@
 /*
  *	Each of these convert an input/output sample to digital or analogue
  */
-digital_output_type ADConvertY(output_type yAn)
+digital_output_type ADConvertY(const output_type yAn)
 {
 // #ifdef FIXED
 // 	float YADCGainf = YADCGain.to_float();
@@ -11,10 +11,15 @@ digital_output_type ADConvertY(output_type yAn)
 // 	float YBiasf = YBias.to_float();
 // #endif
 	digital_output_type yDig = YADCGain * yAn + YBias;
+	
+	/* Saturate output if outside ADC values */
+	yDig = (yDig < ADC_MIN) ? ADC_MIN :
+			(yDig > ADC_MAX) ? ADC_MAX :
+			yDig;
 	return yDig;
 }
 
-output_type DAConvertY(digital_output_type yDig)
+output_type DAConvertY(const digital_output_type yDig)
 {
 //  	#ifdef FIXED
 //  	float YDACGainf = YDACGain.to_float();
@@ -25,7 +30,7 @@ output_type DAConvertY(digital_output_type yDig)
 	return yAn;
 }
 
-digital_input_type ADConvertU(input_type uAn)
+digital_input_type ADConvertU(const input_type uAn)
 {
 // 	#ifdef FIXED
 // 	float UADCGainf = UADCGain.to_float();
@@ -36,7 +41,7 @@ digital_input_type ADConvertU(input_type uAn)
 	return uDig;
 }
 
-input_type DAConvertU(digital_input_type uDig)
+input_type DAConvertU(const digital_input_type uDig)
 {
 // 	#ifdef FIXED
 // 	float UDACGainf = UDACGain.to_float();
@@ -45,20 +50,4 @@ input_type DAConvertU(digital_input_type uDig)
 // #endif
 	input_type uAn = (uDig - UBias) * UDACGain;
 	return uAn;
-}
-
-void shiftRightY(output_type yArr[], int size, output_type yNew)
-{
-	for(int i = size - 1; i > 0; i--)
-		yArr[i] = yArr[i-1];
-	yArr[0] = yNew;
-	return;
-}
-
-void shiftRightU(input_type uArr[], int size, input_type uNew)
-{
-	for(int i = size - 1; i > 0; i--)
-		uArr[i] = uArr[i-1];
-	uArr[0] = uNew;
-	return;
 }

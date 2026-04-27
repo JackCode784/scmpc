@@ -17,7 +17,8 @@ void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type fra
 	rand_type randomVector[nOpt];
 
 	// generate random vector in [-1, 1]
-	pseudoRandArx(randomVector);
+	for(int i = 0; i < nOpt; i++)
+		randomVector[i] = pseudoRandArx();
 
 	// generate poll directions starting with a random vector
 	generatePollDirectionsArx(randomVector, frameIdx, meshIdx, directions);

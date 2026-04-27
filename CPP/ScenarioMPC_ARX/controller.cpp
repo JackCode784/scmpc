@@ -1,99 +1,187 @@
+/**
+ * @file  controller.cpp
+ * @brief SCMPC controller for an ARX system — HLS top-level function.
+ *
+ * SHARED MUTABLE STATE
+ * ---------------------
+ * The variables below are defined here WITHOUT the "static" keyword, giving
+ * them EXTERNAL linkage.  Any other .cpp file that includes setup.h sees
+ * the extern declarations and refers to the same physical storage.
+ *
+ * "static" at file scope would give INTERNAL linkage: every translation
+ * unit that included setup.h would get its own private copy, and those
+ * copies would silently diverge as soon as one was updated.  That is the
+ * wrong behaviour for shared controller state.
+ *
+ *   thetaCenter[nTheta]              — current zonotope centre c(k)
+ *   thetaGens  [nTheta][nGens]— current generator matrix G(k)
+ *   nGens                       — number of active generator columns
+ *   yHist      [na]                  — output history y(k−1), …, y(k−na)
+ *   uHist      [nb+nk−1]             — input  history u(k−1), …, u(k−nb−nk+1)
+ *
+ * ZONOTOPE LIFECYCLE
+ * ------------------
+ * controllerInit()          — copies ACTIVE_CONFIG.Z0.c / Z0.G / Z0.nGen;
+ *                             nGens is fixed from this point on because
+ *                             boundStripZonotopeIntersection preserves the
+ *                             column count of the generator matrix.
+ * boundStripZonotopeIntersection() — produces newCenter/newGens with the
+ *                             same nGens columns; result is copied back
+ *                             into thetaCenter/thetaGens.
+ * intervalHull is NOT used — the strip-intersection algorithm used here
+ *                             already keeps the generator count constant.
+ *
+ * ORDERING OF OPERATIONS INSIDE controller()
+ * -------------------------------------------
+ * The order is critical and must not be changed without careful thought
+ * about which data belongs to time k vs k−1.
+ *
+ *  1. Convert digital inputs → algorithm types.
+ *  2. [PL] Update zonotope using y(k), OLD yHist, OLD uHist.
+ *          The strip S(k) = {θ : |y(k)−φ(k)ᵀθ|≤ε} uses the regressor
+ *          φ(k) = [y(k−1),…, u(k−1),…] — the OLD histories.
+ *  3. [AL] WIP stub.
+ *  4. Generate scenarios from the (now updated) thetaCenter / thetaGens.
+ *  5. Shift yHist ← [y(k), y(k−1), …].
+ *  6. Snapshot uHist into uPast (before it is updated in step 9).
+ *  7. Run MADS → uOpt.
+ *  8. Convert uOpt → digital.
+ *  9. Shift uHist ← [uOpt[0], u(k−1), …].
+ */
+
 #include "setup.h"
 #include <stdio.h>
 
-#ifdef CMPLSYS
-theta_type thetaNominal[nTheta] = {0.7921, 0.1524, -0.1668, 0.0842, 0.0442, 0.0860}; // extern in setup.h
-theta_type generators[nTheta][nTheta] = {
-    {-0.8959, -0.4594, -0.0026, -0.0027, -0.0187, 0.0080},
-    {1.3452, -0.1401, 0.0030, 0.0111, -0.0283, 0.0079},
-    {-0.5326, 0.4275, -0.0051, 0.0289, -0.0362, 0.0077},
-    {-0.0082, 0.0028, 0.0524, 0.0788, 0.0367, 0.0085},
-    {0.0859, 0.0502, -0.1015, -0.0126, 0.0271, 0.0086},
-    {0.0021, 0.1180, 0.0538, -0.0985, 0.0126, 0.0086}
-};  // extern in setup.h
-#endif
+/* ======================================================================
+   DEFINITION of the shared mutable controller state.
+   "extern" declarations for these live in setup.h (included above).
+   No "static" — external linkage is required so all translation units
+   share the same storage.
+   ====================================================================== */
+theta_type  thetaCenter[nTheta]              = {    THETA_NOMINAL_INIT  };
+theta_type  thetaGens  [nTheta][nGens]       = {    GENERATORS_INIT     };
+output_type yHist[na]                         = {0};
+input_type  uHist[nb + nk - 1]               = {0};
 
-output_type yInit[na] = {0};    // extern in setup.h
-input_type uSamples[nb + nd - 1] = {0}; // extern in setup.h
-
-// Take digital inputs, convert them to fixed point, find optimal input, return it as digital
-// At instant k measure y(k), find uOpt = [u(k), u(k+1), ..., u(k+NhorU-1)]
-void controller(digital_input_type uOptDig[NhorU], const digital_output_type yCurrDig, const digital_output_type yrefDig)
+/* ======================================================================
+   controller()
+   ====================================================================== */
+void controller(digital_input_type  uOptDig[NhorU],
+                const digital_output_type yCurrDig,
+                const digital_output_type yrefDig)
 {
-    // Convert digital inputs to fixed point/float
+    /* ------------------------------------------------------------------ */
+    /*  Step 1 — Convert digital inputs to algorithm types                */
+    /* ------------------------------------------------------------------ */
+    output_type yCurr = DAConvertY(yCurrDig);
+    output_type yref  = DAConvertY(yrefDig);
+
     input_type uOpt[NhorU];
-    input_type uPast[nb + nd - 2];
-    output_type yref;
-    output_type yCurr;
-    theta_type thetaScenarios[Nscen][nTheta];
-
-    yref = DAConvertY(yrefDig);
-    yCurr = DAConvertY(yCurrDig); // if this is y(k)...
-    
     for (int i = 0; i < NhorU; i++)
-        uOpt[i] = DAConvertU(uOptDig[i]);   // u(k), u(k+1), ..., u(k+NhorU-1)
+        uOpt[i] = DAConvertU(uOptDig[i]);
 
-#ifdef PL
-    /*
-     *   Uncertainty zonotope update and reduction
-     */
-    theta_type newCenter[nTheta];
-    theta_type newGens[nTheta][nTheta + 1];
-
-    // Writes in newCenter, newGens the new zonotope center and generators
-    boundStripZonotopeIntersection(yCurr, yInit, uSamples, thetaNominal, generators, newCenter, newGens);
-
-    printf("\n\n");
-    for(int i = 0; i < nTheta; i++)
-        printf("%f ", newCenter[i]);
-    printf("\n\n");
-
-    for(int i = 0; i < nTheta; i++)
+    /* ------------------------------------------------------------------ */
+    /*  Step 2 — [PL mode] Zonotope update                                */
+    /* ------------------------------------------------------------------ */
+#if CTRL_MODE == CTRL_MODE_PL
     {
-        for(int j =0; j < nTheta + 1; j++)
-            printf("%f\t", newGens[i][j]);
-        printf("\n");
+        /*
+         * Intersect the current zonotope with the strip S(k).
+         * The strip uses the OLD yHist and OLD uHist — the regressor
+         * φ(k) = [y(k−1),…, u(k−1),…] refers to measurements taken
+         * BEFORE this time step.
+         *
+         * newCenter and newGens are temporaries with the same dimensions
+         * as thetaCenter and thetaGens.  We cannot pass thetaCenter/
+         * thetaGens as both input and output to the same call because
+         * the function reads the old values while writing the new ones;
+         * aliasing would corrupt the computation.
+         * After the call we copy the result back into the globals.
+         */
+        theta_type newCenter[nTheta];
+        theta_type newGens  [nTheta][nGens];
+
+        boundStripZonotopeIntersectionNew(yCurr,
+                                       yHist, uHist,
+                                       thetaCenter, thetaGens,
+                                       newCenter, newGens);
+
+        /* Copy result back into the shared global zonotope state. */
+        for (int i = 0; i < nTheta; i++) {
+            thetaCenter[i] = newCenter[i];
+            for (int j = 0; j < nGens; j++)
+                thetaGens[i][j] = newGens[i][j];
+        }
+
+#ifdef DEBUG_PRINT
+        printf("\n--- PL: updated zonotope ---\n");
+        printf("thetaCenter: ");
+        for (int i = 0; i < nTheta; i++) printf("%f ", (double)thetaCenter[i]);
+        printf("\nthetaGens:\n");
+        for (int i = 0; i < nTheta; i++) {
+            for (int j = 0; j < nGens; j++)
+                printf("%8.4f ", (double)thetaGens[i][j]);
+            printf("\n");
+        }
+#endif
     }
+#endif  /* CTRL_MODE == CTRL_MODE_PL */
 
-    intervalHull(thetaNominal, generators, newCenter, newGens);
-
-    printf("\n\n");
-    for(int i = 0; i < nTheta; i++)
+    /* ------------------------------------------------------------------ */
+    /*  Step 3 — [AL mode] Active learning stub (WIP)                     */
+    /* ------------------------------------------------------------------ */
+#if CTRL_MODE == CTRL_MODE_AL
     {
-        for(int j =0; j < nTheta; j++)
-            printf("%f ", generators[i][j]);
-        printf("\n");
+        /* TODO: dual-control probing perturbation on uOpt. */
     }
-    for(int i = 0; i < nTheta; i++)
-        (((thetaNominal[i] < 0) ? -thetaNominal[i] : thetaNominal[i]) < generators[i][i]) ? printf("Yes ") : printf("No ");
 #endif
 
+    /* ------------------------------------------------------------------ */
+    /*  Step 4 — Generate uncertainty scenarios                            */
+    /* ------------------------------------------------------------------ */
     /*
-     *  Input optimization
+     * generateScenarios reads thetaCenter and thetaGens via the extern
+     * globals, but we pass them as explicit arguments to keep the data
+     * flow visible to the HLS scheduler.  The values are the most recent
+     * ones: updated by step 2 in PL mode, or fixed at init in SCMPC mode.
      */
-    // Generate scenarios for cost function computations
-    generateScenarios(thetaScenarios);
+    theta_type thetaScenarios[Nscen][nTheta];
+    generateScenarios(thetaScenarios, thetaCenter, thetaGens);
 
-    // Update inital conditions
+    /* ------------------------------------------------------------------ */
+    /*  Step 5 — Update output history: push y(k) into yHist             */
+    /* ------------------------------------------------------------------ */
     for (int i = na - 1; i > 0; i--)
-        yInit[i] = yInit[i - 1]; // ...this becomes yInit = [y(k), y(k-1), ..., y(k-na+1)] ...
-    yInit[0] = yCurr;            // ...necessary to compute y(k+1) together with u(k)
+        yHist[i] = yHist[i - 1];
+    yHist[0] = yCurr;   /* yHist = [y(k), y(k−1), …, y(k−na+1)] */
 
-    for (int i = 0; i < nb + nd - 2; i++)
-        uPast[i] = uSamples[i];
+    /* ------------------------------------------------------------------ */
+    /*  Step 6 — Snapshot input history for MADS                          */
+    /* ------------------------------------------------------------------ */
+    /*
+     * uPast = [u(k−1), …, u(k−nb−nk+1)] — needed by costFunctionArx to
+     * roll out predictions for y(k+1), …, y(k+N) alongside uOpt.
+     * Must be taken BEFORE uHist is updated with uOpt[0] in step 9.
+     */
+    input_type uPast[nb + nk - 2];
+    for (int i = 0; i < nb + nk - 2; i++)
+        uPast[i] = uHist[i];
 
-    // Run MADS optimization algorithm
-    // computing u(k)
-    MADSARX(uOpt, uPast, yInit, yref, thetaScenarios);
+    /* ------------------------------------------------------------------ */
+    /*  Step 7 — Run MADS optimisation                                    */
+    /* ------------------------------------------------------------------ */
+    MADSARX(uOpt, uPast, yHist, yref, thetaScenarios);
 
-    // Convert uOpt back to digital
+    /* ------------------------------------------------------------------ */
+    /*  Step 8 — Convert uOpt back to digital                             */
+    /* ------------------------------------------------------------------ */
     for (int i = 0; i < NhorU; i++)
         uOptDig[i] = ADConvertU(uOpt[i]);
 
-    // Update input initial conditions
-    for (int i = nb + nd - 2; i > 0; i--)
-        uSamples[i] = uSamples[i - 1];
-    uSamples[0] = uOpt[0];
-
-    return;
+    /* ------------------------------------------------------------------ */
+    /*  Step 9 — Update input history: push uOpt[0] into uHist           */
+    /* ------------------------------------------------------------------ */
+    for (int i = nb + nk - 2; i > 0; i--)
+        uHist[i] = uHist[i - 1];
+    uHist[0] = uOpt[0];   /* receding horizon: only u(k) is applied */
 }

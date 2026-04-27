@@ -77,11 +77,6 @@
 			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/generatePollMatrixArx.cpp</location>
 		</link>
 		<link>
-			<name>source/generateSCMPCControl.cpp</name>
-			<type>1</type>
-			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/generateSCMPCControl.cpp</location>
-		</link>
-		<link>
 			<name>source/generateScenarios.cpp</name>
 			<type>1</type>
 			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/generateScenarios.cpp</location>

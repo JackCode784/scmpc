@@ -1,6 +1,6 @@
 #include "setup.h"
 
-void updateConstraintViolation(cost_type cost[2], output_type yCurr)
+void updateConstraintViolation(cost_type cost[2], const output_type yCurr)
 {
     #ifdef PRAGMAS
     //  #pragma HLS INLINE

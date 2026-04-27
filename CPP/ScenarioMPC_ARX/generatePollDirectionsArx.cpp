@@ -30,7 +30,7 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 		// #pragma HLS UNROLL
 		#endif
 
-		frameMeshDiff[i] = frameIdx[i] - meshIdx[i] + C;
+		frameMeshDiff[i] = frameIdx[i] - meshIdx[i] + MADS_C;
 		mesh[i] = 1;
 		#ifdef FIXED
 		mesh[i] = mesh[i] << frameMeshDiff[i];

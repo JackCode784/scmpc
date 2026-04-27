@@ -50,9 +50,7 @@ if(width(data) > 7)
     figure;
     plot(data.vol, 'LineWidth',1.5);
     grid on;
-    xlabel('Time instant');
-    ylabel('Volume (normalized)');
-    title('Normalized zonotope volume');
+    xlabel('Time instant')
 end
 
 %% Latency/area occupation dependency on number of scenarios
