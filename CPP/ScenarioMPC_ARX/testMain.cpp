@@ -4,34 +4,32 @@
  *
  * This file is a SOFTWARE-ONLY simulation harness.  It is never synthesised
  * by Vitis HLS; it exists to verify controller behaviour before flashing
- * hardware.
+ * hardware. It serves as the testbench for Vitis HLS.
  *
  * SIMULATION STRUCTURE
  * ---------------------
  * At each time step k the harness:
  *  1. Simulates the plant (true ARX with thetaTrue) to obtain y(k).
- *  2. Converts y(k) and yref to digital samples (12-bit integers).
+ *  2. Converts y(k) and yref to digital samples (12-bit integers) - this mimics an AD conversion.
  *  3. Calls controller(), which returns the optimal digital input.
  *  4. Converts the digital input back to physical units for the plant.
- *  5. Updates the plant's own state buffers (separate from the controller's).
  *
  * CONTROLLER STATE
  * --------------------------------
- * The controller has its own history arrays (yHist, uHist) used only
- * inside its file to simulate the true process. It updates autonomously 
- * and start at zero.
+ * The controller has the global history arrays (yHist, uHist), 
+ * updated autonomously at each time step k and starting at zero.
  *
  * OUTPUT FILE FORMAT
  * ------------------
  * "output.txt" has one row per simulation step; the columns depend on
- * the compilation mode
+ * the compilation mode.
  * 
  * NOTE ON VARIABLE-LENGTH ARRAYS
  * --------------------------------
  * nSim is a constexpr so that ySim[nSim] and uSim[nSim] are arrays with
- * compile-time-known sizes, NOT variable-length arrays (VLAs).  VLAs are
- * a GCC extension not present in standard C++14 and unsupported by some
- * compilers.
+ * compile-time-known sizes, NOT variable-length arrays (VLAs). VLAs are
+ * arrays the size of which is a runtime variable. Such data structures 
+ * are forbidden.
  */
 
 #include "setup.h"
@@ -42,13 +40,15 @@
   #include <time.h>
 #endif
 
+inline void generateReference(output_type yref[], int nSim);
+
 int main(void)
 {
     printf("\n=== SCMPC ARX simulation  |  system=%d  mode=%d ===\n\n",
            ACTIVE_SYSTEM, CTRL_MODE);
 
 #ifdef PRNG_STDLIB
-    srand(time(NULL));   /* different seed each run */
+    srand(time(NULL));  // set random seed
 #endif
 
     /* ------------------------------------------------------------------ */
@@ -59,7 +59,12 @@ int main(void)
     /* Arrays to log the full simulation trajectory. */
     output_type ySim[nSim];
     input_type  uSim[nSim];
+    output_type yref[nSim] = {0};   /* reference array — replace with a richer
+                               signal (PRBS, sinusoid) as needed           */
     alg_type volumes[nSim];
+
+    // generate reference trajectory based on ACTIVE_SYSTEM
+    generateReference(yref, nSim);
 
     /* Measurement noise amplitude and values */
     rand_type noise[nSim];
@@ -75,19 +80,13 @@ int main(void)
     /* ------------------------------------------------------------------ */
     /*
      * thetaTrue is the parameter vector of the REAL plant used to generate
-     * the output data.  It is taken from ACTIVE_CONFIG.thetaTrue — the
-     * scenario chosen at compile time in system_configs.h.
-     * To test robustness, change the values in CONFIG_* and recompile;
-     * the controller's initial zonotope will or will not contain thetaTrue
-     * depending on how far the mismatch is.
+     * the output data. It is taken from system_configs.h, depending on 
+     * the chosen ACTIVE_SYSTEM.
+     * The controller's initial zonotope has to contain thetaTrue and,
+     * hopefully, the updated zonotopes over time will still contain it.
      */
     theta_type thetaTrue[nTheta] = { THETA_TRUE_INIT };
 
-    /* ------------------------------------------------------------------ */
-    /*  Reference signal and initial controller input                     */
-    /* ------------------------------------------------------------------ */
-    output_type yref[nSim] = {0};   /* constant reference — replace with a richer
-                               signal (PRBS, sinusoid) as needed           */
 
     /* Start the controller with u=0 for the entire horizon. */
     input_type          uOpt   [NhorU];
@@ -99,24 +98,19 @@ int main(void)
 
     
     /* ------------------------------------------------------------------ */
-    /*  Closed-loop simulation                                             */
+    /*  Closed-loop simulation                                            */
     /* ------------------------------------------------------------------ */
     for (int k = 0; k < nSim; k++)
     {
         /* --- Simulate plant output y(k) -------------------------------- */
         /*
         * computeArxOutput evaluates
-        *   y(k) = θᵀ · [y(k−1),…,y(k−na), u(k−nk),…,u(k−nk−nb+1)]ᵀ
+        *   y(k) = theta^T · [y(k−1),...,y(k−na), u(k−nk),...,u(k−nk−nb+1)]^T
         */
-
-        /* Reference output only for buck(loss) systems */
-        yref[k] = (k < 75) ? 3 :
-                (k < 150) ? 4 :
-                (k < 225) ? 5 : 7;
 
         // Current zonotope volume computation
         volumes[k] = zonotopeVolume(thetaGens);
-        volumes[k] = (volumes[k] < 0) ? -volumes[k] : volumes[k];
+        volumes[k] = (volumes[k] < 0) ? (alg_type)(-volumes[k]) : volumes[k];
 
         #if defined(CONVERSIONS_MODE) || defined(FIXED)
             digital_output_type yrefDig = ADConvertY(yref[k]);
@@ -174,12 +168,13 @@ int main(void)
     for (int k = 0; k < nSim; k++)
     {
 #ifdef FIXED
-        fprintf(fp, "%f %f %f %f %f %f %f %f %f\n",
-                uSim[k].to_float(),    ySim[k].to_float(),
+        fprintf(fp, "%f %f %f %f %f %f %f %f %f %e\n",
+                uSim[k].to_float(), ySim[k].to_float(),
                 yref[k].to_float(),
                 UMIN.to_float(), UMAX.to_float(),
                 YMIN.to_float(), YMAX.to_float(),
-                uSimDig[k].to_float(), ySimDig[k].to_float());
+                uSimDig[k].to_float(), ySimDig[k].to_float(),
+                volumes[k].to_float()/volumes[0].to_float());
 #elif defined(CONVERSIONS_MODE)
         fprintf(fp, "%f %f %f %f %f %f %f %d %d %e\n",
                 (double)uSim[k], (double)ySim[k],
@@ -201,4 +196,30 @@ int main(void)
     fclose(fp);
     printf("Simulation complete.\nResults written to output.txt.\n");
     return 0;
+}
+
+/* ======================================================================
+   generateReference()
+   Fills yref[nSim] with the reference signal for the active
+   system and reference type.
+
+   @param yref  [out] Reference array, length nSim.
+   ====================================================================== */
+inline void generateReference(output_type yref[], int nSim)
+{
+#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
+    for(int i = 0; i < nSim; i++) yref[i] = (output_type)5;
+#elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
+    for(int i = 0; i < nSim; i++) yref[i] = (i <  nSim / 2) ? (output_type)-1.2 : (output_type)1.2;
+#elif ACTIVE_SYSTEM == SYSTEM_MILANO
+    for (int k = 0; k < nSim; k++) yref[k] = (output_type)100.0 * (output_type)pseudoRandArx();
+#elif ACTIVE_SYSTEM == SYSTEM_BUCK
+    for(int i = 0; i < nSim; i++) yref[i] = (i < 75) ? 3 :
+                                            (i < 150) ? 4 :
+                                            (i < 225) ? 5 : 7;
+#elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
+    for(int i = 0; i < nSim; i++) yref[i] = (i < 75) ? 3 :
+                                            (i < 150) ? 4 :
+                                            (i < 225) ? 5 : 7;
+#endif  /* ACTIVE_SYSTEM */
 }

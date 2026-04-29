@@ -4,6 +4,7 @@
 #endif
 
 #ifndef PRNG_STDLIB
+// 32-bit initial state
 static unsigned int random_state = 0xAAAAAAAAu;
 
 inline void pseudoRandSeed(unsigned int seed)
@@ -43,40 +44,7 @@ rand_type pseudoRandArx()
 	return res;
 }
 
-// // Check if correct, random vector is only 2-dimensional instead of nDim_CTRL
-// void pseudoRandArx(rand_type randomVector[nOpt])
-// {
-// 	#ifdef PRNG_STDLIB
-// 	for(int i = 0; i < nOpt; i++)
-// 	{
-// 		randomVector[i] = (rand_type)2 * ((rand_type)rand() / (rand_type)RAND_MAX) - (rand_type)1;
-// 	}
-// 	#else
-//     // Random number generator implementation
-// 	for(int i = 0; i < nOpt; i++)
-// 	{
-// 		#ifdef PRAGMAS
-// 		// #pragma HLS pipeline II=1
-// 		#endif
-// 		unsigned int r = xorshift32Step();
-// 		u16_type u16 = (r >> 16) & 0xFFFFu;
-// 		#ifdef FIXED
-// 		frac_type frac = u16 >> 16;
-// 		#else
-// 		frac_type frac = u16 / 65536.0;
-// 		#endif
-
-// 		// #ifdef FIXED
-// 		// 		float fracf = frac.to_float();
-// 		// #endif
-
-// 		randomVector[i] = (rand_type(2) * (rand_type)(frac)) - rand_type(1);
-// 	}
-// 	#endif
-// }
-
-
- // Overloading for a generic [-1, 1] vector of coefficients for passive learning
+// Overloading for a generic [-1, 1] vector of coefficients for passive learning
 void pseudoRandArx(rand_type coeffs[nGens])
 {
 	#ifdef PRNG_STDLIB
@@ -89,7 +57,7 @@ void pseudoRandArx(rand_type coeffs[nGens])
 	for(int i = 0; i < nGens; i++)
 	{
 		#ifdef PRAGMAS
-		// #pragma HLS pipeline II=1
+		#pragma HLS pipeline II=1
 		#endif
 		unsigned int r = xorshift32Step();
 		u16_type u16 = (r >> 16) & 0xFFFFu;

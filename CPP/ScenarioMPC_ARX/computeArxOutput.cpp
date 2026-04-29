@@ -1,14 +1,14 @@
 #include "setup.h"
 
 // computeArxOutput     
-// Computes ARX ***nominal*** model output using past output and input samples.
+// Computes ARX model output using past output and input samples.
 // ARX output is the scalar product between past output/input samples and theta
 // parameters
 output_type computeArxOutput(const output_type yPast[na], const input_type uSamples[nb+nk-1], const theta_type theta[nTheta])
 {
-#ifdef PRAGMAS
-// #pragma HLS INLINE
-#endif
+    #ifdef PRAGMAS
+    // #pragma HLS INLINE
+    #endif
     output_type yRes = 0;
 
 

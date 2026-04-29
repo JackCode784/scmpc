@@ -1,12 +1,13 @@
 %% Plot output data from CPP MADS ARX implementation
-
+function plotOutputCpp(vitisbool)
 clc;
-clear;
-close all;
-path = "";
+% close all;
 
-% Comment this to print VSCode simulation, otherwise -> Vitis's results
-% path = "C:\Users\jackf\Documents\MPC\ARXforsetVITIS\VitisProj\ARX\solution1\csim\build\";
+if vitisbool
+    path = "C:\Users\jackf\Documents\MPC\ARXforVITIS\VitisProj\ARX\solution1\csim\build\";
+else
+    path = "";
+end
 
 % load(append(path, "output.txt"));
 % uSim = output(:,1);
@@ -18,7 +19,7 @@ path = "";
 % yMax = output(:,7);
 
 % Save data as table instead of matrix
-data = readtable("output.txt", VariableNamingRule="preserve");
+data = readtable(append(path, "output.txt"), VariableNamingRule="preserve");
 
 figure; subplot(2,1,1);
 hold on;
@@ -82,3 +83,4 @@ xlabel('Number of scenarios');
 ylabel('Percentages');
 legend('BRAM', 'DSP', 'FF', 'LUT', 'URAM');
 grid on;
+end

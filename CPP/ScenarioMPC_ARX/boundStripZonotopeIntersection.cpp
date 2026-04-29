@@ -170,7 +170,7 @@ void boundStripZonotopeIntersectionNew(const output_type yCurr,
         gproj[i] = 0;
         for(int j = 0; j < nTheta; j++) gproj[i] += phi[j] * (alg_type)oldGens[j][i];
 
-        supStripOffset[0] += (gproj[i] < (alg_type)0) ? -gproj[i] : gproj[i];
+        supStripOffset[0] += (gproj[i] < (alg_type)0) ? (alg_type)(-gproj[i]) : gproj[i];
     }
     supStripOffset[1] = supStripOffset[0] - cproj;
     supStripOffset[0] += cproj;
@@ -215,8 +215,8 @@ void boundStripZonotopeIntersectionNew(const output_type yCurr,
                     #pragma HLS UNROLL
                     #endif
                     tmpGens[i][j] = (j == genId) ? 
-                    (theta_type)(tsr * gprojinv) * oldGens[i][j] : 
-                    oldGens[i][j] - (theta_type)(gproj[j] * gprojinv) * oldGens[i][genId];
+                                    (theta_type)((theta_type)(tsr * gprojinv) * oldGens[i][j]) :
+                                    (theta_type)(oldGens[i][j] - ((theta_type)(gproj[j] * gprojinv) * oldGens[i][genId]));
                 }
             }
             alg_type tmpVol = zonotopeVolume(tmpGens);

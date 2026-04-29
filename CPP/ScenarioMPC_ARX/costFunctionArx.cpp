@@ -6,29 +6,29 @@
  * --------------
  * The MPC objective over a prediction horizon of N steps is:
  *
- *   J = Σ_{k=0}^{N-2} [ u(k)·R·u(k)  +  Q·(ŷ_nom(k+1) − y_ref)²
- *                                      +  Q · scenariosContrib(k+1) ]
- *     +                  P·(ŷ_nom(N) − y_ref)²
- *     +                  Q · scenariosContrib(N)
+ *   J = sum_{k=0}^{N-2} [ u(k)*R*u(k)  +  Q*(ypred_nom(k+1) - y_ref)^2
+ *                                      +  Q * scenariosContrib(k+1) ]
+ *     +                  P*(ypred_nom(N) - y_ref)^2
+ *     +                  Q * scenariosContrib(N)
  *
  * where:
- *   ŷ_nom(k+1)       — one-step prediction using the nominal parameter
+ *   ypred_nom(k+1)       - one-step prediction using the nominal parameter
  *                       vector thetaCenter (the current zonotope centre)
- *   scenariosContrib  — mean squared error over all Nscen uncertainty
+ *   scenariosContrib  - mean squared error over all Nscen uncertainty
  *                       scenarios, included only in PL/AL modes to penalise
  *                       poor performance across the uncertainty set
  *
- * The input cost term u·R·u is included for steps k = 0 … N−2 (i.e. the
- * last input u(k = N−1) is not penalised separately because the terminal
+ * The input cost term u*R*u is included for steps k = 0 ... N-2 (i.e. the
+ * last input u(k = N-1) is not penalised separately because the terminal
  * cost P already handles the final output).
  *
  * CONTROL vs PREDICTION HORIZON
  * ------------------------------
- * currU has nOpt = NhorU entries: u(0), …, u(NhorU−1).
- * For steps k ≥ NhorU the last applied input u(NhorU−1) is held constant
+ * currU has nOpt = NhorU entries: u(0), ..., u(NhorU-1).
+ * For steps k >= NhorU the last applied input u(NhorU-1) is held constant
  * ("input blocking" / zero-order hold beyond the control horizon).
  * uSamples[0] is not re-assigned in the tail loop; it retains the value
- * set at k = NhorU−1, which is currU[NhorU−1].  This is correct.
+ * set at k = NhorU-1, which is currU[NhorU-1].  This is correct.
  *
  * CONSTRAINT VIOLATION
  * ---------------------
@@ -38,18 +38,15 @@
  *
  * HLS NOTES
  * ----------
- * • The outer loop (k = 0 … Nhor−1) has a static bound and is unrolled
+ * • The outer loop (k = 0 ... Nhor-1) has a static bound and is unrolled
  *   (#pragma HLS UNROLL) so that all N prediction steps are computed in
  *   parallel.  This trades area for latency.
- * • The inner scenario loop (l = 0 … Nscen−1) can similarly be unrolled.
+ * • The inner scenario loop (l = 0 ... Nscen-1) can similarly be unrolled.
  * • yPastCurr and uSamples are local rolling-window buffers; they should
  *   NOT be partitioned (they are written sequentially, not randomly).
  */
 
 #include "setup.h"
-#ifdef FIXED
-  #include "hls_math.h"
-#endif
 
 void costFunctionArx(cost_type         cost           [2],
                      const output_type yPast          [na],
@@ -77,13 +74,13 @@ void costFunctionArx(cost_type         cost           [2],
      * yPastCurr and uSamples are local copies that are shifted forward at
      * each prediction step, simulating the recurrence of the ARX model.
      *
-     * uSamples layout (length nb + nk − 1):
-     *   uSamples[0]   = u(k)       ← set from currU[k] or held constant
-     *   uSamples[1]   = u(k−1)
+     * uSamples layout (length nb + nk - 1):
+     *   uSamples[0]   = u(k)       <= set from currU[k] or held constant
+     *   uSamples[1]   = u(k-1)
      *   ...
-     *   uSamples[nb+nk−2] = u(k−nb−nk+1)  ← from uPast[nb+nk−3]
+     *   uSamples[nb+nk-2] = u(k-nb-nk+1)  <= from uPast[nb+nk-3]
      *
-     * Initial fill: uSamples[1..nb+nk−2] ← uPast[0..nb+nk−3].
+     * Initial fill: uSamples[1..nb+nk-2] <= uPast[0..nb+nk-3].
      * uSamples[0] is set at the start of each prediction step.
      */
     output_type yPastCurr[na];
@@ -114,14 +111,14 @@ void costFunctionArx(cost_type         cost           [2],
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Prediction loop  k = 0, 1, …, Nhor − 1                           */
+    /*  Prediction loop  k = 0, 1, ..., Nhor - 1                           */
     /* ------------------------------------------------------------------ */
     /*
      * All Nhor steps share the same structure; the only differences are:
      *   • k < NhorU   : uSamples[0] = currU[k]  (within control horizon)
      *   • k >= NhorU  : uSamples[0] unchanged    (zero-order hold)
-     *   • k < Nhor−1  : terminal weight = Q      (stage cost)
-     *   • k = Nhor−1  : terminal weight = P      (terminal cost, no input term)
+     *   • k < Nhor-1  : terminal weight = Q      (stage cost)
+     *   • k = Nhor-1  : terminal weight = P      (terminal cost, no input term)
      *
      * Encoding these as conditional expressions inside a single loop avoids
      * the three near-identical code blocks in the original and makes the
@@ -130,12 +127,12 @@ void costFunctionArx(cost_type         cost           [2],
     for (int k = 0; k < Nhor; k++)
     {
 #ifdef PRAGMAS
-        #pragma HLS UNROLL
+        // #pragma HLS UNROLL
 #endif
         /* --- Set current input ---------------------------------------- */
         if (k < NhorU)
             uSamples[0] = currU[k];
-        /* else: uSamples[0] retains currU[NhorU−1] from the previous step */
+        /* else: uSamples[0] retains currU[NhorU-1] from the previous step */
 
         /* --- Input cost term (all steps except the terminal one) ------- */
         if (k < Nhor - 1)

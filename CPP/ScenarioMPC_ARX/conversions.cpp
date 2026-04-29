@@ -1,7 +1,7 @@
 #include "setup.h"
 
 /*
- *	Each of these convert an input/output sample to digital or analogue
+ *	Each of these convert an input/output sample to digital or analog
  */
 digital_output_type ADConvertY(const output_type yAn)
 {
@@ -12,10 +12,12 @@ digital_output_type ADConvertY(const output_type yAn)
 // #endif
 	digital_output_type yDig = YADCGain * yAn + YBias;
 	
+	#ifndef FIXED
 	/* Saturate output if outside ADC values */
-	yDig = (yDig < ADC_MIN) ? ADC_MIN :
-			(yDig > ADC_MAX) ? ADC_MAX :
+	yDig = (yDig < (digital_output_type)ADC_MIN) ? (digital_output_type)ADC_MIN :
+			(yDig > (digital_output_type)ADC_MAX) ? (digital_output_type)ADC_MAX :
 			yDig;
+	#endif
 	return yDig;
 }
 

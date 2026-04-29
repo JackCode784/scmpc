@@ -1,6 +1,6 @@
 /**
  * @file  controller.cpp
- * @brief SCMPC controller for an ARX system — HLS top-level function.
+ * @brief SCMPC controller for an ARX system - HLS top-level function.
  *
  * SHARED MUTABLE STATE
  * ---------------------
@@ -13,22 +13,18 @@
  * copies would silently diverge as soon as one was updated.  That is the
  * wrong behaviour for shared controller state.
  *
- *   thetaCenter[nTheta]              — current zonotope centre c(k)
- *   thetaGens  [nTheta][nGens]— current generator matrix G(k)
- *   nGens                       — number of active generator columns
- *   yHist      [na]                  — output history y(k−1), …, y(k−na)
- *   uHist      [nb+nk−1]             — input  history u(k−1), …, u(k−nb−nk+1)
+ *   thetaCenter[nTheta]              - current zonotope centre c(k)
+ *   thetaGens  [nTheta][nGens]- current generator matrix G(k)
+ *   nGens                       - number of active generator columns
+ *   yHist      [na]                  - output history y(k−1), ..., y(k−na)
+ *   uHist      [nb+nk−1]             - input  history u(k−1), ..., u(k−nb−nk+1)
  *
  * ZONOTOPE LIFECYCLE
  * ------------------
- * controllerInit()          — copies ACTIVE_CONFIG.Z0.c / Z0.G / Z0.nGen;
- *                             nGens is fixed from this point on because
- *                             boundStripZonotopeIntersection preserves the
- *                             column count of the generator matrix.
- * boundStripZonotopeIntersection() — produces newCenter/newGens with the
+ * boundStripZonotopeIntersection() - produces newCenter/newGens with the
  *                             same nGens columns; result is copied back
  *                             into thetaCenter/thetaGens.
- * intervalHull is NOT used — the strip-intersection algorithm used here
+ * intervalHull is NOT used - the strip-intersection algorithm used here
  *                             already keeps the generator count constant.
  *
  * ORDERING OF OPERATIONS INSIDE controller()
@@ -36,17 +32,17 @@
  * The order is critical and must not be changed without careful thought
  * about which data belongs to time k vs k−1.
  *
- *  1. Convert digital inputs → algorithm types.
+ *  1. Convert digital inputs -> algorithm types.
  *  2. [PL] Update zonotope using y(k), OLD yHist, OLD uHist.
- *          The strip S(k) = {θ : |y(k)−φ(k)ᵀθ|≤ε} uses the regressor
- *          φ(k) = [y(k−1),…, u(k−1),…] — the OLD histories.
+ *          The strip S(k) = {theta : |y(k)−phi(k)^T*theta|<=epsilon} uses the regressor
+ *          phi(k) = [y(k−1),..., u(k−1),...] - the OLD histories.
  *  3. [AL] WIP stub.
  *  4. Generate scenarios from the (now updated) thetaCenter / thetaGens.
- *  5. Shift yHist ← [y(k), y(k−1), …].
+ *  5. Shift yHist <- [y(k), y(k−1), ...].
  *  6. Snapshot uHist into uPast (before it is updated in step 9).
- *  7. Run MADS → uOpt.
- *  8. Convert uOpt → digital.
- *  9. Shift uHist ← [uOpt[0], u(k−1), …].
+ *  7. Run MADS -> uOpt.
+ *  8. Convert uOpt -> digital.
+ *  9. Shift uHist <- [uOpt[0], u(k−1), ...].
  */
 
 #include "setup.h"
@@ -55,7 +51,7 @@
 /* ======================================================================
    DEFINITION of the shared mutable controller state.
    "extern" declarations for these live in setup.h (included above).
-   No "static" — external linkage is required so all translation units
+   No "static" - external linkage is required so all translation units
    share the same storage.
    ====================================================================== */
 theta_type  thetaCenter[nTheta]              = {    THETA_NOMINAL_INIT  };
@@ -70,8 +66,14 @@ void controller(digital_input_type  uOptDig[NhorU],
                 const digital_output_type yCurrDig,
                 const digital_output_type yrefDig)
 {
+	#ifdef PRAGMAS
+	#pragma HLS INTERFACE ap_none port=uOptDig
+	#pragma HLS INTERFACE ap_none port=yCurrDig
+	#pragma HLS INTERFACE ap_none port=yrefDig
+	#pragma HLS INTERFACE ap_ctrl_hs port=return
+	#endif
     /* ------------------------------------------------------------------ */
-    /*  Step 1 — Convert digital inputs to algorithm types                */
+    /*  Step 1 - Convert digital inputs to algorithm types                */
     /* ------------------------------------------------------------------ */
     output_type yCurr = DAConvertY(yCurrDig);
     output_type yref  = DAConvertY(yrefDig);
@@ -81,14 +83,14 @@ void controller(digital_input_type  uOptDig[NhorU],
         uOpt[i] = DAConvertU(uOptDig[i]);
 
     /* ------------------------------------------------------------------ */
-    /*  Step 2 — [PL mode] Zonotope update                                */
+    /*  Step 2 - [PL mode] Zonotope update                                */
     /* ------------------------------------------------------------------ */
 #if CTRL_MODE == CTRL_MODE_PL
     {
         /*
          * Intersect the current zonotope with the strip S(k).
-         * The strip uses the OLD yHist and OLD uHist — the regressor
-         * φ(k) = [y(k−1),…, u(k−1),…] refers to measurements taken
+         * The strip uses the OLD yHist and OLD uHist - the regressor
+         * phi(k) = [y(k−1),..., u(k−1),...] refers to measurements taken
          * BEFORE this time step.
          *
          * newCenter and newGens are temporaries with the same dimensions
@@ -128,7 +130,7 @@ void controller(digital_input_type  uOptDig[NhorU],
 #endif  /* CTRL_MODE == CTRL_MODE_PL */
 
     /* ------------------------------------------------------------------ */
-    /*  Step 3 — [AL mode] Active learning stub (WIP)                     */
+    /*  Step 3 - [AL mode] Active learning stub (WIP)                     */
     /* ------------------------------------------------------------------ */
 #if CTRL_MODE == CTRL_MODE_AL
     {
@@ -137,7 +139,7 @@ void controller(digital_input_type  uOptDig[NhorU],
 #endif
 
     /* ------------------------------------------------------------------ */
-    /*  Step 4 — Generate uncertainty scenarios                            */
+    /*  Step 4 - Generate uncertainty scenarios                            */
     /* ------------------------------------------------------------------ */
     /*
      * generateScenarios reads thetaCenter and thetaGens via the extern
@@ -149,18 +151,18 @@ void controller(digital_input_type  uOptDig[NhorU],
     generateScenarios(thetaScenarios, thetaCenter, thetaGens);
 
     /* ------------------------------------------------------------------ */
-    /*  Step 5 — Update output history: push y(k) into yHist             */
+    /*  Step 5 - Update output history: push y(k) into yHist             */
     /* ------------------------------------------------------------------ */
     for (int i = na - 1; i > 0; i--)
         yHist[i] = yHist[i - 1];
-    yHist[0] = yCurr;   /* yHist = [y(k), y(k−1), …, y(k−na+1)] */
+    yHist[0] = yCurr;   /* yHist = [y(k), y(k−1), ..., y(k−na+1)] */
 
     /* ------------------------------------------------------------------ */
-    /*  Step 6 — Snapshot input history for MADS                          */
+    /*  Step 6 - Snapshot input history for MADS                          */
     /* ------------------------------------------------------------------ */
     /*
-     * uPast = [u(k−1), …, u(k−nb−nk+1)] — needed by costFunctionArx to
-     * roll out predictions for y(k+1), …, y(k+N) alongside uOpt.
+     * uPast = [u(k−1), ..., u(k−nb−nk+1)] - needed by costFunctionArx to
+     * roll out predictions for y(k+1), ..., y(k+N) alongside uOpt.
      * Must be taken BEFORE uHist is updated with uOpt[0] in step 9.
      */
     input_type uPast[nb + nk - 2];
@@ -168,18 +170,18 @@ void controller(digital_input_type  uOptDig[NhorU],
         uPast[i] = uHist[i];
 
     /* ------------------------------------------------------------------ */
-    /*  Step 7 — Run MADS optimisation                                    */
+    /*  Step 7 - Run MADS optimisation                                    */
     /* ------------------------------------------------------------------ */
     MADSARX(uOpt, uPast, yHist, yref, thetaScenarios);
 
     /* ------------------------------------------------------------------ */
-    /*  Step 8 — Convert uOpt back to digital                             */
+    /*  Step 8 - Convert uOpt back to digital                             */
     /* ------------------------------------------------------------------ */
     for (int i = 0; i < NhorU; i++)
         uOptDig[i] = ADConvertU(uOpt[i]);
 
     /* ------------------------------------------------------------------ */
-    /*  Step 9 — Update input history: push uOpt[0] into uHist           */
+    /*  Step 9 - Update input history: push uOpt[0] into uHist           */
     /* ------------------------------------------------------------------ */
     for (int i = nb + nk - 2; i > 0; i--)
         uHist[i] = uHist[i - 1];

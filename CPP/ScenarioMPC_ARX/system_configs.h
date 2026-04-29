@@ -2,30 +2,22 @@
  * @file  system_configs.h
  * @brief Compile-time system configurations for SCMPC on ARX systems.
  *
- * This file owns three things:
- *   1. Upper-bound dimension macros (SYS_MAX_*) that size all static arrays.
- *   2. The ZonotopeConfig and SystemConfig struct definitions.
- *   3. Three static const configuration instances and the getSystemConfig()
- *      dispatch helper.
- *
  * System registry
  * ---------------
- *  SYSTEM_SIMPLE     (id 0)  na=2, nb=1, nk=2 — original non-CMPLSYS ARX
- *  SYSTEM_BENCHMARK  (id 1)  na=2, nb=2, nk=1 — benchmark ARX (selectSys.m)
- *  SYSTEM_MILANO     (id 2)  na=3, nb=3, nk=1 — original CMPLSYS (BESS)
+ *  SYSTEM_SIMPLE     (id 0)  na=2, nb=1, nk=2 - original non-CMPLSYS ARX
+ *  SYSTEM_BENCHMARK  (id 1)  na=2, nb=2, nk=1 - benchmark ARX (selectSys.m)
+ *  SYSTEM_MILANO     (id 2)  na=3, nb=3, nk=1 - original CMPLSYS (BESS)
  *  SYSTEM_BUCK       (id 3)  na=2, nb=1, nk=2 - buck power converter
+ *  SYSTEM_BUCK_LOSS  (id 4)  na=2, nb=1, nk=2 - buck power converter with loss resistance
  *
  * Why fixed-size arrays in the structs?
  * --------------------------------------
  * C++ (and ANSI C) require every struct member to have a size known at
- * compile time — it is impossible to write "theta_type c[nTheta]" inside
+ * compile time - it is impossible to write "theta_type c[nTheta]" inside
  * a struct because nTheta is a runtime value for a generic struct.
  * Vitis HLS adds a stronger constraint: it forbids ALL dynamic memory
  * allocation (no new/delete, no std::vector) because hardware circuits
- * must be fully sized at synthesis time.  The standard pattern is to
- * allocate for the worst case (SYS_MAX_*) and track the active size in
- * companion integer fields (nTheta, nGen).  Unused entries are zero-padded
- * and never accessed by correct code.
+ * must be fully sized at synthesis time.
  *
  * Generator-matrix shape for PL mode
  * ------------------------------------
@@ -33,31 +25,14 @@
  * matrix from nTheta columns to nTheta+1 (a temporary wider zonotope).
  * The subsequent interval-hull reduction brings it back to nTheta columns
  * (a square matrix).  Therefore the PERSISTENT controller state always
- * holds a square nTheta×nTheta generator matrix.  nGens is set
- * equal to nTheta so that the persistent arrays are always large
- * enough.  The CONFIG_BENCHMARK initial zonotope has 6 generators for
- * 4 parameters; for PL mode only the first nTheta=4 columns are copied
- * into the persistent state at initialisation.
- *
- * ODR note
- * --------
- * The three CONFIG_* objects are "static const", making them local to each
- * translation unit that includes this header.  In a single-TU HLS build
- * this is always correct.  For multi-TU unit-test builds (C++17 toolchain),
- * upgrade to "inline const" to avoid silent symbol duplication.
+ * holds a square nTheta*nTheta generator matrix.
  */
 
 #pragma once
 #include "types.h"
 
 /* ======================================================================
-   Upper bounds on dimensions across ALL supported systems.
-   Array sizes in every struct and every function that loops over these
-   dimensions must reference these macros — never hard-coded integers.
-   ====================================================================== */
-
-/* ======================================================================
-   System identifiers — plain integers so they work in #if expressions.
+   System identifiers - plain integers so they work in #if expressions.
    ====================================================================== */
 #define SYSTEM_SIMPLE     0
 #define SYSTEM_BENCHMARK  1
@@ -65,7 +40,6 @@
 #define SYSTEM_BUCK       3
 #define SYSTEM_BUCK_LOSS  4
 
-/* CONFIG_SIMPLE */
 #if ACTIVE_SYSTEM == SYSTEM_SIMPLE
     #define THETA_NOMINAL_INIT   2.0, -1.0, 1.0
     #define GENERATORS_INIT \

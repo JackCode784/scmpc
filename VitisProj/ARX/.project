@@ -47,6 +47,11 @@
 			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/MADSARX.cpp</location>
 		</link>
 		<link>
+			<name>source/boundStripZonotopeIntersection.cpp</name>
+			<type>1</type>
+			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/boundStripZonotopeIntersection.cpp</location>
+		</link>
+		<link>
 			<name>source/computeArxOutput.cpp</name>
 			<type>1</type>
 			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/computeArxOutput.cpp</location>
@@ -97,9 +102,24 @@
 			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/setup.h</location>
 		</link>
 		<link>
+			<name>source/system_configs.h</name>
+			<type>1</type>
+			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/system_configs.h</location>
+		</link>
+		<link>
+			<name>source/types.h</name>
+			<type>1</type>
+			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/types.h</location>
+		</link>
+		<link>
 			<name>source/updateConstraintViolation.cpp</name>
 			<type>1</type>
 			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/updateConstraintViolation.cpp</location>
+		</link>
+		<link>
+			<name>source/volumeZonotope.cpp</name>
+			<type>1</type>
+			<location>C:/Users/jackf/Documents/MPC/ARXforVITIS/CPP/ScenarioMPC_ARX/volumeZonotope.cpp</location>
 		</link>
 		<link>
 			<name>testbench/testMain.cpp</name>

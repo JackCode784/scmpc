@@ -5,56 +5,61 @@
  * HOW TO CONFIGURE AN EXPERIMENT
  * --------------------------------
  * 1. Set ACTIVE_SYSTEM to the desired plant         (one #define below).
- * 2. Set CTRL_MODE   to the desired algorithm mode  (one #define below).
+ * 2. Set CTRL_MODE to the desired algorithm mode  (one #define below).
  * 3. Comment / uncomment FIXED for HW vs SW target  (one #define below).
  * Everything else (dimensions, bounds, ADC/DAC gains, prototypes) is
  * derived automatically.
  *
  * FILE RELATIONSHIPS
  * ------------------
- *   types.h         — data-type aliases (included first)
- *   system_configs.h— ZonotopeConfig, SystemConfig, CONFIG_* instances
- *   setup.h         — this file; algorithm-level constants and prototypes
+ *   types.h         - data-type aliases (included first)
+ *   system_configs.h- system definitions
+ *   setup.h         - this file; algorithm-level constants and prototypes
  *
  * VITIS HLS 2021.1 COMPATIBILITY NOTES
  * --------------------------------------
- * • "constexpr int" is fully supported (C++14 mode).  Used for all
+ * * "constexpr int" is fully supported (C++14 mode).  Used for all
  *   integer algorithm parameters (Nhor, NhorU, etc.).
- * • "static const <type>" is used for fixed-point constants because
+ * * "static const <type>" is used for fixed-point constants because
  *   ap_fixed<> does not have a constexpr constructor.
- * • na, nb, nk, nTheta, nOpt remain #define macros because array sizes
+ * * na, nb, nk, nTheta, nOpt remain #define macros because array sizes
  *   in function prototypes  (e.g. theta[nTheta])  must be integral
  *   constant expressions visible at the point of declaration, and #define
  *   guarantees this across every C++ standard and every HLS front-end.
- * • static_assert is used for invariant checks; it produces a clean
+ * * static_assert is used for invariant checks; it produces a clean
  *   compile error and has zero RTL impact.
- * • All mutable global state (zonotope centre/generators, output/input
- *   history) is DEFINED in controller.cpp (external linkage — no "static"
+ * * All mutable global state (zonotope centre/generators, output/input
+ *   history) is DEFINED in controller.cpp (external linkage - no "static"
  *   keyword) and DECLARED here as "extern".  Any .cpp file that includes
  *   setup.h therefore refers to the same, single, physical storage as
  *   controller.cpp.  This is the standard C/C++ idiom for shared mutable
  *   globals: one definition, one or more extern declarations.
  *   Using "static" in controller.cpp would give each translation unit its
- *   own private copy — the opposite of what is required here.
+ *   own private copy - the opposite of what is required here.
  */
 
 #pragma once
 
 /* ======================================================================
-   TARGET SELECTION — edit only these three lines between experiments
+   TARGET SELECTION - edit only these three lines between experiments
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-// #define FIXED
+#define FIXED
 
-/** Active plant — choose one of: SYSTEM_SIMPLE, SYSTEM_BENCHMARK, SYSTEM_MILANO, SYSTEM_BUCK */
+/** Active plant - choose one of: 
+ * SYSTEM_SIMPLE, 
+ * SYSTEM_BENCHMARK, 
+ * SYSTEM_MILANO, 
+ * SYSTEM_BUCK,
+ * SYSTEM_BUCK_LOSS */
 #define ACTIVE_SYSTEM   SYSTEM_BUCK_LOSS
 
 /**
- * Controller algorithm mode — choose one of:
+ * Controller algorithm mode - choose one of:
  *   CTRL_MODE_SCMPC  : scenario-based robust MPC only (no online learning)
- *   CTRL_MODE_PL     : passive learning  — update uncertainty set from data
- *   CTRL_MODE_AL     : active learning   — actively minimizes uncertainty set size
+ *   CTRL_MODE_PL     : passive learning  - update uncertainty set from data
+ *   CTRL_MODE_AL     : active learning   - actively minimizes uncertainty set size
  */
 #define CTRL_MODE_SCMPC  0
 #define CTRL_MODE_PL     1
@@ -69,7 +74,8 @@
   #define CONVERSIONS_MODE  /* ADC/DAC functions always needed in hardware  */
   #include <ap_fixed.h>
 #else
-  // #define PRNG_STDLIB     /* uncomment to enable printf debug output      */
+  // #define DEBUG_PRINT    /* uncomment to see debug printfs */
+  // #define PRNG_STDLIB    /* use rand() as prng */
   #define CONVERSIONS_MODE  /* sue ADC/DAC functions */
 #endif
 
@@ -97,15 +103,13 @@
 #endif
 
 /* ======================================================================
-   ARX MODEL DIMENSIONS  (compile-time macros — must remain #define)
+   ARX MODEL DIMENSIONS  (compile-time macros - must remain #define)
    ======================================================================
    These are #define macros rather than constexpr ints because they appear
    as array sizes inside function prototypes, where the C++ standard
    requires an integral constant expression at the point of declaration.
    constexpr works in a single-TU build under C++14 but #define is the
    safest choice across all HLS front-ends.
-
-   nk is an alias for nk kept for backward compatibility.
    ====================================================================== */
 #if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
   #define na   2
@@ -142,27 +146,24 @@
 #define nTheta  (na + nb)       /* total ARX parameter count */
 
 /* ======================================================================
-   SHARED MUTABLE CONTROLLER STATE
+   CONTROLLER STATE
    ======================================================================
    These variables are DEFINED (storage allocated) in controller.cpp and
    DECLARED here as extern so that every translation unit that includes
    setup.h reads and writes the same physical location.
 
    Why extern and not static:
-     "static" at file scope gives the variable INTERNAL linkage — each
+     "static" at file scope gives the variable INTERNAL linkage - each
      .cpp file that includes the header gets its own private copy.  Those
      copies are independent and go out of sync the moment any one of them
      is updated.  "extern" gives the variable EXTERNAL linkage: there is
      exactly ONE copy (defined in controller.cpp) and all files share it.
 
-   thetaCenter / thetaGens / nGens — the current parameter zonotope
-     Z(k) = { thetaCenter + thetaGens·ξ : ‖ξ‖∞ ≤ 1 }.
+   thetaCenter / thetaGens - the current parameter zonotope
+     Z(k) = { thetaCenter + thetaGens*ξ : || ξ ||inf <= 1 }.
      Updated each step by boundStripZonotopeIntersection (PL/AL modes).
-     In SCMPC mode they are fixed at the initial values set by controllerInit().
-     nGens is the number of active generator columns; it equals
-     ACTIVE_CONFIG.Z0.nGen and is constant after controllerInit().
 
-   yHist / uHist — ARX regressor history buffers
+   yHist / uHist - ARX regressor history buffers
      yHist[0] = y(k-1), yHist[1] = y(k-2), ..., yHist[na-1]  = y(k-na)
      uHist[0] = u(k-1), uHist[1] = u(k-2), ..., uHist[nb+nk-2] = u(k-nb-nk+1)
      Updated each step inside controller().
@@ -181,7 +182,7 @@ extern input_type  uHist[nb + nk - 1];
 constexpr int Nhor  = 5;
 
 /**
- * Control horizon Nu ≤ N: the input sequence u(k), …, u(k+Nu−1) is
+ * Control horizon Nu <= N: the input sequence u(k), ..., u(k+Nu-1) is
  * optimised; u is held constant from step Nu to N ("input blocking").
  */
 constexpr int NhorU = 3;
@@ -210,7 +211,7 @@ static_assert(Nhor - nk >= NhorU - 1,
    INPUT / OUTPUT HARD CONSTRAINTS
    ======================================================================
    These are the box constraints used by the progressive barrier in MADSARX.
-   They must be consistent with ACTIVE_CONFIG.uMin/uMax/yMin/yMax.
+   They must be consistent with the ones for the ACTIVE_SYSTEM.
    They are repeated as separate constants because ap_fixed<> prevents
    deriving them from the config struct at compile time via constexpr.
    ====================================================================== */
@@ -249,8 +250,8 @@ static const output_type YMAX = 10;
 /* ======================================================================
    MPC COST-FUNCTION WEIGHTS
    ======================================================================
-   Stage cost per step:  ℓ(y, u) = Q·(y − y_ref)² + R·u²
-   Terminal cost:        V_f(y)   = P·(y(k+N) − y_ref)²
+   Stage cost per step:  l(y, u) = Q*(y - y_ref)^2 + R*u^2
+   Terminal cost:        V_f(y)   = P*(y(k+N) - y_ref)^2
    ====================================================================== */
 static const weights_type P =  5.0;   /* terminal output weight */
 static const weights_type Q =  5.0;   /* stage   output weight  */
@@ -260,7 +261,7 @@ static const weights_type R = 0.1;   /* stage   input  weight  */
    MADS SOLVER PARAMETERS
    ======================================================================
    The Mesh Adaptive Direct Search (MADS) algorithm manages a frame size
-   Δᵏ updated as Δᵏ⁺¹ = τ^(±c) · Δᵏ (success: +c, failure: −c).
+   updated multiple times in a single time step(success: +c, failure: -c).
    Sizes are stored in log-scale (frameIdx, meshIdx) as integers for
    efficient hardware arithmetic.
    ====================================================================== */
@@ -269,8 +270,8 @@ constexpr int TAU       = 1;   /* frame-size update base                  */
 constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
 
 /*
- * expC = 2^{−MADS_C}: pre-computed scaling factor for the mesh update.
- * In FIXED mode this is exactly 0.5 = 2^{−1}, needing only 1 integer bit,
+ * expC = 2^{-MADS_C}: pre-computed scaling factor for the mesh update.
+ * In FIXED mode this is exactly 0.5 = 2^{-1}, needing only 1 integer bit,
  * so a 1-bit ap_ufixed is used to save multiplier resources.
  * If MADS_C changes, update expC and its type consistently.
  */
@@ -281,8 +282,8 @@ constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
 #endif
 
 /*
- * D0[j]: initial log₂ frame-size exponent for optimisation variable j.
- * Initial frame size = τ^D0[j].  More negative → finer initial mesh.
+ * D0[j]: initial log2 frame-size exponent for optimisation variable j.
+ * Initial frame size = tau^D0[j].  More negative -> finer initial mesh.
  * HLS hint: #pragma HLS ARRAY_PARTITION variable=D0 complete dim=1
  */
 #define D0_VAL -8 // used in MADSARX, frameIdx init
@@ -291,16 +292,16 @@ static const mesh_exp_type D0[nOpt] = { -8, -8, -8 };
 /* ======================================================================
    ADC / DAC CONVERTER PARAMETERS
    ======================================================================
-   Linear conversion between the 12-bit integer domain ({0,…,4095}) and
+   Linear conversion between the 12-bit integer domain ({0,...,4095}) and
    the physical domain used by the algorithm.
 
    Output channel:
-     y_dig = YADCGain · (y_an − YBias)         [ADC: analogue → digital]
-     y_an  = YDACGain ·  y_dig + YBias          [DAC: digital → analogue]
+     y_dig = YADCGain * (y_an - YBias)         [ADC: analogue -> digital]
+     y_an  = YDACGain *  y_dig + YBias          [DAC: digital -> analogue]
 
    Input channel:
-     u_dig = UADCGain · (u_an − UBias_an)       (UBias maps midscale → 0)
-     u_an  = UDACGain ·  u_dig + UBias_an
+     u_dig = UADCGain * (u_an - UBias_an)       (UBias maps midscale -> 0)
+     u_an  = UDACGain *  u_dig + UBias_an
 
    In software mode the gains are derived from UMIN/UMAX/YMIN/YMAX.
    In fixed-point mode they are explicit literals (ap_fixed<> prevents
@@ -340,7 +341,7 @@ void controller(digital_input_type  uOptDig[NhorU],
 /* --- ARX model -------------------------------------------------------- */
 
 /** One-step-ahead prediction:
- *  ŷ(k) = θᵀ · [y(k−1),…,y(k−na), u(k−nk),…,u(k−nk−nb+1)]ᵀ */
+ *  ypred(k) = theta^T * [y(k-1),...,y(k-na), u(k-nk),...,u(k-nk-nb+1)]^T */
 output_type computeArxOutput(const output_type yPast   [na],
                               const input_type  uSamples[nb + nk - 1],
                               const theta_type  theta   [nTheta]);
@@ -358,7 +359,7 @@ void costFunctionArx(cost_type         cost            [2],
 
 /* --- MADS poll-step --------------------------------------------------- */
 
-/** Build 2·nOpt poll directions from a random unit vector and the
+/** Build 2*nOpt poll directions from a random unit vector and the
  *  current mesh/frame exponent vectors. */
 void generatePollDirectionsArx(const rand_type     randomVector[nOpt],
                                 const mesh_exp_type frameIdx    [nOpt],
@@ -375,11 +376,11 @@ void generatePollMatrixArx(const input_type    currU     [nOpt],
 
 /**
  * Fill thetaScenarios[0..Nscen-1] with Nscen parameter vectors drawn
- * uniformly at random from  Z = { center + gens·ξ  :  ‖ξ‖∞ ≤ 1 }.
+ * uniformly at random from  Z = { center + gens*ξ  :  ||ξ||inf <= 1 }.
  *
- * @param thetaScenarios [out] Nscen × nTheta array of scenario vectors.
+ * @param thetaScenarios [out] Nscen * nTheta array of scenario vectors.
  * @param center         [in]  Zonotope centre, length nTheta.
- * @param gens           [in]  Generator matrix, nTheta × nGens
+ * @param gens           [in]  Generator matrix, nTheta * nGens
  *                              (row-major); only the first nGen columns
  *                              are read.
  * @param nGen           [in]  Number of active generator columns
@@ -399,7 +400,7 @@ void MADSARX(input_type uOpt[nOpt],
                 const output_type yref, 
                 const theta_type thetaScenarios[Nscen][nTheta]);
 
-/** Evaluate all 2·nOpt poll candidates; update the best feasible point
+/** Evaluate all 2*nOpt poll candidates; update the best feasible point
  *  via the progressive barrier strategy. */
 void progressiveBarrierPollingArx(cost_type         bestCost   [2],
                                    input_type        bestPoint  [nOpt],
@@ -414,7 +415,7 @@ void progressiveBarrierPollingArx(cost_type         bestCost   [2],
 /** Random number in [-1, 1] */
 rand_type pseudoRandArx();
 
-/** nGens random coefficients in [−1, 1] for zonotope scenario sampling. */
+/** nGens random coefficients in [-1, 1] for zonotope scenario sampling. */
 void pseudoRandArx(rand_type coeffs[nGens]);
 
 /* --- Constraint violation --------------------------------------------- */
@@ -436,25 +437,25 @@ input_type          DAConvertU(const digital_input_type  uDig);
 
 /**
  * Intersect the current parameter zonotope with the measurement strip
- *   S(k) = { θ : |y(k) − φ(k)ᵀ θ| ≤ ε }
- * where φ(k) = [y(k−1),…,y(k−na), u(k−nk),…]ᵀ is the ARX regressor.
+ *   S(k) = { theta : |y(k) - phi(k)^T theta| <= epsilon }
+ * where phi(k) = [y(k-1),...,y(k-na), u(k-nk),...]^T is the ARX regressor.
  *
  * The algorithm used here preserves the number of generator columns, so
- * the output zonotope has the same shape as the input (no intervalHull
- * reduction step is required).
+ * the output zonotope has the same shape as the input (no reduction 
+ * step is required).
  *
  * Inputs:
- *   yCurr         — current measurement y(k)
- *   yPast         — output history  [y(k−1), …, y(k−na)]
- *   uSamplesIn    — input  history  [u(k−1), …, u(k−nb−nk+1)]
- *   oldCenter     — current zonotope centre  (length nTheta)
- *   oldGens       — current generator matrix (nTheta × nGens);
+ *   yCurr         - current measurement y(k)
+ *   yPast         - output history  [y(k-1), ..., y(k-na)]
+ *   uSamplesIn    - input  history  [u(k-1), ..., u(k-nb-nk+1)]
+ *   oldCenter     - current zonotope centre  (length nTheta)
+ *   oldGens       - current generator matrix (nTheta * nGens);
  *                   only the first nGen columns are read
- *   nGen          — number of active generator columns
+ *   nGen          - number of active generator columns
  *
  * Outputs:
- *   newCenter     — updated zonotope centre  (length nTheta)
- *   newGens       — updated generator matrix (nTheta × nGens);
+ *   newCenter     - updated zonotope centre  (length nTheta)
+ *   newGens       - updated generator matrix (nTheta * nGens);
  *                   exactly nGen columns are written (same as input)
  */
 void boundStripZonotopeIntersectionNew(const output_type yCurr, 
