@@ -1,3 +1,4 @@
+# ???
 # Prerequisites
 *.d
 
@@ -40,6 +41,7 @@
 # debug information files
 *.dwo
 
+# Visual Studio Code gitignore at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
 # vscode
 .vscode/*
 !.vscode/settings.json
@@ -139,3 +141,137 @@ venv/
 # Third-party softwares
 CORA/
 tbxmanager/
+
+# CORA gitignore at https://github.com/TUMcps/CORA/blob/master/.gitignore
+# exclude autosave files
+*.asv
+*.m~
+*.txt~
+
+# exclude generated files
+generated_*
+models/auxiliary/*
+**/+CustomLayers
+**/+DLT_CustomLayers
+**/website_*.html
+
+# explude files from installCORA 
+# (in case some installs tbxmanager into the CORA folder)
+**/tbxmanager
+**/startup.m
+
+# exclude from from general cora conversions
+models/CoraConverted/*
+# exclude files from power systems conversion
+models/powerSystemsConverted/*
+# exclude files from spaceex conversion
+models/SpaceExConverted/*
+
+/.project
+
+# exclude latex generated files
+**/*.aux
+**/*.auxlock
+**/*.bbl
+**/*.blg
+**/*.dvi
+**/*.log
+**/*.out
+manual/*.pdf
+**/*.ps
+**/*.toc
+**/*.synctex.gz
+**/*-eps-converted-to.pdf
+**/*.synctex(busy)
+
+manual/figures/externalize/**/*.dpth
+manual/figures/externalize/**/*.log
+manual/figures/externalize/**/*.md5
+
+*/.idea
+manual/manual.iml
+
+# for MAC users
+**/.DS_Store
+
+# exclude folders in workspace
+workspace/*
+
+# CORA release
+global/functions/release/commitHistory.txt
+
+# MATLAB gitignore at https://github.com/github/gitignore/blob/main/Global/MATLAB.gitignore
+# Autosave files
+*.asv
+*.m~
+*.autosave
+*.slx.r*
+*.mdl.r*
+*.bak
+
+# Derived content-obscured files
+*.p
+
+# Compiled MEX files
+*.mex*
+
+# Packaged app and toolbox files
+*.mlappinstall
+*.mltbx
+
+# Deployable archives
+*.ctf
+
+# Generated helpsearch folders
+helpsearch*/
+
+# Code generation folders
+slprj/
+sccprj/
+codegen/
+
+# Cache files
+*.slxc
+
+# Cloud based storage dotfile
+.MATLABDriveTag
+
+# ============================================================
+# Vitis HLS 2021.1 gitignore - generated with Claude
+# ============================================================
+
+# --- Project-level generated logs and journals ---
+# Vivado/HLS always dumps these during any run; purely transient
+*.log
+*.jou
+vivado_*.str
+vitis_hls.pb
+
+# --- Internal autopilot working directory ---
+# HLS's internal scheduler/binder state; fully regenerated on csynth
+**/.autopilot/
+
+# --- C Simulation build artifacts ---
+# Compiled binaries and object files from csim_design
+solution*/csim/build/
+
+# --- Generated RTL (synthesis output) ---
+# Produced by csynth_design; you want to regenerate these, not track them.
+# If you want to snapshot RTL for a release, do it explicitly.
+solution*/syn/verilog/
+solution*/syn/vhdl/
+solution*/syn/systemc/
+
+# --- Co-simulation and implementation outputs ---
+solution*/sim/
+solution*/impl/
+
+# --- Exported IP catalog ---
+# Re-exportable from the project at any time
+solution*/export/
+solution*/impl/ip/
+
+# --- Xilinx temporary directories ---
+.Xil/
+.nfs*
+*.tmp
