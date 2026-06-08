@@ -20,7 +20,7 @@
 % For a total of tHzn+nb-1 samples.
 % 
 
-function scmpc = initializeoptimization(tHzn,nb,nd,na,nScen,nhoru,uMin,uMax,yMin,yMax,useSlack,useScnConstr,R,Q,useScnCost)
+function scmpc = initializeoptimization(tHzn,nb,nd,na,nScen,nhoru,uMin,uMax,yMin,yMax,useSlack,useScnConstr,R,Q,useScnCost,isNormalized)
 n = na + nb;
 
 % Optimization variables
@@ -44,7 +44,7 @@ thetaScenarios = sdpvar(n,nScen);
 % Slack
 slack = sdpvar;
 
-%% Constraints definition
+% Constraints definition
 constr = [yNominal(1:na) == yInit(end:-1:1);
     u(1:nb+nd-2) == uInit(end:-1:1);
     u(nd+nb+nhoru-1:end) == u(nd+nb+nhoru-2); % input unchanged after control horizon
@@ -72,7 +72,7 @@ if useScnConstr
     end
 end
 
-%% Cost function
+% Cost function
 cost = (u(nb+nd-1:end) - u(nb+nd-2:end-1)) * R * (u(nb+nd-1:end) - u(nb+nd-2:end-1))';
 cost = cost + (yNominal(na+1:end) - yRefVar) * Q * (yNominal(na+1:end) - yRefVar)';
 cost = cost + useSlack*slack^2;
@@ -83,9 +83,10 @@ if useScnCost && useScnConstr
     end
 end
 
-%% Optimizer object
+% Optimizer object
 inputs = {thetaScenarios, thetaNominal, yInit, uInit, yRefVar};
 outputs = {u, yNominal, yScenarios, slack};
 ops = sdpsettings('solver', 'quadprog', 'verbose', 1, 'usex0', 0);
 scmpc = optimizer(constr, cost, ops, inputs, outputs);
+
 end
