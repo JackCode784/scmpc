@@ -115,7 +115,7 @@ yInit = zeros(1,na); % recent -> old
 yInitNorm = my * yInit + qy;
 % uInit = [u(k-1),...,u(k-nk),...,u(k-nk-nb+1)]
 %         |_____|
-%       to be optimized
+%       last that has been optimized
 uInit = zeros(1,nb+nk-1); % recent -> old
 uInitNorm = mu * uInit + qu;
 
@@ -134,7 +134,7 @@ for k=1:nSim
     volsNorm(k) = volume(ZNorms{k});
     thetaSeq(:, k) = ZNotNorms{k}.c;
     thetaNormSeq(:, k) = ZNorms{k}.c;
-    dists(k) = norm(thetaTrue - ZNotNorms{k}.c);
+    dists(k) = norm(thetaTrue - ZNotNorms{k,1}.c);
     distsNorm(k) = norm(thetaTrueNorm - ZNorms{k}.c);
 
     % Zonotope update (not normalized)
@@ -155,7 +155,7 @@ for k=1:nSim
 
     % Both optimizations
     [thetaScenariosNorm, thetaNominalNorm] = stableScenary(ZNorms{k+1}, nScen, na);
-    [thetaScenarios, thetaNominal] = stableScenary(ZNotNorms{k+1}, nScen, na);
+    [thetaScenarios, thetaNominal] = stableScenary(ZNotNorms{k+1,1}, nScen, na);
     yRefNorm = my * yRef(k+1) + qy;
 
     inputsNorm = {thetaScenariosNorm, thetaNominalNorm, ...
@@ -179,7 +179,7 @@ for k=1:nSim
             disp('Run interrupted.');
             break;
         else
-            while(errCode ~= 0)
+            while(errCode ~= 0 || errCodeNorm ~= 0)
                 [thetaScenariosNorm, thetaNominalNorm] = stableScenary(ZNorms{k+1}, nScen, na);
                 [thetaScenarios, thetaNominal] = stableScenary(ZNotNorms{k+1}, nScen, na);
                 inputs = {thetaScenarios, thetaNominal, ...
@@ -205,12 +205,12 @@ end
 
 %% Error computation 
 lastNotEmptyIdx = find(~cellfun('isempty', ZNorms), 1, 'last');
-inputError = uSim - (uNormSim - qu) / mu;
-outputError = ySim - (yNormSim - qy) / my;
-inputRMSE = sqrt(mean(inputError .^ 2));
-outputRMSE = sqrt(mean(outputError .^ 2));
-maxInputError = max(abs(inputError));
-maxOutputError = max(abs(outputError));
+inputDiffs = uSim - (uNormSim - qu) / mu;
+outputDiffs = ySim - (yNormSim - qy) / my;
+inputRMSE = sqrt(mean(inputDiffs .^ 2));
+outputRMSE = sqrt(mean(outputDiffs .^ 2));
+maxInputError = max(abs(inputDiffs));
+maxOutputError = max(abs(outputDiffs));
 
 disp(['Input RMSE = ', num2str(inputRMSE), '[unnormalized]']);
 disp(['Output RMSE = ', num2str(outputRMSE), '[unnormalized]']);
@@ -234,38 +234,40 @@ disp(['Max center discrepancy: ', num2str(maxCenterDist)]);
 disp(['Max generator discrepancy: ', num2str(maxGeneratorFrobNorm)]);
 
 %% Zonotope plots
-% figure;
-% hold on;
-% if allZonsPlot
-%     cmap = turbo(lastNotEmptyIdx);
-%     for l=1:lastNotEmptyIdx
-%         plot(ZNorms{l}, 1:3, 'LineWidth',1.5, 'Color', cmap(l,:), 'HandleVisibility','off');
-%     end
-%     colorbar;
-%     colormap(cmap);
-%     clim([1, lastNotEmptyIdx]);
-% else
-%     plot(ZNorms{1}, 1:3, 'LineWidth',1.5, 'DisplayName','\Theta_0^N');
-%     plot(ZNotNorms{1}, 1:3, 'LineWidth',1.5, 'DisplayName','\Theta_0');
-%     plot(ZNorms{lastNotEmptyIdx}, 1:3, 'LineWidth',1.5,'DisplayName',append('\Theta^N(k=', num2str(lastNotEmptyIdx), ')'));
-%     plot(ZNotNorms{lastNotEmptyIdx}, 1:3, 'LineWidth',1.5,'DisplayName',append('\Theta(k=', num2str(lastNotEmptyIdx), ')'));
-%     grid on;
-% end
-% plot3([-1 1 1 -1 -1 NaN -1 1 1 -1 -1 NaN -1 -1 NaN 1 1 NaN 1 1 NaN -1 -1], ...
-%     [-1 -1 1 1 -1 NaN -1 -1 1 1 -1 NaN -1 -1 NaN -1 -1 NaN 1 1 NaN 1 1], ...
-%     [-1 -1 -1 -1 -1 NaN 1 1 1 1 1 NaN -1 1 NaN -1 1 NaN -1 1 NaN -1 1], ...
-%     '--', 'LineWidth',1.5, 'DisplayName','Unit cube');
-% plot3(ZNorms{1}.c(1), ZNorms{1}.c(2), ZNorms{1}.c(3),'.','LineWidth',1.5, 'MarkerSize',20, 'DisplayName','\theta_n^{R}(1)');
-% plot3(ZNotNorms{1}.c(1), ZNotNorms{1}.c(2), ZNotNorms{1}.c(3),'.','LineWidth',1.5, 'MarkerSize',20, 'DisplayName','\theta_n^{R}(1)');
-% plot3(ZNorms{lastNotEmptyIdx}.c(1), ZNorms{lastNotEmptyIdx}.c(2), ZNorms{lastNotEmptyIdx}.c(3),'.','LineWidth',1.5, 'MarkerSize',20, 'DisplayName','\theta_n^{R}(k)');
-% plot3(thetaTrueNorm(1), thetaTrueNorm(2), thetaTrueNorm(3), '*', 'LineWidth',1.5,'MarkerSize',10, 'DisplayName','\tilde{\theta}_t');
-% grid on;
-% xlabel('\theta_1');
-% ylabel('\theta_2');
-% zlabel('\theta_3');
-% title('Zonotopes');
-% legend('-DynamicLegend');
-% legend('boxoff');
+figure;
+hold on;
+if allZonsPlot
+    cmap = turbo(lastNotEmptyIdx);
+    for l=1:lastNotEmptyIdx
+        plot(ZNorms{l}, 1:3, 'LineWidth',1.5, 'Color', cmap(l,:), 'HandleVisibility','off');
+    end
+    colorbar;
+    colormap(cmap);
+    clim([1, lastNotEmptyIdx]);
+else
+    plot(ZNorms{1}, 1:3, 'LineWidth',1.5, 'DisplayName','\Theta_0^N');
+    plot(ZNotNorms{1,1}, 1:3, 'LineWidth',1.5, 'DisplayName','\Theta_0');
+    plot(ZNorms{lastNotEmptyIdx}, 1:3, 'LineWidth',1.5,'DisplayName',append('\Theta^N(k=', num2str(lastNotEmptyIdx), ')'));
+    plot(ZNotNorms{lastNotEmptyIdx,1}, 1:3, 'LineWidth',1.5,'DisplayName',append('\Theta(k=', num2str(lastNotEmptyIdx), ')'));
+    grid on;
+end
+plot3([-1 1 1 -1 -1 NaN -1 1 1 -1 -1 NaN -1 -1 NaN 1 1 NaN 1 1 NaN -1 -1], ...
+    [-1 -1 1 1 -1 NaN -1 -1 1 1 -1 NaN -1 -1 NaN -1 -1 NaN 1 1 NaN 1 1], ...
+    [-1 -1 -1 -1 -1 NaN 1 1 1 1 1 NaN -1 1 NaN -1 1 NaN -1 1 NaN -1 1], ...
+    '--', 'LineWidth',1.5, 'DisplayName','Unit cube');
+plot3(ZNorms{1}.c(1), ZNorms{1}.c(2), ZNorms{1}.c(3),'.','LineWidth',1.5, 'MarkerSize',20, 'DisplayName','c^N(1)');
+plot3(ZNotNorms{1,1}.c(1), ZNotNorms{1,1}.c(2), ZNotNorms{1,1}.c(3),'.','LineWidth',1.5, 'MarkerSize',20, 'DisplayName','c^{UN}(1)');
+plot3(ZNorms{lastNotEmptyIdx}.c(1), ZNorms{lastNotEmptyIdx}.c(2), ZNorms{lastNotEmptyIdx}.c(3),'.','LineWidth',1.5, 'MarkerSize',20, 'DisplayName','c^N(k)');
+plot3(ZNotNorms{lastNotEmptyIdx,1}.c(1), ZNotNorms{lastNotEmptyIdx,1}.c(2), ZNotNorms{lastNotEmptyIdx,1}.c(3),'.','LineWidth',1.5, 'MarkerSize',20, 'DisplayName','c^{UN}(k)');
+plot3(thetaTrueNorm(1), thetaTrueNorm(2), thetaTrueNorm(3), '*', 'LineWidth',1.5,'MarkerSize',10, 'DisplayName','\theta^N_t');
+plot3(thetaTrue(1), thetaTrue(2), thetaTrue(3), '*', 'LineWidth',1.5,'MarkerSize',10, 'DisplayName','\theta^{UN}_t');
+grid on;
+xlabel('\theta_1');
+ylabel('\theta_2');
+zlabel('\theta_3');
+title('Zonotopes');
+legend('-DynamicLegend');
+legend('boxoff');
 
 %% Simpler plots
 % Simulation plots
@@ -279,9 +281,10 @@ plot(0*ySim+yMax, 'k--');
 plot(0*ySim+yMin, 'k--');
 hold off;
 grid on;
-legend('Unnormalized output', 'Normalized output','Reference', 'y_M', 'y_m');
-xlabel('Time step');
-title('System true output');
+legend('UN y_k', 'N y_k','y_r', 'y_M', 'y_m');
+legend('boxoff');
+xlabel('k');
+title('Measured output');
 
 subplot(3,1,2);
 hold on;
@@ -297,7 +300,7 @@ plot([1 nSim], mean(normalizedOutputReferenceError)*[1, 1], ...
     'LineWidth',1.5);
 hold off;
 grid on;
-legend('UN output-ref', 'N output-ref', 'UN RMSE', 'N RMSE', 'UN mean', 'N mean');
+legend('UN y_k-y_r', 'N y_k-y_r', 'UN RMSE', 'N RMSE', 'UN mean', 'N mean');
 ylabel('Error[actual units]');
 xlabel('Time step');
 
@@ -308,9 +311,10 @@ plot((uNormSim - qu) / mu, 'LineWidth',1.5);
 plot(0*uSim + uMin, 'k--');
 plot(0*uSim + uMax, 'k--');
 grid on;
-legend('UN u(k)', 'N u(k)', 'u_m', 'u_M');
-ylabel('Optimal control');
-xlabel('Time step');
+legend('UN u_k', 'N u_k', 'u_m', 'u_M');
+title('Optimal control');
+ylabel('u_k');
+xlabel('k');
 
 % Zonotope diagnostic plots
 figure;
@@ -319,10 +323,10 @@ hold on;
 plot(vols / volume(Z0), 'LineWidth',1.5);
 plot(volsNorm / volume(ZNorms{1}), 'LineWidth',1.5);
 grid on;
-title('Uncertainty region volumes (reduced)');
+title('Uncertainty region volumes');
 legend('UN', 'N');
 xlabel('Time step');
-ylabel('vol(Z(t))/vol(Z0)');
+ylabel('vol(Z_k)/vol(Z_0)');
 
 subplot(3,1,2);
 hold on;
@@ -331,7 +335,7 @@ plot(volsNorm(2:end) ./ volsNorm(1:end-1), 'LineWidth',1.5);
 grid on;
 legend('UN', 'N');
 xlabel('Time instant');
-ylabel('vol(Zr(t))/vol(Zr(t-1))');
+ylabel('vol(Z_k))/vol(Z_{k-1})');
 
 subplot(3,1,3);
 hold on;
@@ -339,5 +343,5 @@ plot(dists / norm(thetaTrue), 'LineWidth',1.5);
 plot(distsNorm / norm(thetaTrueNorm), 'LineWidth',1.5);
 xlabel('Time step');
 legend('UN', 'N');
-ylabel('||\theta_t-\theta_n|| / ||\theta_t||');
+ylabel('||\theta_t-c_k|| / ||\theta_t||');
 grid on;
