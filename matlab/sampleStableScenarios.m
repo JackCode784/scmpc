@@ -22,8 +22,6 @@ function [thetaScens, thetaNom] = sampleStableScenarios(Z, nScen, na, stabMargin
 
     % Fill remaining slots with the center (stable by assumption)
     if filled < nScen
-        for j = filled+1:nScen
-            thetaScens(:, j) = Z.c;
-        end
+        thetaScens(:, filled+1:nScen) = Z.c*ones(1,nScen-filled);
     end
 end

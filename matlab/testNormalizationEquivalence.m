@@ -95,8 +95,8 @@ normParams = struct('useIONorm', true, ...
 
 solverOps = [];
 
-scmpc = buildscmpcoptimizer(sysParams, horizParams, costParams);
-scmpcNorm = buildscmpcoptimizer(sysParams, horizParams, costParams, normParams, solverOps);
+scmpc = buildSCMPCOptimizer(sysParams, horizParams, costParams);
+scmpcNorm = buildSCMPCOptimizer(sysParams, horizParams, costParams, normParams, solverOps);
 
 %% Simulation
 ySim = zeros(1,nSim);

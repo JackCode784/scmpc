@@ -40,7 +40,6 @@ yRef = selectRef(sys, refStr, tHzn, nSim, moreArgs);
 return;
 end
 
-
 function yRef = selectRef(sys, refStr, tHzn, nSim, moreArgs)
 
 switch sys

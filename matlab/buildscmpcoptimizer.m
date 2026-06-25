@@ -1,4 +1,5 @@
-%% scmpc = buildscmpcoptimizer(sysParams, horizParams, costParams, normParams, solverOps)
+function scmpc = buildSCMPCOptimizer(sysParams, horizParams, costParams, normParams, solverOps)
+% scmpc = buildscmpcoptimizer(sysParams, horizParams, costParams, normParams, solverOps)
 % This returns an optimizer object for the ARX SCMPC optimization problem.
 % All params structs must have the following fields.
 % 
@@ -35,9 +36,6 @@
 % Outputs:
 % - scmpc: yalmip optimizer object with inputs
 %          scmpc(thetaScenarios, thetaNominal, yInit, uInit, yMinVar, yMaxVar, uMinVar, uMaxVar, yRefVar)
-% 
-
-function scmpc = buildscmpcoptimizer(sysParams, horizParams, costParams, normParams, solverOps)
 
 if nargin < 5 || isempty(solverOps)
     solverOps = sdpsettings('solver','quadprog','verbose',1,'usex0',0);
@@ -91,8 +89,8 @@ end
 
 u = sdpvar(1,tHzn+nb-1);
 uInit = sdpvar(1,nb+nd-2); % written in reverse order (recent -> old)
-uMaxVar = sdpvar;
 uMinVar = sdpvar;
+uMaxVar = sdpvar;
 
 % As for the outputs, they need exactly na initial conditions (to compute
 % the next output) and tHzn from the problem formulation.
@@ -103,9 +101,9 @@ uMinVar = sdpvar;
 yNominal = sdpvar(1,tHzn+na);
 yScenarios = sdpvar(nScen, tHzn+na);
 yInit = sdpvar(1,na); % written in reverse order (recent -> old)
-yMaxVar = sdpvar;
-yMinVar = sdpvar;
 yRefVar = sdpvar;
+yMinVar = sdpvar;
+yMaxVar = sdpvar;
 
 thetaNominal = sdpvar(n,1);
 thetaScenarios = sdpvar(n,nScen);
