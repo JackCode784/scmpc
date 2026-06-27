@@ -80,8 +80,6 @@ typedef ap_ufixed<32, 16>                         u16_type;
 /* ---------------------------------------------------------------------- */
 /*  Software types for PC simulation / debugging                          */
 /* ---------------------------------------------------------------------- */
-typedef int          digital_input_type;   /**< ADC raw integer {0,...,4095} */
-typedef int          digital_output_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;
@@ -94,13 +92,20 @@ typedef unsigned int u16_type;
 #endif  /* FIXED */
 
 /* ======================================================================
-   Semantic aliases.
-   All resolve to alg_type; the distinct names document the ROLE of each
-   variable at every call site.  Use these everywhere - never use
-   alg_type, double, or ap_fixed<> directly outside this file.
-   ====================================================================== */
+Semantic aliases.
+All resolve to alg_type; the distinct names document the ROLE of each
+variable at every call site.  Use these everywhere - never use
+alg_type, double, or ap_fixed<> directly outside this file.
+====================================================================== */
 typedef alg_type  output_type;   /**< Plant output sample  y(k).           */
 typedef alg_type  input_type;    /**< Control input sample u(k).           */
 typedef alg_type  weights_type;  /**< MPC cost-weight matrix entry.        */
 typedef alg_type  theta_type;    /**< ARX parameter vector entry.          */
 typedef alg_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
+#ifdef CONVERSIONS_MODE
+typedef int          digital_input_type;   /**< ADC raw integer {0,...,4095} */
+typedef int          digital_output_type;
+#else // they're the same because no conversion is done
+typedef input_type   digital_input_type;
+typedef output_type  digital_output_type;
+#endif

@@ -62,12 +62,10 @@ input_type  uHist[nb + nk - 1]               = {0};
 /* ======================================================================
    controller()
    ====================================================================== */
-void controller(digital_input_type  uOptDig[NhorU],
-                const digital_output_type yCurrDig,
-                const digital_output_type yrefDig)
+digital_input_type controller(const digital_output_type yCurrDig,
+                              const digital_output_type yrefDig)
 {
 	#ifdef PRAGMAS
-	#pragma HLS INTERFACE ap_none port=uOptDig
 	#pragma HLS INTERFACE ap_none port=yCurrDig
 	#pragma HLS INTERFACE ap_none port=yrefDig
 	#pragma HLS INTERFACE ap_ctrl_hs port=return
@@ -75,12 +73,17 @@ void controller(digital_input_type  uOptDig[NhorU],
     /* ------------------------------------------------------------------ */
     /*  Step 1 - Convert digital inputs to algorithm types                */
     /* ------------------------------------------------------------------ */
+    #ifdef CONVERSIONS_MODE
     output_type yCurr = DAConvertY(yCurrDig);
     output_type yref  = DAConvertY(yrefDig);
-
+    #else 
+    output_type yCurr = yCurrDig;
+    output_type yref = yrefDig;
+    #endif
+    
     input_type uOpt[NhorU];
     for (int i = 0; i < NhorU; i++)
-        uOpt[i] = DAConvertU(uOptDig[i]);
+        uOpt[i] = uHist[0]; // warm start
 
     /* ------------------------------------------------------------------ */
     /*  Step 2 - [PL mode] Zonotope update                                */
@@ -177,8 +180,12 @@ void controller(digital_input_type  uOptDig[NhorU],
     /* ------------------------------------------------------------------ */
     /*  Step 8 - Convert uOpt back to digital                             */
     /* ------------------------------------------------------------------ */
-    for (int i = 0; i < NhorU; i++)
-        uOptDig[i] = ADConvertU(uOpt[i]);
+    digital_input_type uOptDig;
+    #ifdef CONVERSIONS_MODE
+    uOptDig = ADConvertU(uOpt[0]);
+    #else
+    uOptDig = uOpt[0];
+    #endif
 
     /* ------------------------------------------------------------------ */
     /*  Step 9 - Update input history: push uOpt[0] into uHist           */
@@ -186,4 +193,6 @@ void controller(digital_input_type  uOptDig[NhorU],
     for (int i = nb + nk - 2; i > 0; i--)
         uHist[i] = uHist[i - 1];
     uHist[0] = uOpt[0];   /* receding horizon: only u(k) is applied */
+
+    return uOptDig;
 }

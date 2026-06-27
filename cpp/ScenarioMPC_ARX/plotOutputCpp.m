@@ -1,9 +1,9 @@
 %% Plot output data from CPP MADS ARX implementation
-function plotOutputCpp(vitisbool)
+function plotOutputCpp(isVitisSim)
 clc;
 % close all;
 
-if vitisbool
+if isVitisSim
     path = "C:\Users\jackf\Documents\MPC\ARXforVITIS\VitisProj\ARX\solution1\csim\build\";
 else
     path = "";
@@ -35,7 +35,7 @@ stairs(data.uSim, 'LineWidth', 1.5); grid on;xlabel('Sample');ylabel('Optimized 
 plot(data.uMax,'k--', 'LineWidth',1.5);
 plot(data.uMin,'k--', 'LineWidth',1.5);
 
-if(width(data) > 7)
+if ismember('ySimDig', data.Properties.VariableNames)
     % uSimDig = output(:,8);
     % ySimDig = output(:,9);
 
@@ -47,17 +47,19 @@ if(width(data) > 7)
     subplot(2,1,2);
     hold on;
     stairs(data.uSimDig, 'LineWidth', 1.5); grid on;xlabel('Sample');ylabel('Optimized digital input');
-
-    figure;
-    plot(data.vol, 'LineWidth',1.5);
-    grid on;
-    xlabel('Time instant');
-    ylabel('Volume (normalized)');
-    title('Normalized zonotope volume');
 end
 
+% Zonotope volume
+figure;
+plot(data.vol, 'LineWidth',1.5);
+grid on;
+xlabel('Time instant');
+ylabel('Volume (normalized)');
+title('Normalized zonotope volume');
 %% Latency/area occupation dependency on number of scenarios
 % Keeping the same FPGA board, same #pragma directives
+
+if isVitisSim
 nscenarios = [10, 25, 50, 100];
 latencies = [18031, 40651, 16316, 27216];  % clock cycles
 occupationPercs = [0, 27, 10, 36, 0;
@@ -83,4 +85,6 @@ xlabel('Number of scenarios');
 ylabel('Percentages');
 legend('BRAM', 'DSP', 'FF', 'LUT', 'URAM');
 grid on;
+end
+
 end

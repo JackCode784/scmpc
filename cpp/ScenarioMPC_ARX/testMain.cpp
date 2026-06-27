@@ -86,16 +86,6 @@ int main(void)
      * hopefully, the updated zonotopes over time will still contain it.
      */
     theta_type thetaTrue[nTheta] = { THETA_TRUE_INIT };
-
-
-    /* Start the controller with u=0 for the entire horizon. */
-    input_type          uOpt   [NhorU];
-    digital_input_type  uOptDig[NhorU];
-    for (int i = 0; i < NhorU; i++) {
-        uOpt[i]    = 0;
-        uOptDig[i] = ADConvertU(uOpt[i]);
-    }
-
     
     /* ------------------------------------------------------------------ */
     /*  Closed-loop simulation                                            */
@@ -109,20 +99,21 @@ int main(void)
         */
 
         // Current zonotope volume computation
-        volumes[k] = zonotopeVolume(thetaGens);
+        volumes[k] = matDet(thetaGens);
         volumes[k] = (volumes[k] < 0) ? (alg_type)(-volumes[k]) : volumes[k];
 
-        #if defined(CONVERSIONS_MODE) || defined(FIXED)
-            digital_output_type yrefDig = ADConvertY(yref[k]);
-        #endif
         output_type yCurr = computeArxOutput(yHist, uHist, thetaTrue) + (output_type)noise[k] * (output_type)sigma;
         ySim[k] = yCurr;
 
         /* --- Convert y(k) to digital ----------------------------------- */
-#if defined(CONVERSIONS_MODE) || defined(FIXED)
+        #if defined(CONVERSIONS_MODE) || defined(FIXED)
+        digital_output_type yrefDig = ADConvertY(yref[k]);
         digital_output_type yCurrDig = ADConvertY(yCurr);
         ySimDig[k] = yCurrDig;
-#endif
+        #else
+        digital_output_type yrefDig = yref[k];
+        digital_output_type yCurrDig = yCurr;
+        #endif
 
         /* --- Call controller ------------------------------------------- */
         /*
@@ -132,22 +123,15 @@ int main(void)
          * The controller internally updates its own history; we do NOT
          * duplicate that update here.
          */
-#if defined(CONVERSIONS_MODE) || defined(FIXED)
-        controller(uOptDig, yCurrDig, yrefDig);
-#else
-        /*
-         * Without CONVERSIONS_MODE the digital conversion path is not
-         * compiled.  A direct float/double interface could be added here
-         * for a fully analogue simulation, but the current harness always
-         * compiles CONVERSIONS_MODE in software mode (see setup.h).
-         */
-        controller(uOptDig, ADConvertY(yCurr), ADConvertY(yref));
-#endif
+        digital_input_type uOptDig = controller(yCurrDig, yrefDig);
+        
         /* Receding-horizon: only u(k) = uOpt[0] is applied. */
-        uSimDig[k] = uOptDig[0];
-        for (int i = 0; i < NhorU; i++)
-            uOpt[i] = DAConvertU(uOptDig[i]);
-        uSim[k] = uOpt[0];
+        #ifdef CONVERSIONS_MODE
+        uSimDig[k] = uOptDig;
+        uSim[k] = DAConvertU(uOptDig);
+        #else 
+        uSim[k] = uOptDig;
+        #endif
     }
 
     /* ------------------------------------------------------------------ */

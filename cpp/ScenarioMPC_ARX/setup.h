@@ -45,7 +45,7 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-#define FIXED
+// #define FIXED
 
 /** Active plant - choose one of: 
  * SYSTEM_SIMPLE, 
@@ -76,7 +76,7 @@
 #else
   // #define DEBUG_PRINT    /* uncomment to see debug printfs */
   // #define PRNG_STDLIB    /* use rand() as prng */
-  #define CONVERSIONS_MODE  /* sue ADC/DAC functions */
+  // #define CONVERSIONS_MODE  /* sue ADC/DAC functions */
 #endif
 
 /* ======================================================================
@@ -329,14 +329,12 @@ static const digital_input_type   UBias    = (conv_type)(ADC_MIN*UMAX - ADC_MAX*
  *  returns the optimal input sequence as 12-bit digital samples.
  *
  *  HLS interface pragmas (add in controller.cpp, not here):
- *    #pragma HLS INTERFACE ap_none port=uOptDig
  *    #pragma HLS INTERFACE ap_none port=yCurrDig
  *    #pragma HLS INTERFACE ap_none port=yrefDig
  *    #pragma HLS INTERFACE ap_ctrl_hs port=return
  */
-void controller(digital_input_type  uOptDig[NhorU],
-                const digital_output_type yCurrDig,
-                const digital_output_type yrefDig);
+digital_input_type controller(const digital_output_type yCurrDig,
+                              const digital_output_type yrefDig);
 
 /* --- ARX model -------------------------------------------------------- */
 
