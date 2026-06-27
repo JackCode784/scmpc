@@ -29,6 +29,12 @@ output_type DAConvertY(const digital_output_type yDig)
 //  	float YBiasf = YBias.to_float();
 //  #endif
 	output_type yAn = (yDig - YBias) * YDACGain;
+
+	#ifdef NRMLZ
+	// Internal normalization
+	yAn = yNormGain * yAn + yNormOffset;
+	#endif
+
 	return yAn;
 }
 
@@ -39,7 +45,12 @@ digital_input_type ADConvertU(const input_type uAn)
 // 	float uAnf = uAn.to_float();
 // 	float UBiasf = UBias.to_float();
 // #endif
+	#ifdef NRMLZ
+	digital_input_type uDig = (uAn - uNormOffset) * uNormGainInverse;
+	uDig = UADCGain * uAn + UBias;
+	#else
 	digital_input_type uDig = UADCGain * uAn + UBias;
+	#endif
 	return uDig;
 }
 

@@ -56,8 +56,8 @@
    ====================================================================== */
 theta_type  thetaCenter[nTheta]              = {    THETA_NOMINAL_INIT  };
 theta_type  thetaGens  [nTheta][nGens]       = {    GENERATORS_INIT     };
-output_type yHist[na]                         = {0};
-input_type  uHist[nb + nk - 1]               = {0};
+output_type yHist[na]                         = { Y_HIST_INIT };
+input_type  uHist[nb + nk - 1]               = { U_HIST_INIT };
 
 /* ======================================================================
    controller()

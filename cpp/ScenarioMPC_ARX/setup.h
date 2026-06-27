@@ -46,6 +46,7 @@
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
 // #define FIXED
+#define NRMLZ
 
 /** Active plant - choose one of: 
  * SYSTEM_SIMPLE, 
@@ -101,49 +102,6 @@
     (CTRL_MODE != CTRL_MODE_AL)
   #error "Unrecognized CTRL_MODE!"
 #endif
-
-/* ======================================================================
-   ARX MODEL DIMENSIONS  (compile-time macros - must remain #define)
-   ======================================================================
-   These are #define macros rather than constexpr ints because they appear
-   as array sizes inside function prototypes, where the C++ standard
-   requires an integral constant expression at the point of declaration.
-   constexpr works in a single-TU build under C++14 but #define is the
-   safest choice across all HLS front-ends.
-   ====================================================================== */
-#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-  #define na   2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
-  #define sigma 0.0
-#elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-  #define na   2
-  #define nb   2
-  #define nk   1
-  #define nGens 6
-  #define sigma 0.20
-#elif ACTIVE_SYSTEM == SYSTEM_MILANO
-  #define na   3
-  #define nb   3
-  #define nk   1
-  #define nGens 6
-  #define sigma 4.4655
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK
-  #define na   2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
-  #define sigma 0.2
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-  #define na  2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
-  #define sigma 0.02
-#endif
-
-#define nTheta  (na + nb)       /* total ARX parameter count */
 
 /* ======================================================================
    CONTROLLER STATE
@@ -208,46 +166,6 @@ static_assert(Nhor - nk >= NhorU - 1,
 #define nOpt NhorU
 
 /* ======================================================================
-   INPUT / OUTPUT HARD CONSTRAINTS
-   ======================================================================
-   These are the box constraints used by the progressive barrier in MADSARX.
-   They must be consistent with the ones for the ACTIVE_SYSTEM.
-   They are repeated as separate constants because ap_fixed<> prevents
-   deriving them from the config struct at compile time via constexpr.
-   ====================================================================== */
-#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-  static const input_type  UMIN = -0.3;
-  static const input_type  UMAX =  0.3;
-  static const output_type YMIN =  0.0;
-  static const output_type YMAX =  8.0;
-
-#elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-  static const input_type  UMIN = -1.9;
-  static const input_type  UMAX =  1.9;
-  static const output_type YMIN = -10.0;
-  static const output_type YMAX =  8.0;
-
-#elif ACTIVE_SYSTEM == SYSTEM_MILANO
-static const input_type  UMIN = -200.0;
-static const input_type  UMAX =  200.0;
-static const output_type YMIN = -110.0;
-static const output_type YMAX =  110.0;
-
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK
-static const input_type  UMIN = 0;
-static const input_type  UMAX = 1;
-static const output_type YMIN = 0;
-static const output_type YMAX = 10;
-
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-static const input_type  UMIN = 0;
-static const input_type  UMAX = 1;
-static const output_type YMIN = 0;
-static const output_type YMAX = 10;
-
-#endif
-
-/* ======================================================================
    MPC COST-FUNCTION WEIGHTS
    ======================================================================
    Stage cost per step:  l(y, u) = Q*(y - y_ref)^2 + R*u^2
@@ -255,7 +173,7 @@ static const output_type YMAX = 10;
    ====================================================================== */
 static const weights_type P =  5.0;   /* terminal output weight */
 static const weights_type Q =  5.0;   /* stage   output weight  */
-static const weights_type R = 0.1;   /* stage   input  weight  */
+static const weights_type RBaseLine = 0.1;
 
 /* ======================================================================
    MADS SOLVER PARAMETERS
@@ -317,6 +235,34 @@ static const digital_output_type  YBias    = (conv_type)(ADC_MIN*YMAX - ADC_MAX*
 static const conv_type            UADCGain = (conv_type)ADC_RANGE / (conv_type)(UMAX - UMIN);
 static const conv_type            UDACGain = (conv_type)(UMAX - UMIN) / (conv_type)ADC_RANGE;
 static const digital_input_type   UBias    = (conv_type)(ADC_MIN*UMAX - ADC_MAX*UMIN) / (conv_type)(UMAX - UMIN);
+
+#ifdef NRMLZ
+constexpr int YNORMMAX = 1;
+constexpr int YNORMMIN = -1;
+constexpr int UNORMMAX = 1;
+constexpr int UNORMMIN = -1;
+
+static const norm_type yNormGain = (norm_type)((YNORMMAX - YNORMMIN) / (YMAX - YMIN));
+static const norm_type uNormGain = (norm_type)((UNORMMAX - UNORMMIN) / (UMAX - UMIN));
+static const norm_type uNormGainInverse = (norm_type)((UMAX - UMIN) / (UNORMMAX - UNORMMIN));
+static const norm_type yNormOffset = (norm_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
+static const norm_type uNormOffset = (norm_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
+
+static const weights_type R = RBaseLine * (yNormGain*yNormGain)/(uNormGain*uNormGain);
+
+/* Pre-computed in MATLAB 
+ * A better way to compute these offline is needed.
+*/
+#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
+static const norm_type myInvDmDg[nTheta] = {5.544771541217021, 4.480002635302223, 0.848930417640874};
+static const norm_type qmyInvDmDg[nTheta] = {5.544771541217021,   4.480002635302223,   0.848930417640874};
+static const norm_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
+static const norm_type qmyInvDmc0 = 0.992262713557689;
+#endif
+
+#else
+static const weights_type R = RBaseLine;   /* stage   input  weight  */
+#endif
 
 /* ======================================================================
    FUNCTION PROTOTYPES
