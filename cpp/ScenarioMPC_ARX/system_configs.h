@@ -156,8 +156,8 @@ static const output_type YMAX = 10;
     #define THETA_TRUE_INIT        1.8612,  -0.9276,    0.6732
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
     #ifndef NRMLZ
-    #define Y_HIST_INIT 0, 0, 0
-    #define U_HIST_INIT 0, 0, 0
+    #define Y_HIST_INIT 0, 0
+    #define U_HIST_INIT 0
     #define THETA_NOMINAL_INIT 1.817972144631566,  -0.871463786797535,   0.457543557236585
     #define GENERATORS_INIT \
           {-0.093616869443703,   0.124811247863353,   0.003362744341625}, \

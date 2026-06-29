@@ -1,5 +1,6 @@
 #include "setup.h"
 
+#ifdef CONVERSIONS_MODE
 /*
  *	Each of these convert an input/output sample to digital or analog
  */
@@ -58,7 +59,9 @@ input_type DAConvertU(const digital_input_type uDig)
 	input_type uAn = (uDig - UBias) * UDACGain;
 	return uAn;
 }
+#endif
 
+#ifdef NRMLZ
 /** The following functions normalize (denormalize) output (input) samples
  * They're used iff NRMLZ is defined.
  */
@@ -73,3 +76,4 @@ input_type denormalizeU(norm_input_type uNorm)
 	input_type uAn = (uNorm - uNormOffset) * uNormGainInverse;
 	return uAn;
 }
+#endif
