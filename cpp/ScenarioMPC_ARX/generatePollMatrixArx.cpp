@@ -1,7 +1,7 @@
 #include "setup.h"
 
 // Generate matrix whose columns are poll points for the computation of cost function in MADS alg
-void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], input_type pollMatrix[nOpt][2 * nOpt])
+void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], norm_input_type pollMatrix[nOpt][2 * nOpt])
 {
 	#ifdef PRAGMAS
 	// #pragma HLS INLINE
@@ -30,9 +30,9 @@ void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type fra
 		// #pragma HLS UNROLL
 		#endif
 
-		mesh[i] = 1;
+		mesh[i] = (mesh_type)1;
 
-		if (meshIdx[i] < 0)
+		if (meshIdx[i] < (mesh_type)0)
 		{
 			#ifdef FIXED
 			mesh[i] = mesh[i] >> (-meshIdx[i]);
@@ -49,7 +49,7 @@ void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type fra
 			for (int j = 0; j < meshIdx[i]; j++)
 				mesh[i] *= 2;
 			#endif
-			}
+		}
 
 		for (int j = 0; j < 2 * nOpt; j++)
 		{
@@ -57,7 +57,7 @@ void generatePollMatrixArx(const input_type currU[nOpt], const mesh_exp_type fra
 			// #pragma HLS UNROLL
 			#endif
 		
-			pollMatrix[i][j] = currU[i] + (mesh[i] * directions[i][j]);
+			pollMatrix[i][j] = currU[i] + (norm_input_type)(mesh[i] * directions[i][j]);
 		}
 	}
 }

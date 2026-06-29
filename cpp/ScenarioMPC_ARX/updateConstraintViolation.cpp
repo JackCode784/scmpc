@@ -1,14 +1,15 @@
 #include "setup.h"
 
-void updateConstraintViolation(cost_type cost[2], const output_type yCurr)
+/** Update output constraint violation. */
+void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr)
 {
     #ifdef PRAGMAS
     //  #pragma HLS INLINE
     #endif
     
-    if (yCurr > YMAX)
-        cost[1] += yCurr - YMAX;
+    if (yCurr > YNORMMAX)
+        cost[1] += (cost_type)(yCurr - YNORMMAX);
 
-    if (yCurr < YMIN)
-        cost[1] += YMIN - yCurr;
+    if (yCurr < YNORMMIN)
+        cost[1] += (cost_type)(YNORMMIN - yCurr);
 }

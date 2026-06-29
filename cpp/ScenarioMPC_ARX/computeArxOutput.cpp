@@ -5,13 +5,12 @@ Computes ARX model output using past output and input samples.
 ARX output is the scalar product between past output/input samples and theta
 parameters 
 */
-output_type computeArxOutput(const output_type yPast[na], const input_type uSamples[nb+nk-1], const theta_type theta[nTheta])
+norm_output_type computeArxOutput(const norm_output_type yPast[na], const norm_input_type uSamples[nb+nk-1], const theta_type theta[nTheta])
 {
     #ifdef PRAGMAS
     // #pragma HLS INLINE
     #endif
-    output_type yRes = 0;
-
+    norm_output_type yRes = 0;
 
     #ifdef PRAGMAS
     #pragma HLS array_partition variable=theta dim=1 complete
@@ -28,13 +27,13 @@ output_type computeArxOutput(const output_type yPast[na], const input_type uSamp
         yRes += ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * theta[i];
         #else
         /* Compute normalized output from normalized I/O samples */
-        yRes += ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * theta[i] * myInvDmDg[i] +
+        yRes += (norm_output_type)(((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * theta[i] * myInvDmDg[i] +
                 qmyInvDmDg[i] * theta[i] +
-                ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * myInvDmc0[i];
+                ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * myInvDmc0[i]);
         #endif
     }
     #ifdef NRMLZ
-    yRes += qmyInvDmc0 + yNormOffset;
+    yRes += (norm_output_type)(qmyInvDmc0 + yNormOffset);
     #endif
 
     return yRes;

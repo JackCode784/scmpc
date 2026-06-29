@@ -150,7 +150,7 @@ constexpr int NhorU = 3;
  * The cost is evaluated on Nscen + 1 models simultaneously.
  * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
  */
-constexpr int Nscen      = 4;
+constexpr int Nscen      = 4;   /* should always be a power of 2 */
 constexpr int LOG2NSCEN  = 2;   /* must satisfy (1 << LOG2NSCEN) == Nscen */
 
 static_assert(NhorU <= Nhor,
@@ -196,7 +196,7 @@ constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
 #ifdef FIXED
   static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5;
 #else
-  static const input_type expC = 0.5;
+  static const norm_input_type expC = 0.5;
 #endif
 
 /*
@@ -237,10 +237,10 @@ static const conv_type            UDACGain = (conv_type)(UMAX - UMIN) / (conv_ty
 static const digital_input_type   UBias    = (conv_type)(ADC_MIN*UMAX - ADC_MAX*UMIN) / (conv_type)(UMAX - UMIN);
 
 #ifdef NRMLZ
-constexpr int YNORMMAX = 1;
-constexpr int YNORMMIN = -1;
-constexpr int UNORMMAX = 1;
-constexpr int UNORMMIN = -1;
+static const norm_output_type YNORMMAX = 1;
+static const norm_output_type YNORMMIN = -1;
+static const norm_input_type UNORMMAX = 1;
+static const norm_input_type UNORMMIN = -1;
 
 static const norm_conv_type yNormGain = (norm_conv_type)((YNORMMAX - YNORMMIN) / (YMAX - YMIN));
 static const norm_conv_type uNormGain = (norm_conv_type)((UNORMMAX - UNORMMIN) / (UMAX - UMIN));
@@ -262,6 +262,10 @@ static const norm_conv_type qmyInvDmc0 = 0.992262713557689;
 
 #else
 static const weights_type R = RBaseLine;   /* stage   input  weight  */
+constexpr norm_output_type YNORMMAX = YMAX;
+constexpr norm_output_type YNORMMIN = YMIN;
+constexpr norm_input_type UNORMMAX = UMAX;
+constexpr norm_input_type UNORMMIN = UMIN;
 #endif
 
 /* ======================================================================
@@ -286,20 +290,20 @@ digital_input_type controller(const digital_output_type yCurrDig,
 
 /** One-step-ahead prediction:
  *  ypred(k) = theta^T * [y(k-1),...,y(k-na), u(k-nk),...,u(k-nk-nb+1)]^T */
-output_type computeArxOutput(const output_type yPast   [na],
-                              const input_type  uSamples[nb + nk - 1],
-                              const theta_type  theta   [nTheta]);
+norm_output_type computeArxOutput(const norm_output_type yPast[na],
+                                  const norm_input_type uSamples[nb+nk-1],
+                                  const theta_type theta[nTheta]);
 
 /* --- MPC cost function ------------------------------------------------ */
 
 /** Evaluate scenario-based MPC cost over the control horizon.
  *  cost[0] = objective value;  cost[1] = constraint violation. */
-void costFunctionArx(cost_type         cost            [2],
-                     const output_type yPast           [na],
-                     const input_type  currU           [nOpt],
-                     const input_type  uPast           [nb + nk - 2],
-                     const output_type yref,
-                     const theta_type  thetaScenarios  [Nscen][nTheta]);
+void costFunctionArx(cost_type              cost[2],
+                     const norm_output_type yPast          [na],
+                     const norm_input_type  currU          [nOpt],
+                     const norm_input_type  uPast          [nb + nk - 2],
+                     const norm_output_type yref,
+                     const theta_type       thetaScenarios [Nscen][nTheta]);
 
 /* --- MADS poll-step --------------------------------------------------- */
 
@@ -311,10 +315,10 @@ void generatePollDirectionsArx(const rand_type     randomVector[nOpt],
                                 direction_type      directions  [nOpt][2*nOpt]);
 
 /** Scale the poll directions into a full poll matrix. */
-void generatePollMatrixArx(const input_type    currU     [nOpt],
-                            const mesh_exp_type frameIdx  [nOpt],
-                            const mesh_exp_type meshIdx   [nOpt],
-                            input_type          pollMatrix[nOpt][2*nOpt]);
+void generatePollMatrixArx(const norm_input_type currU[nOpt], 
+                            const mesh_exp_type frameIdx[nOpt], 
+                            const mesh_exp_type meshIdx[nOpt],
+                            norm_input_type pollMatrix[nOpt][2 * nOpt]);
 
 /* --- Scenario generation --------------------------------------------- */
 
@@ -338,22 +342,22 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nTheta],
 /* --- MADS main loop --------------------------------------------------- */
 
 /** Run MADS_ITER iterations and return the optimal input sequence. */
-void MADSARX(input_type uOpt[nOpt], 
-                const input_type uInit[nb + nk - 2], 
-                const output_type yInit[na], 
-                const output_type yref, 
-                const theta_type thetaScenarios[Nscen][nTheta]);
+void MADSARX(norm_input_type uOpt[nOpt], 
+            const norm_input_type uInit[nb + nk - 2], 
+            const norm_output_type yInit[na], 
+            const norm_output_type yref, 
+            const theta_type thetaScenarios[Nscen][nTheta]);
 
 /** Evaluate all 2*nOpt poll candidates; update the best feasible point
  *  via the progressive barrier strategy. */
-void progressiveBarrierPollingArx(cost_type         bestCost   [2],
-                                   input_type        bestPoint  [nOpt],
-                                   const output_type yPast      [na],
-                                   const input_type  uPast      [nb + nk - 2],
-                                   output_type       yref,
-                                   const input_type  pollMatrix [nOpt][2*nOpt],
-                                   mesh_exp_type     frameExp   [nOpt],
-                                   const theta_type  thetaScenarios[Nscen][nTheta]);
+void progressiveBarrierPollingArx(cost_type bestCost[2], 
+                                    norm_input_type bestPoint[nOpt], 
+                                    const norm_output_type yPast[na], 
+                                    const norm_input_type uPast[nb + nk - 2], 
+                                    const norm_output_type yref, 
+                                    const norm_input_type pollMatrix[nOpt][2 * nOpt], 
+                                    mesh_exp_type frameExp[nOpt], 
+                                    const theta_type thetaScenarios[Nscen][nTheta]);
 
 /* --- Pseudo-random generation (three overloads) ----------------------- */
 /** Random number in [-1, 1] */
@@ -366,7 +370,7 @@ void pseudoRandArx(rand_type coeffs[nGens]);
 
 /** Update cost[1] (the progressive-barrier violation term) given the
  *  current predicted output currY and the bounds YMIN/YMAX. */
-void updateConstraintViolation(cost_type cost[2], const output_type currY);
+void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr);
 
 /* --- ADC / DAC conversions -------------------------------------------- */
 #ifdef CONVERSIONS_MODE

@@ -4,11 +4,11 @@
 // currentCost is the cost for currentPoint
 // currentPoint is updated when a new best point is found
 void progressiveBarrierPollingArx(cost_type bestCost[2], 
-								input_type bestPoint[nOpt], 
-								const output_type yPast[na], 
-								const input_type uPast[nb + nk - 2], 
-								const output_type yref, 
-								const input_type pollMatrix[nOpt][2 * nOpt], 
+								norm_input_type bestPoint[nOpt], 
+								const norm_output_type yPast[na], 
+								const norm_input_type uPast[nb + nk - 2], 
+								const norm_output_type yref, 
+								const norm_input_type pollMatrix[nOpt][2 * nOpt], 
 								mesh_exp_type frameExp[nOpt], 
 								const theta_type thetaScenarios[Nscen][nTheta])
 {
@@ -16,11 +16,11 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 	// #pragma HLS ALLOCATION instances=costFunctionArx limit=6 function
 	#endif
 
-	// flag indicating if one of the polling points is better than the current one
+	// is there a better poll point than the current?
 	int success = 0;
 
 	// point under test
-	input_type testPoint[nOpt];
+	norm_input_type testPoint[nOpt];
 	#ifdef PRAGMAS
 	// #pragma HLS ARRAY_PARTITION variable = testPoint dim = 1 complete
 	#endif
