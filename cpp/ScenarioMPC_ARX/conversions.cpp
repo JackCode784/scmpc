@@ -29,12 +29,6 @@ output_type DAConvertY(const digital_output_type yDig)
 //  	float YBiasf = YBias.to_float();
 //  #endif
 	output_type yAn = (yDig - YBias) * YDACGain;
-
-	#ifdef NRMLZ
-	// Internal normalization
-	yAn = yNormGain * yAn + yNormOffset;
-	#endif
-
 	return yAn;
 }
 
@@ -62,5 +56,20 @@ input_type DAConvertU(const digital_input_type uDig)
 // 	float UBiasf = UBias.to_float();
 // #endif
 	input_type uAn = (uDig - UBias) * UDACGain;
+	return uAn;
+}
+
+/** The following functions normalize (denormalize) output (input) samples
+ * They're used iff NRMLZ is defined.
+ */
+norm_output_type normalizeY(output_type yAn)
+{
+	norm_output_type yNorm = yNormGain * yAn + yNormOffset;
+	return yNorm;
+}
+
+input_type denormalizeU(norm_input_type uNorm)
+{
+	input_type uAn = (uNorm - uNormOffset) * uNormGainInverse;
 	return uAn;
 }

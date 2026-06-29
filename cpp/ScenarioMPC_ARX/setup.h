@@ -242,11 +242,11 @@ constexpr int YNORMMIN = -1;
 constexpr int UNORMMAX = 1;
 constexpr int UNORMMIN = -1;
 
-static const norm_type yNormGain = (norm_type)((YNORMMAX - YNORMMIN) / (YMAX - YMIN));
-static const norm_type uNormGain = (norm_type)((UNORMMAX - UNORMMIN) / (UMAX - UMIN));
-static const norm_type uNormGainInverse = (norm_type)((UMAX - UMIN) / (UNORMMAX - UNORMMIN));
-static const norm_type yNormOffset = (norm_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
-static const norm_type uNormOffset = (norm_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
+static const norm_conv_type yNormGain = (norm_conv_type)((YNORMMAX - YNORMMIN) / (YMAX - YMIN));
+static const norm_conv_type uNormGain = (norm_conv_type)((UNORMMAX - UNORMMIN) / (UMAX - UMIN));
+static const norm_conv_type uNormGainInverse = (norm_conv_type)((UMAX - UMIN) / (UNORMMAX - UNORMMIN));
+static const norm_conv_type yNormOffset = (norm_conv_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
+static const norm_conv_type uNormOffset = (norm_conv_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
 
 static const weights_type R = RBaseLine * (yNormGain*yNormGain)/(uNormGain*uNormGain);
 
@@ -254,10 +254,10 @@ static const weights_type R = RBaseLine * (yNormGain*yNormGain)/(uNormGain*uNorm
  * A better way to compute these offline is needed.
 */
 #if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-static const norm_type myInvDmDg[nTheta] = {5.544771541217021, 4.480002635302223, 0.848930417640874};
-static const norm_type qmyInvDmDg[nTheta] = {5.544771541217021,   4.480002635302223,   0.848930417640874};
-static const norm_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
-static const norm_type qmyInvDmc0 = 0.992262713557689;
+static const norm_conv_type myInvDmDg[nTheta] = {5.544771541217021, 4.480002635302223, 0.848930417640874};
+static const norm_conv_type qmyInvDmDg[nTheta] = {5.544771541217021,   4.480002635302223,   0.848930417640874};
+static const norm_conv_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
+static const norm_conv_type qmyInvDmc0 = 0.992262713557689;
 #endif
 
 #else

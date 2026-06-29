@@ -40,9 +40,18 @@
 /* ---------------------------------------------------------------------- */
 #include <ap_fixed.h>
 
-/** Raw 12-bit ADC/DAC sample, integer range {0, ..., 4095}. */
-typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_input_type;
-typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_output_type;
+/** System-dependent data type (based on I/O dynamic range)
+ * Taken care of by MATLAB?
+ */
+#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
+typedef ap_ufixed<8,1> output_type;
+typedef ap_ufixed<8,4> input_type;
+   #ifdef NRMLZ
+   typedef ap_fixed<18,1> theta_type;
+   #endif
+#else
+#error "Unrecognized ACTIVE_SYSTEM."
+#endif
 
 /** Cost accumulator; wide enough to prevent saturation over the horizon. */
 typedef ap_ufixed<32,  9, AP_RND_CONV, AP_SAT>  cost_type;
@@ -87,9 +96,11 @@ typedef int          mesh_exp_type;
 typedef int          direction_type;
 typedef double       conv_type;
 typedef double       alg_type;
+typedef double       output_type;
+typedef double       input_type;
+typedef double       theta_type;
 typedef double       frac_type;
 typedef unsigned int u16_type;
-typedef double       norm_type;
 #endif  /* FIXED */
 
 /* ======================================================================
@@ -98,20 +109,35 @@ typedef double       norm_type;
    variable at every call site.  Use these everywhere - never use
    alg_type, double, or ap_fixed<> directly outside this file.
    ====================================================================== */
-#ifndef NRMLZ
-typedef alg_type  output_type;   /**< Plant output sample  y(k).           */
-typedef alg_type  input_type;    /**< Control input sample u(k).           */
-#else
-typedef norm_type output_type;
-typedef norm_type input_type;
-#endif
 typedef alg_type  weights_type;  /**< MPC cost-weight matrix entry.        */
-typedef alg_type  theta_type;    /**< ARX parameter vector entry.          */
 typedef alg_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
+typedef alg_type  norm_conv_type;
+
 #ifdef CONVERSIONS_MODE
+#ifdef FIXED
+/** Raw 12-bit ADC/DAC sample, integer range {0, ..., 4095}. */
+typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_input_type;
+typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_output_type;
+#else
 typedef int          digital_input_type;   /**< ADC raw integer {0,...,4095} */
 typedef int          digital_output_type;
+#endif
 #else // they're the same because no conversion is done
 typedef input_type   digital_input_type;
 typedef output_type  digital_output_type;
+#endif
+   
+#ifdef NRMLZ
+#ifdef FIXED
+/** Normalized quantities types */
+typedef ap_fixed<18,1> norm_output_type;
+typedef ap_fixed<18,1> norm_input_type;
+typedef ap_fixed<18,1> theta_type;
+#else
+typedef double norm_output_type;
+typedef double norm_input_type;
+#endif
+#else
+typedef output_type norm_output_type;
+typedef input_type norm_input_type;
 #endif
