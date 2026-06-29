@@ -46,8 +46,8 @@
 #if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
 typedef ap_ufixed<8,1> output_type;
 typedef ap_ufixed<8,4> input_type;
-   #ifdef NRMLZ
-   typedef ap_fixed<18,1> theta_type;
+   #ifndef NRMLZ
+   typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
    #endif
 #else
 #error "Unrecognized ACTIVE_SYSTEM."
