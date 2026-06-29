@@ -56,8 +56,8 @@
    ====================================================================== */
 theta_type  thetaCenter[nTheta]              = {    THETA_NOMINAL_INIT  };
 theta_type  thetaGens  [nTheta][nGens]       = {    GENERATORS_INIT     };
-output_type yHist[na]                         = { Y_HIST_INIT };
-input_type  uHist[nb + nk - 1]               = { U_HIST_INIT };
+norm_output_type yHist[na]                   = { Y_HIST_INIT };
+norm_input_type  uHist[nb + nk - 1]          = { U_HIST_INIT };
 
 /* ======================================================================
    controller()
@@ -73,17 +73,30 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* ------------------------------------------------------------------ */
     /*  Step 1 - Convert digital inputs to algorithm types                */
     /* ------------------------------------------------------------------ */
+    output_type yCurr;
+    output_type yref;
     #ifdef CONVERSIONS_MODE
-    output_type yCurr = DAConvertY(yCurrDig);
-    output_type yref  = DAConvertY(yrefDig);
+    yCurr = DAConvertY(yCurrDig);
+    yref  = DAConvertY(yrefDig);
     #else 
-    output_type yCurr = yCurrDig;
-    output_type yref = yrefDig;
+    yCurr = yCurrDig;
+    yref = yrefDig;
+    #endif
+
+    /* Normalize output samples if needed */
+    norm_output_type yCurrNorm;
+    norm_output_type yrefNorm;
+    #ifdef NRMLZ
+    yCurrNorm = normalizeY(yCurr);
+    yrefNorm = normalizeY(yref);
+    #else
+    yCurrNorm = yCurr;
+    yrefNorm = yref;
     #endif
     
-    input_type uOpt[NhorU];
+    norm_input_type uOptNorm[NhorU];
     for (int i = 0; i < NhorU; i++)
-        uOpt[i] = uHist[0]; // warm start
+        uOptNorm[i] = uHist[0]; // warm start
 
     /* ------------------------------------------------------------------ */
     /*  Step 2 - [PL mode] Zonotope update                                */
@@ -158,7 +171,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* ------------------------------------------------------------------ */
     for (int i = na - 1; i > 0; i--)
         yHist[i] = yHist[i - 1];
-    yHist[0] = yCurr;   /* yHist = [y(k), y(k−1), ..., y(k−na+1)] */
+    yHist[0] = yCurrNorm;   /* yHist = [y(k), y(k−1), ..., y(k−na+1)] */
 
     /* ------------------------------------------------------------------ */
     /*  Step 6 - Snapshot input history for MADS                          */
@@ -168,31 +181,39 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * roll out predictions for y(k+1), ..., y(k+N) alongside uOpt.
      * Must be taken BEFORE uHist is updated with uOpt[0] in step 9.
      */
-    input_type uPast[nb + nk - 2];
+    norm_input_type uPast[nb + nk - 2];
     for (int i = 0; i < nb + nk - 2; i++)
         uPast[i] = uHist[i];
 
     /* ------------------------------------------------------------------ */
     /*  Step 7 - Run MADS optimisation                                    */
     /* ------------------------------------------------------------------ */
-    MADSARX(uOpt, uPast, yHist, yref, thetaScenarios);
+    MADSARX(uOptNorm, uPast, yHist, yrefNorm, thetaScenarios);
 
+    /* Denormalize output if NRMLZ is defined */
+    input_type uOpt;
+    #ifdef NRMLZ
+    uOpt = denormalizeU(uOptNorm[0]);
+    #else
+    uOpt = uOptNorm[0];
+    #endif
+    
     /* ------------------------------------------------------------------ */
-    /*  Step 8 - Convert uOpt back to digital                             */
+    /*  Step 8 - Update input history: push uOpt[0] into uHist           */
+    /* ------------------------------------------------------------------ */
+    for (int i = nb + nk - 2; i > 0; i--)
+    uHist[i] = uHist[i - 1];
+    uHist[0] = uOptNorm[0];   /* receding horizon: only u(k) is applied */
+    
+    /* ------------------------------------------------------------------ */
+    /*  Step 9 - Convert uOpt back to digital                             */
     /* ------------------------------------------------------------------ */
     digital_input_type uOptDig;
     #ifdef CONVERSIONS_MODE
-    uOptDig = ADConvertU(uOpt[0]);
+    uOptDig = ADConvertU(uOpt);
     #else
-    uOptDig = uOpt[0];
+    uOptDig = uOpt;
     #endif
-
-    /* ------------------------------------------------------------------ */
-    /*  Step 9 - Update input history: push uOpt[0] into uHist           */
-    /* ------------------------------------------------------------------ */
-    for (int i = nb + nk - 2; i > 0; i--)
-        uHist[i] = uHist[i - 1];
-    uHist[0] = uOpt[0];   /* receding horizon: only u(k) is applied */
 
     return uOptDig;
 }

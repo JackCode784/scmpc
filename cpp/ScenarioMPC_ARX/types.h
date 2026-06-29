@@ -48,7 +48,7 @@ typedef ap_ufixed<8,1> output_type;
 typedef ap_ufixed<8,4> input_type;
    #ifndef NRMLZ
    typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
-   #endif
+   #endif // case when normalized and no fixed in #ifdef NRMLZ section
 #else
 #error "Unrecognized ACTIVE_SYSTEM."
 #endif

@@ -376,6 +376,11 @@ digital_input_type  ADConvertU(const input_type         uAn);
 input_type          DAConvertU(const digital_input_type  uDig);
 #endif
 
+#ifdef NRMLZ
+norm_output_type normalizeY(output_type yAn);
+input_type denormalizeU(norm_input_type uNorm);
+#endif
+
 /* --- Passive learning (PL mode only) ---------------------------------- */
 #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
 
