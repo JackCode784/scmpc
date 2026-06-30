@@ -9,15 +9,6 @@ else
     path = "";
 end
 
-% load(append(path, "output.txt"));
-% uSim = output(:,1);
-% ySim = output(:,2);
-% yref = output(:,3);
-% uMin = output(:,4);
-% uMax = output(:,5);
-% yMin = output(:,6);
-% yMax = output(:,7);
-
 % Save data as table instead of matrix
 data = readtable(append(path, "output.txt"), VariableNamingRule="preserve");
 
@@ -56,7 +47,8 @@ grid on;
 xlabel('Time instant');
 ylabel('Volume (normalized)');
 title('Normalized zonotope volume');
-%% Latency/area occupation dependency on number of scenarios
+
+% Latency/area occupation dependency on number of scenarios
 % Keeping the same FPGA board, same #pragma directives
 
 if isVitisSim

@@ -45,8 +45,11 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-// #define FIXED
-#define NRMLZ
+// #define FIXED            /* fixed point representation */
+// #define CONVERSIONS_MODE /* ADC/DAC conversions */
+// #define NRMLZ               /* normalization */
+#define PRNG_STDLIB         /* use rand() as prng */
+// #define DEBUG_PRINT      /* debug printfs */
 
 /** Active plant - choose one of: 
  * SYSTEM_SIMPLE, 
@@ -71,14 +74,36 @@
    Derived feature flags (do NOT edit)
    ====================================================================== */
 #ifdef FIXED
-  #define PRAGMAS           /* enable HLS synthesis pragmas in .cpp files  */
-  #define CONVERSIONS_MODE  /* ADC/DAC functions always needed in hardware  */
-  #include <ap_fixed.h>
-#else
-  // #define DEBUG_PRINT    /* uncomment to see debug printfs */
-  // #define PRNG_STDLIB    /* use rand() as prng */
-  // #define CONVERSIONS_MODE  /* sue ADC/DAC functions */
+    #define PRAGMAS         /* enable all HLS synthesis pragmas in .cpp files  */
+    #include <ap_fixed.h>   /* include fixed point data types */
+    #undef PRNG_STDLIB      /* can't use rand() in fixed point */
 #endif
+
+/* ======================================================================
+    Macros for printing active modes in main.
+    These are automatically derived from the target selection section.
+   ====================================================================== */
+#ifdef FIXED
+    #define FIXED_PRINT "true"
+#else 
+    #define FIXED_PRINT "false"
+#endif
+#ifdef CONVERSIONS_MODE
+    #define CONVERSIONS_MODE_PRINT "true"
+#else 
+    #define CONVERSIONS_MODE_PRINT "false"
+#endif
+#ifdef NRMLZ
+    #define NRMLZ_PRINT "true"
+#else 
+    #define NRMLZ_PRINT "false"
+#endif
+#ifdef PRNG_STDLIB
+    #define PRNG_STDLIB_PRINT "true"
+#else 
+    #define PRNG_STDLIB_PRINT "false"
+#endif
+
 
 /* ======================================================================
    Core headers
@@ -128,8 +153,8 @@
    ====================================================================== */
 extern theta_type  thetaCenter[nTheta];
 extern theta_type  thetaGens  [nTheta][nGens];
-extern output_type yHist[na];
-extern input_type  uHist[nb + nk - 1];
+extern norm_output_type yHist[na];
+extern norm_input_type  uHist[nb + nk - 1];
 
 
 /* ======================================================================
@@ -262,10 +287,10 @@ static const norm_conv_type qmyInvDmc0 = 0.992262713557689;
 
 #else
 static const weights_type R = RBaseLine;   /* stage   input  weight  */
-constexpr norm_output_type YNORMMAX = YMAX;
-constexpr norm_output_type YNORMMIN = YMIN;
-constexpr norm_input_type UNORMMAX = UMAX;
-constexpr norm_input_type UNORMMIN = UMIN;
+static const norm_output_type YNORMMAX = YMAX;
+static const norm_output_type YNORMMIN = YMIN;
+static const norm_input_type UNORMMAX = UMAX;
+static const norm_input_type UNORMMIN = UMIN;
 #endif
 
 /* ======================================================================

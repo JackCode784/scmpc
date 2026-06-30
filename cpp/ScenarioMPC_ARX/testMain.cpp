@@ -46,10 +46,16 @@ int main(void)
 {
     printf("\n=== SCMPC ARX simulation  |  system=%d  mode=%d ===\n\n",
            ACTIVE_SYSTEM, CTRL_MODE);
+    printf("Operation modes:\n");
+    printf("\tFixed point: %s\n", FIXED_PRINT);
+    printf("\tADC/DAC: %s\n", CONVERSIONS_MODE_PRINT);
+    printf("\tNormalization: %s\n", NRMLZ_PRINT);
+    printf("\tPRNG: %s\n", PRNG_STDLIB_PRINT);
+    printf("\n\n");
 
-#ifdef PRNG_STDLIB
+    #ifdef PRNG_STDLIB
     srand(time(NULL));  // set random seed
-#endif
+    #endif
 
     /* ------------------------------------------------------------------ */
     /*  Simulation parameters                                              */
