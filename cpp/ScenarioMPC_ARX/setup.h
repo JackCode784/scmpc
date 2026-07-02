@@ -47,8 +47,8 @@
 /** Hardware synthesis target.  Comment out for PC simulation. */
 // #define FIXED            /* fixed point representation */
 // #define CONVERSIONS_MODE /* ADC/DAC conversions */
-// #define NRMLZ               /* normalization */
-#define PRNG_STDLIB         /* use rand() as prng */
+#define NRMLZ               /* normalization */
+// #define PRNG_STDLIB         /* use rand() as prng */
 // #define DEBUG_PRINT      /* debug printfs */
 
 /** Active plant - choose one of: 
@@ -220,6 +220,7 @@ constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
  */
 #ifdef FIXED
   static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5;
+//   static const norm_input_type expC = 0.5;
 #else
   static const norm_input_type expC = 0.5;
 #endif
@@ -262,6 +263,7 @@ static const conv_type            UDACGain = (conv_type)(UMAX - UMIN) / (conv_ty
 static const digital_input_type   UBias    = (conv_type)(ADC_MIN*UMAX - ADC_MAX*UMIN) / (conv_type)(UMAX - UMIN);
 
 #ifdef NRMLZ
+/* Set these from user? */
 static const norm_output_type YNORMMAX = 1;
 static const norm_output_type YNORMMIN = -1;
 static const norm_input_type UNORMMAX = 1;
@@ -270,8 +272,8 @@ static const norm_input_type UNORMMIN = -1;
 static const norm_conv_type yNormGain = (norm_conv_type)((YNORMMAX - YNORMMIN) / (YMAX - YMIN));
 static const norm_conv_type uNormGain = (norm_conv_type)((UNORMMAX - UNORMMIN) / (UMAX - UMIN));
 static const norm_conv_type uNormGainInverse = (norm_conv_type)((UMAX - UMIN) / (UNORMMAX - UNORMMIN));
-static const norm_conv_type yNormOffset = (norm_conv_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
-static const norm_conv_type uNormOffset = (norm_conv_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
+static const norm_output_type yNormOffset = (norm_conv_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
+static const norm_input_type uNormOffset = (norm_conv_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
 
 static const weights_type R = RBaseLine * (yNormGain*yNormGain)/(uNormGain*uNormGain);
 

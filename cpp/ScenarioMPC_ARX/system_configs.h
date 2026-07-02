@@ -54,33 +54,39 @@
   #define nb   1
   #define nk   2
   #define nGens 3
-  #define sigma 0.0
+  #define SIGMA_UNNORM` 0.0
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
   #define na   2
   #define nb   2
   #define nk   1
   #define nGens 6
-  #define sigma 0.20
+  #define SIGMA_UNNORM 0.20
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
   #define na   3
   #define nb   3
   #define nk   1
   #define nGens 6
-  #define sigma 4.4655
+  #define SIGMA_UNNORM 4.4655
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
   #define na   2
   #define nb   1
   #define nk   2
   #define nGens 3
-  #define sigma 0.2
+  #define SIGMA_UNNORM 0.2
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
   #define na  2
   #define nb   1
   #define nk   2
   #define nGens 3
-  #define sigma 0.02
+  #define SIGMA_UNNORM 0.02
 #endif
 #define nTheta  (na + nb)       /* total ARX parameter count */
+/* WIP */
+#ifndef NRMLZ
+#define sigma SIGMA_UNNORM
+#else
+#define sigma yNormGain*SIGMA_UNNORM
+#endif
 
 /* ======================================================================
    INPUT / OUTPUT HARD CONSTRAINTS
@@ -155,23 +161,25 @@ static const output_type YMAX = 10;
             {      0,        0,    0.2500}  
     #define THETA_TRUE_INIT        1.8612,  -0.9276,    0.6732
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-    #ifndef NRMLZ
-    #define Y_HIST_INIT 0, 0
-    #define U_HIST_INIT 0
-    #define THETA_NOMINAL_INIT 1.817972144631566,  -0.871463786797535,   0.457543557236585
-    #define GENERATORS_INIT \
-          {-0.093616869443703,   0.124811247863353,   0.003362744341625}, \
-            {0.057591158572667,  -0.117838849718767,   0.003770097120654}, \
-            {0.271071396611763,   0.068140402887871,   0.000360367556716}
-    #else
-    #define Y_HIST_INIT -1, -1
-    #define U_HIST_INIT -1
-    // Normalized zonotope
-    #define THETA_NOMINAL_INIT 0, 0, 0
-    #define GENERATORS_INIT \
-        {-0.422095251119916,   0.562742968468448,   0.015161780411636}, \
-        {0.321379044059322,  -0.657582479919780,   0.021038476020897}, \
-        {0.798273306559841,   0.200665453469169,   0.001061239970989}
-    #endif
-    #define THETA_TRUE_INIT     1.857831352244614,  -0.933661885378246,   0.683201544134083
+#define THETA_NOMINAL_UNNORM 1.817972144631566,  -0.871463786797535,   0.457543557236585
+#define GENERATORS_UNNORM \
+        {-0.093616869443703,   0.124811247863353,   0.003362744341625}, \
+        {0.057591158572667,  -0.117838849718767,   0.003770097120654}, \
+        {0.271071396611763,   0.068140402887871,   0.000360367556716}
+#define THETA_TRUE_INIT     1.857831352244614,  -0.933661885378246,   0.683201544134083
+#ifndef NRMLZ
+#define Y_HIST_INIT 0, 0
+#define U_HIST_INIT 0
+#define THETA_NOMINAL_INIT THETA_NOMINAL_UNNORM
+#define GENERATORS_INIT GENERATORS_UNNORM
+#else
+#define Y_HIST_INIT -1, -1
+#define U_HIST_INIT -1
+#define THETA_NOMINAL_INIT 0, 0, 0
+/* For now, computed offline in MATLAB and pasted here */
+#define GENERATORS_INIT \
+    {-0.422095251119916,   0.562742968468448,   0.015161780411636}, \
+    {0.321379044059322,  -0.657582479919780,   0.021038476020897}, \
+    {0.798273306559841,   0.200665453469169,   0.001061239970989}
+#endif
 #endif
