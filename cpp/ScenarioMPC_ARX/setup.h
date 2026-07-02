@@ -46,7 +46,7 @@
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
 // #define FIXED            /* fixed point representation */
-// #define CONVERSIONS_MODE /* ADC/DAC conversions */
+#define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 // #define PRNG_STDLIB         /* use rand() as prng */
 // #define DEBUG_PRINT      /* debug printfs */
@@ -275,7 +275,7 @@ static const norm_conv_type uNormGainInverse = (norm_conv_type)((UMAX - UMIN) / 
 static const norm_output_type yNormOffset = (norm_conv_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
 static const norm_input_type uNormOffset = (norm_conv_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
 
-static const weights_type R = RBaseLine * (yNormGain*yNormGain)/(uNormGain*uNormGain);
+static const weights_type R = RBaseLine * (yNormGain * yNormGain) / (uNormGain * uNormGain);
 
 /* Pre-computed in MATLAB 
  * A better way to compute these offline is needed.
@@ -438,9 +438,9 @@ input_type denormalizeU(norm_input_type uNorm);
  *   newGens       - updated generator matrix (nTheta * nGens);
  *                   exactly nGen columns are written (same as input)
  */
-void boundStripZonotopeIntersectionNew(const output_type yCurr, 
-                                    const output_type yPast[na], 
-                                    const input_type uSamples[nb + nk - 1], 
+void boundStripZonotopeIntersectionNew(const norm_output_type stripCenter, 
+                                    const alg_type phi[nTheta],
+                                    const alg_type stripRadius,
                                     const theta_type oldCenter[nTheta],
                                     const theta_type oldGens[nTheta][nGens], 
                                     theta_type newCenter[nTheta], 

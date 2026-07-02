@@ -101,7 +101,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* ------------------------------------------------------------------ */
     /*  Step 2 - [PL mode] Zonotope update                                */
     /* ------------------------------------------------------------------ */
-#if CTRL_MODE == CTRL_MODE_PL
+#if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
     {
         /*
          * Intersect the current zonotope with the strip S(k).
@@ -119,8 +119,34 @@ digital_input_type controller(const digital_output_type yCurrDig,
         theta_type newCenter[nTheta];
         theta_type newGens  [nTheta][nGens];
 
-        boundStripZonotopeIntersectionNew(yCurr,
-                                       yHist, uHist,
+        /* In NRMLZ case, the inputs should be:
+            * yCurr -> yCurr - yNormOffset - ([yHist, uHist] - offsets) * yNormGain * ((i < na) ? 1 : normGainsRatio) * Dg * c0
+            * yHist, uHist -> ([yHist, uHist] - ioOffsets) * yNormGain * (i < na) ? 1 : normGainsRatio * Dg
+            * the rest is the same
+            In brief, phi should become (phi_norm-q)*my*Dm^-1*Dg
+         */
+        alg_type phi[nTheta];
+        norm_output_type stripCenter = yCurrNorm;
+        #ifdef NRMLZ
+
+        /* Compute \tilde{phi} - offsets */
+        for(int i = 0; i < na; i++) phi[i] = (yHist[i] - yNormOffset);
+        for(int i = 0; i < nb; i++) phi[i+na] = (uHist[i+nk-1] - uNormOffset);
+
+        /* Use (\tilde{phi} - offsets) to multiply by my*Dm^-1*c0 */
+        stripCenter -= yNormOffset;
+        for(int i = 0; i < nTheta; i++) stripCenter -= phi[i] * myInvDmc0[i];
+
+        /* Conclude phi computation */
+        for(int i = 0; i < nTheta; i++) phi[i] *= myInvDmDg[i];
+        
+        #else /* Unnormalized case */
+        /* The strip uses original, unnormalized I/O samples */
+        for(int i = 0; i < na; i++) phi[i] = yHist[i];
+        for(int i = 0; i < nb; i++) phi[i+na] = uHist[i+nk-1];
+        
+        #endif
+        boundStripZonotopeIntersectionNew(stripCenter, phi, sigma,
                                        thetaCenter, thetaGens,
                                        newCenter, newGens);
 

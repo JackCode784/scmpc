@@ -50,7 +50,7 @@ int main(void)
     printf("\tFixed point: %s\n", FIXED_PRINT);
     printf("\tADC/DAC: %s\n", CONVERSIONS_MODE_PRINT);
     printf("\tNormalization: %s\n", NRMLZ_PRINT);
-    printf("\tPRNG: %s\n", PRNG_STDLIB_PRINT);
+    printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
     printf("\n\n");
 
     #ifdef PRNG_STDLIB
@@ -115,7 +115,7 @@ int main(void)
         for(int i = 0; i < nTheta; i++)
             yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];
         #endif
-        yCurr += (output_type)noise[k] * (output_type)sigma;
+        yCurr += (output_type)noise[k] * (output_type)SIGMA_UNNORM;
         ySim[k] = yCurr;
 
         /* --- Convert y(k) to digital ----------------------------------- */
