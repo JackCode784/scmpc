@@ -44,8 +44,8 @@
  * Taken care of by MATLAB?
  */
 #if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-typedef ap_ufixed<8,1> output_type;
-typedef ap_ufixed<8,4> input_type;
+typedef ap_ufixed<8,4> output_type;
+typedef ap_ufixed<8,1> input_type;
    #ifndef NRMLZ
    typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
    #endif // case when normalized and no fixed in #ifdef NRMLZ section
@@ -60,7 +60,7 @@ typedef ap_ufixed<32,  9, AP_RND_CONV, AP_SAT>  cost_type;
 typedef ap_fixed <18,  3, AP_TRN,      AP_WRAP>  rand_type;
 
 /** Mesh-point coordinates (same range as input_type, unsigned). */
-typedef ap_ufixed<36, 12, AP_TRN,      AP_WRAP>  mesh_type;
+typedef ap_fixed<36, 12, AP_TRN,      AP_WRAP>  mesh_type;
 
 /** Signed log2 frame-size exponent (small integer). */
 typedef ap_int<6>                                 mesh_exp_type;
@@ -130,9 +130,9 @@ typedef output_type  digital_output_type;
 #ifdef NRMLZ
 #ifdef FIXED
 /** Normalized quantities types */
-typedef ap_fixed<18,1> norm_output_type;
-typedef ap_fixed<18,1> norm_input_type;
-typedef ap_fixed<18,1> theta_type;
+typedef ap_fixed<18,2> norm_output_type;
+typedef ap_fixed<18,2> norm_input_type;
+typedef ap_fixed<18,2> theta_type;
 #else
 typedef double norm_output_type;
 typedef double norm_input_type;

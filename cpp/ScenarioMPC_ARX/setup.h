@@ -47,7 +47,7 @@
 /** Hardware synthesis target.  Comment out for PC simulation. */
 // #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
-#define NRMLZ               /* normalization */
+// #define NRMLZ               /* normalization */
 // #define PRNG_STDLIB         /* use rand() as prng */
 // #define DEBUG_PRINT      /* debug printfs */
 
@@ -251,6 +251,7 @@ static const mesh_exp_type D0[nOpt] = { -8, -8, -8 };
    In fixed-point mode they are explicit literals (ap_fixed<> prevents
    compile-time arithmetic on non-constexpr types).
    ====================================================================== */
+#ifdef CONVERSIONS_MODE
 constexpr int ADC_MAX   = 4095;
 constexpr int ADC_MIN   = 0;
 constexpr int ADC_RANGE = ADC_MAX - ADC_MIN;
@@ -261,6 +262,7 @@ static const digital_output_type  YBias    = (conv_type)(ADC_MIN*YMAX - ADC_MAX*
 static const conv_type            UADCGain = (conv_type)ADC_RANGE / (conv_type)(UMAX - UMIN);
 static const conv_type            UDACGain = (conv_type)(UMAX - UMIN) / (conv_type)ADC_RANGE;
 static const digital_input_type   UBias    = (conv_type)(ADC_MIN*UMAX - ADC_MAX*UMIN) / (conv_type)(UMAX - UMIN);
+#endif
 
 #ifdef NRMLZ
 /* Set these from user? */
@@ -285,20 +287,44 @@ static const norm_conv_type myInvDmDg[nTheta] = {5.544771541217021, 4.4800026353
 static const norm_conv_type qmyInvDmDg[nTheta] = {5.544771541217021,   4.480002635302223,   0.848930417640874};
 static const norm_conv_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
 static const norm_conv_type qmyInvDmc0 = 0.992262713557689;
-static const conv_type yDANormGain = yNormGain*YDACGain;
-static const conv_type yDANormOffset = yNormOffset - YBias*yDANormGain;
-static const conv_type uNormADGain = UADCGain*uNormGainInverse;
-static const conv_type uNormADOffset = UBias - uNormOffset*uNormADGain;
 #else
 #error "Conversion variables for unknwon system could not be defined!"
 #endif
-
 #else
 static const weights_type R = RBaseLine;   /* stage   input  weight  */
 static const norm_output_type YNORMMAX = YMAX;
 static const norm_output_type YNORMMIN = YMIN;
 static const norm_input_type UNORMMAX = UMAX;
 static const norm_input_type UNORMMIN = UMIN;
+#endif
+
+/* Choose appropriate coefficients based on the operation modes.
+    These serve as coefficients and offsets for computing
+    conversions functions. */
+#ifdef CONVERSIONS_MODE
+    #ifdef NRMLZ
+    static const conv_type yConvCoeff = yNormGain*YDACGain;
+    static const conv_type uConvCoeff = UADCGain*uNormGainInverse;
+    static const norm_output_type yConvOffset = yNormOffset - YDACGain*YBias*yNormGain;
+    static const digital_input_type uConvOffset = UBias - uNormOffset*uNormGainInverse*UADCGain;
+    #else
+    static const conv_type yConvCoeff = YDACGain;
+    static const conv_type uConvCoeff = UADCGain;
+    static const norm_output_type yConvOffset = -YBias*YDACGain;
+    static const digital_input_type uConvOffset = UBias;
+    #endif
+    #else
+    #ifdef NRMLZ
+    static const conv_type yConvCoeff = yNormGain;
+    static const conv_type uConvCoeff = uNormGainInverse;
+    static const norm_output_type yConvOffset = yNormOffset;
+    static const digital_input_type uConvOffset = -uNormOffset*uNormGainInverse;
+    #else
+    static const conv_type yConvCoeff = 1;
+    static const conv_type uConvCoeff = 1;
+    static const norm_output_type yConvOffset = 0;
+    static const digital_input_type uConvOffset = 0;
+    #endif
 #endif
 
 /* ======================================================================
@@ -417,6 +443,10 @@ input_type          DAConvertU(const digital_input_type  uDig);
 norm_output_type normalizeY(output_type yAn);
 input_type denormalizeU(norm_input_type uNorm);
 #endif
+
+/* Conversion functions to/from type used in controller */
+norm_output_type dig2ctrlY(const digital_output_type yDig);
+digital_input_type ctrlU2dig(const norm_input_type uCtrl);
 
 /* --- Passive learning (PL mode only) ---------------------------------- */
 #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL

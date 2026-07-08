@@ -54,78 +54,80 @@
   #define nb   1
   #define nk   2
   #define nGens 3
-  #define SIGMA_UNNORM` 0.0
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
   #define na   2
   #define nb   2
   #define nk   1
   #define nGens 6
-  #define SIGMA_UNNORM 0.20
-#elif ACTIVE_SYSTEM == SYSTEM_MILANO
+  #elif ACTIVE_SYSTEM == SYSTEM_MILANO
   #define na   3
   #define nb   3
   #define nk   1
   #define nGens 6
-  #define SIGMA_UNNORM 4.4655
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK
+  #elif ACTIVE_SYSTEM == SYSTEM_BUCK
   #define na   2
   #define nb   1
   #define nk   2
   #define nGens 3
-  #define SIGMA_UNNORM 0.2
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
+  #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
   #define na  2
   #define nb   1
   #define nk   2
   #define nGens 3
-  #define SIGMA_UNNORM 0.02
-#endif
-#define nTheta  (na + nb)       /* total ARX parameter count */
-/* WIP */
-#ifndef NRMLZ
-#define sigma SIGMA_UNNORM
-#else
-#define sigma yNormGain*SIGMA_UNNORM
-#endif
-
-/* ======================================================================
-   INPUT / OUTPUT HARD CONSTRAINTS
-   ======================================================================
-   These are the box constraints used by the progressive barrier in MADSARX.
-   They must be consistent with the ones for the ACTIVE_SYSTEM.
-   They are repeated as separate constants because ap_fixed<> prevents
-   deriving them from the config struct at compile time via constexpr.
-   ====================================================================== */
+  #endif
+  #define nTheta  (na + nb)       /* total ARX parameter count */
+  
+  
+  /* ======================================================================
+  INPUT / OUTPUT HARD CONSTRAINTS
+  ======================================================================
+  These are the box constraints used by the progressive barrier in MADSARX.
+  They must be consistent with the ones for the ACTIVE_SYSTEM.
+  They are repeated as separate constants because ap_fixed<> prevents
+  deriving them from the config struct at compile time via constexpr.
+  ====================================================================== */
 #if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-  static const input_type  UMIN = -0.3;
-  static const input_type  UMAX =  0.3;
-  static const output_type YMIN =  0.0;
-  static const output_type YMAX =  8.0;
+static const input_type  UMIN = -0.3;
+static const input_type  UMAX =  0.3;
+static const output_type YMIN =  0.0;
+static const output_type YMAX =  8.0;
+#define SIGMA_UNNORM` 0.0
 
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-  static const input_type  UMIN = -1.9;
-  static const input_type  UMAX =  1.9;
-  static const output_type YMIN = -10.0;
-  static const output_type YMAX =  8.0;
+static const input_type  UMIN = -1.9;
+static const input_type  UMAX =  1.9;
+static const output_type YMIN = -10.0;
+static const output_type YMAX =  8.0;
+#define SIGMA_UNNORM 0.20
 
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
 static const input_type  UMIN = -200.0;
 static const input_type  UMAX =  200.0;
 static const output_type YMIN = -110.0;
 static const output_type YMAX =  110.0;
+#define SIGMA_UNNORM 4.4655
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
 static const input_type  UMIN = 0;
 static const input_type  UMAX = 1;
 static const output_type YMIN = 0;
 static const output_type YMAX = 10;
+#define SIGMA_UNNORM 0.2
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
 static const input_type  UMIN = 0;
 static const input_type  UMAX = 1;
 static const output_type YMIN = 0;
 static const output_type YMAX = 10;
+#define SIGMA_UNNORM 0.02
 
+#endif
+
+/* WIP */
+#ifndef NRMLZ
+#define sigma SIGMA_UNNORM
+#else
+#define sigma yNormGain*SIGMA_UNNORM
 #endif
 
 #if ACTIVE_SYSTEM == SYSTEM_SIMPLE
