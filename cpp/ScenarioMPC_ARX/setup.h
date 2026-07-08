@@ -285,6 +285,12 @@ static const norm_conv_type myInvDmDg[nTheta] = {5.544771541217021, 4.4800026353
 static const norm_conv_type qmyInvDmDg[nTheta] = {5.544771541217021,   4.480002635302223,   0.848930417640874};
 static const norm_conv_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
 static const norm_conv_type qmyInvDmc0 = 0.992262713557689;
+static const conv_type yDANormGain = yNormGain*YDACGain;
+static const conv_type yDANormOffset = yNormOffset - YBias*yDANormGain;
+static const conv_type uNormADGain = UADCGain*uNormGainInverse;
+static const conv_type uNormADOffset = UBias - uNormOffset*uNormADGain;
+#else
+#error "Conversion variables for unknwon system could not be defined!"
 #endif
 
 #else

@@ -65,3 +65,23 @@ input_type denormalizeU(norm_input_type uNorm)
 	return uAn;
 }
 #endif
+
+/* Convert directly from digital (normalized) output (input) 
+	samples to normalized (digital) output (input) samples 
+	
+	This way the controller never sees variables in their original,
+	system-dependent domain
+*/
+#if defined(NRMLZ) && defined(CONVERSIONS_MODE)
+norm_output_type dig2normY(digital_output_type yDig)
+{
+	norm_output_type yNorm = yDig * yDANormGain + yDANormOffset;
+	return yNorm;
+}
+
+digital_input_type norm2digU(norm_input_type uNorm)
+{
+	digital_input_type uDig = uNorm*uNormADGain + uNormADOffset;
+	return uDig;
+}
+#endif
