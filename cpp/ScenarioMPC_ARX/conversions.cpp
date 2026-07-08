@@ -12,13 +12,6 @@ digital_output_type ADConvertY(const output_type yAn)
 // 	float YBiasf = YBias.to_float();
 // #endif
 	digital_output_type yDig = YADCGain * yAn + YBias;
-	
-	#ifndef FIXED
-	/* Saturate output if outside ADC values */
-	yDig = (yDig < (digital_output_type)ADC_MIN) ? (digital_output_type)ADC_MIN :
-			(yDig > (digital_output_type)ADC_MAX) ? (digital_output_type)ADC_MAX :
-			yDig;
-	#endif
 	return yDig;
 }
 
@@ -40,12 +33,7 @@ digital_input_type ADConvertU(const input_type uAn)
 // 	float uAnf = uAn.to_float();
 // 	float UBiasf = UBias.to_float();
 // #endif
-	#ifdef NRMLZ
-	digital_input_type uDig = (uAn - uNormOffset) * uNormGainInverse;
-	uDig = UADCGain * uAn + UBias;
-	#else
 	digital_input_type uDig = UADCGain * uAn + UBias;
-	#endif
 	return uDig;
 }
 
