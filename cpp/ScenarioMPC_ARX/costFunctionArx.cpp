@@ -55,11 +55,11 @@ void costFunctionArx(cost_type              cost[2],
                      const norm_output_type yref,
                      const theta_type       thetaScenarios [Nscen][nTheta])
 {
-#ifdef PRAGMAS
+    #ifdef PRAGMAS
     /* Unrolling the outer prediction loop allows HLS to compute all N steps
      * in parallel.  Remove if the area cost is too high.                    */
     // #pragma HLS INLINE
-#endif
+    #endif
 
     /* ------------------------------------------------------------------ */
     /*  Initialise cost accumulators                                       */
@@ -135,8 +135,9 @@ void costFunctionArx(cost_type              cost[2],
         /* else: uSamples[0] retains currU[NhorU-1] from the previous step */
 
         /* --- Input cost term (all steps except the terminal one) ------- */
+        /* --- Input term is difference with respect to previous sample -- */
         if (k < Nhor - 1)
-            cost[0] += (cost_type)(uSamples[0] * R * uSamples[0]);
+            cost[0] += ((cost_type)(uSamples[0] - uSamples[1]) * R * (cost_type)(uSamples[0] - uSamples[1]));
 
         /* --- Scenario loop: constraint check + PL/AL cost contribution - */
         cost_type scenariosContrib = 0;
@@ -157,14 +158,14 @@ void costFunctionArx(cost_type              cost[2],
         }
 
         #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
-                /* Divide by Nscen to get the mean squared error across scenarios.
-                * In software: floating-point division.
-                * In hardware: right-shift by LOG2NSCEN (exact only if Nscen is a
-                * power of 2, which is enforced by the static_assert in setup.h). */
+        /* Divide by Nscen to get the mean squared error across scenarios.
+         * In software: floating-point division.
+         * In hardware: right-shift by LOG2NSCEN (exact only if Nscen is a
+         * power of 2, which is enforced by the static_assert in setup.h). */
         #ifndef FIXED
-                scenariosContrib /= Nscen;
+        scenariosContrib /= Nscen;
         #else
-                scenariosContrib = scenariosContrib >> LOG2NSCEN;
+        scenariosContrib = scenariosContrib >> LOG2NSCEN;
         #endif
         #endif
 
