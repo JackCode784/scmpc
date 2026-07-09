@@ -55,11 +55,11 @@ void costFunctionArx(cost_type         cost           [2],
                      const output_type yref,
                      const theta_type  thetaScenarios [Nscen][nTheta])
 {
-#ifdef PRAGMAS
+    #ifdef PRAGMAS
     /* Unrolling the outer prediction loop allows HLS to compute all N steps
      * in parallel.  Remove if the area cost is too high.                    */
     // #pragma HLS INLINE
-#endif
+    #endif
 
     /* ------------------------------------------------------------------ */
     /*  Initialise cost accumulators                                       */
@@ -126,47 +126,48 @@ void costFunctionArx(cost_type         cost           [2],
      */
     for (int k = 0; k < Nhor; k++)
     {
-#ifdef PRAGMAS
+        #ifdef PRAGMAS
         // #pragma HLS UNROLL
-#endif
+        #endif
         /* --- Set current input ---------------------------------------- */
         if (k < NhorU)
             uSamples[0] = currU[k];
         /* else: uSamples[0] retains currU[NhorU-1] from the previous step */
 
         /* --- Input cost term (all steps except the terminal one) ------- */
+        /* --- Input term is difference with respect to previous sample -- */
         if (k < Nhor - 1)
-            cost[0] += uSamples[0] * R * uSamples[0];
+            cost[0] += (uSamples[0] - uSamples[1]) * R * (uSamples[0] - uSamples[1]);
 
         /* --- Scenario loop: constraint check + PL/AL cost contribution - */
         cost_type scenariosContrib = 0;
 
         for (int l = 0; l < Nscen; l++)
         {
-#ifdef PRAGMAS
+            #ifdef PRAGMAS
             // #pragma HLS UNROLL
-#endif
+            #endif
             output_type yNext = computeArxOutput(yPastCurr, uSamples,
                                                   thetaScenarios[l]);
 
-#if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
+            #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
             err_type err_s = yNext - yref;
             scenariosContrib += err_s * err_s;
-#endif
+            #endif
             updateConstraintViolation(cost, yNext);
         }
 
-#if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
+        #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
         /* Divide by Nscen to get the mean squared error across scenarios.
          * In software: floating-point division.
          * In hardware: right-shift by LOG2NSCEN (exact only if Nscen is a
          * power of 2, which is enforced by the static_assert in setup.h). */
-  #ifndef FIXED
+        #ifndef FIXED
         scenariosContrib /= Nscen;
-  #else
+        #else
         scenariosContrib = scenariosContrib >> LOG2NSCEN;
-  #endif
-#endif
+        #endif
+        #endif
 
         /* --- Nominal prediction and output cost ----------------------- */
         output_type yNext_nom = computeArxOutput(yPastCurr, uSamples,
