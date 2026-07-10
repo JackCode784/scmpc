@@ -46,10 +46,16 @@ int main(void)
 {
     printf("\n=== SCMPC ARX simulation  |  system=%d  mode=%d ===\n\n",
            ACTIVE_SYSTEM, CTRL_MODE);
+    printf("Operation modes:\n");
+    printf("\tFixed point: %s\n", FIXED_PRINT);
+    printf("\tADC/DAC: %s\n", CONVERSIONS_MODE_PRINT);
+    printf("\tNormalization: %s\n", NRMLZ_PRINT);
+    printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
+    printf("\n\n");
 
-#ifdef PRNG_STDLIB
+    #ifdef PRNG_STDLIB
     srand(time(NULL));  // set random seed
-#endif
+    #endif
 
     /* ------------------------------------------------------------------ */
     /*  Simulation parameters                                              */
@@ -59,8 +65,7 @@ int main(void)
     /* Arrays to log the full simulation trajectory. */
     output_type ySim[nSim];
     input_type  uSim[nSim];
-    output_type yref[nSim] = {0};   /* reference array — replace with a richer
-                               signal (PRBS, sinusoid) as needed           */
+    output_type yref[nSim] = {0}; // output follows this
     alg_type volumes[nSim];
 
     // generate reference trajectory based on ACTIVE_SYSTEM
@@ -95,14 +100,22 @@ int main(void)
         /* --- Simulate plant output y(k) -------------------------------- */
         /*
         * computeArxOutput evaluates
-        *   y(k) = theta^T · [y(k−1),...,y(k−na), u(k−nk),...,u(k−nk−nb+1)]^T
+        *   y(k) = theta^T * [y(k−1),...,y(k−na), u(k−nk),...,u(k−nk−nb+1)]^T
         */
 
         // Current zonotope volume computation
         volumes[k] = matDet(thetaGens);
         volumes[k] = (volumes[k] < 0) ? (alg_type)(-volumes[k]) : volumes[k];
 
-        output_type yCurr = computeArxOutput(yHist, uHist, thetaTrue) + (output_type)noise[k] * (output_type)sigma;
+        output_type yCurr = 0;
+        #ifdef NRMLZ
+        for(int i = 0; i < nTheta; i++) 
+            yCurr += ((i < na) ? (yHist[i] - yNormOffset)/yNormGain : (uHist[i-na+nk-1] - uNormOffset)/uNormGain) * thetaTrue[i];
+        #else
+        for(int i = 0; i < nTheta; i++)
+            yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];
+        #endif
+        yCurr += (output_type)noise[k] * (output_type)SIGMA_UNNORM;
         ySim[k] = yCurr;
 
         /* --- Convert y(k) to digital ----------------------------------- */

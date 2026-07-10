@@ -56,8 +56,8 @@
    ====================================================================== */
 theta_type  thetaCenter[nTheta]              = {    THETA_NOMINAL_INIT  };
 theta_type  thetaGens  [nTheta][nGens]       = {    GENERATORS_INIT     };
-output_type yHist[na]                         = {0};
-input_type  uHist[nb + nk - 1]               = {0};
+norm_output_type yHist[na]                   = { Y_HIST_INIT };
+norm_input_type  uHist[nb + nk - 1]          = { U_HIST_INIT };
 
 /* ======================================================================
    controller()
@@ -73,73 +73,115 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* ------------------------------------------------------------------ */
     /*  Step 1 - Convert digital inputs to algorithm types                */
     /* ------------------------------------------------------------------ */
-    #ifdef CONVERSIONS_MODE
-    output_type yCurr = DAConvertY(yCurrDig);
-    output_type yref  = DAConvertY(yrefDig);
-    #else 
-    output_type yCurr = yCurrDig;
-    output_type yref = yrefDig;
-    #endif
+    norm_output_type yCurrNorm;
+    norm_output_type yrefNorm;
+    digital_input_type uOptDig;
+
+    yCurrNorm = dig2ctrlY(yCurrDig);
+    yrefNorm = dig2ctrlY(yrefDig);
+
+    // #ifdef CONVERSIONS_MODE
+    // output_type yCurr;
+    // output_type yref;
+    // yCurr = DAConvertY(yCurrDig);
+    // yref  = DAConvertY(yrefDig);
+    // #else 
+    // yCurr = yCurrDig;
+    // yref = yrefDig;
+    // #endif
+
+    // /* Normalize output samples if needed */
+    // #ifdef NRMLZ
+    // yCurrNorm = normalizeY(yCurr);
+    // yrefNorm = normalizeY(yref);
+    // #else
+    // yCurrNorm = yCurr;
+    // yrefNorm = yref;
+    // #endif
     
-    input_type uOpt[NhorU];
+    norm_input_type uOptNorm[NhorU];
     for (int i = 0; i < NhorU; i++)
-        uOpt[i] = uHist[0]; // warm start
+        uOptNorm[i] = uHist[0]; // warm start
 
     /* ------------------------------------------------------------------ */
     /*  Step 2 - [PL mode] Zonotope update                                */
     /* ------------------------------------------------------------------ */
-#if CTRL_MODE == CTRL_MODE_PL
-    {
-        /*
-         * Intersect the current zonotope with the strip S(k).
-         * The strip uses the OLD yHist and OLD uHist - the regressor
-         * phi(k) = [y(k−1),..., u(k−1),...] refers to measurements taken
-         * BEFORE this time step.
-         *
-         * newCenter and newGens are temporaries with the same dimensions
-         * as thetaCenter and thetaGens.  We cannot pass thetaCenter/
-         * thetaGens as both input and output to the same call because
-         * the function reads the old values while writing the new ones;
-         * aliasing would corrupt the computation.
-         * After the call we copy the result back into the globals.
-         */
-        theta_type newCenter[nTheta];
-        theta_type newGens  [nTheta][nGens];
+    #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
+    /*
+        * Intersect the current zonotope with the strip S(k).
+        * The strip uses the OLD yHist and OLD uHist - the regressor
+        * phi(k) = [y(k−1),..., u(k−1),...] refers to measurements taken
+        * BEFORE this time step.
+        *
+        * newCenter and newGens are temporaries with the same dimensions
+        * as thetaCenter and thetaGens.  We cannot pass thetaCenter/
+        * thetaGens as both input and output to the same call because
+        * the function reads the old values while writing the new ones;
+        * aliasing would corrupt the computation.
+        * After the call we copy the result back into the globals.
+        */
+    theta_type newCenter[nTheta];
+    theta_type newGens  [nTheta][nGens];
 
-        boundStripZonotopeIntersectionNew(yCurr,
-                                       yHist, uHist,
-                                       thetaCenter, thetaGens,
-                                       newCenter, newGens);
+    /* In NRMLZ case, the inputs should be:
+        * yCurr -> yCurr - yNormOffset - ([yHist, uHist] - offsets) * yNormGain * ((i < na) ? 1 : normGainsRatio) * Dg * c0
+        * yHist, uHist -> ([yHist, uHist] - ioOffsets) * yNormGain * (i < na) ? 1 : normGainsRatio * Dg
+        * the rest is the same
+        In brief, phi should become (phi_norm-q)*my*Dm^-1*Dg
+        */
+    alg_type phi[nTheta];
+    norm_output_type stripCenter = yCurrNorm;
+    #ifdef NRMLZ
 
-        /* Copy result back into the shared global zonotope state. */
-        for (int i = 0; i < nTheta; i++) {
-            thetaCenter[i] = newCenter[i];
-            for (int j = 0; j < nGens; j++)
-                thetaGens[i][j] = newGens[i][j];
-        }
+    /* Compute \tilde{phi} - offsets */
+    for(int i = 0; i < na; i++) phi[i] = (yHist[i] - yNormOffset);
+    for(int i = 0; i < nb; i++) phi[i+na] = (uHist[i+nk-1] - uNormOffset);
 
-#ifdef DEBUG_PRINT
-        printf("\n--- PL: updated zonotope ---\n");
-        printf("thetaCenter: ");
-        for (int i = 0; i < nTheta; i++) printf("%f ", (double)thetaCenter[i]);
-        printf("\nthetaGens:\n");
-        for (int i = 0; i < nTheta; i++) {
-            for (int j = 0; j < nGens; j++)
-                printf("%8.4f ", (double)thetaGens[i][j]);
-            printf("\n");
-        }
-#endif
+    /* Use (\tilde{phi} - offsets) to multiply by my*Dm^-1*c0 */
+    stripCenter -= yNormOffset;
+    for(int i = 0; i < nTheta; i++) stripCenter -= phi[i] * myInvDmc0[i];
+
+    /* Conclude phi computation */
+    for(int i = 0; i < nTheta; i++) phi[i] *= myInvDmDg[i];
+    
+    #else /* Unnormalized case */
+    /* The strip uses original, unnormalized I/O samples */
+    for(int i = 0; i < na; i++) phi[i] = yHist[i];
+    for(int i = 0; i < nb; i++) phi[i+na] = uHist[i+nk-1];
+    
+    #endif
+    boundStripZonotopeIntersectionNew(stripCenter, phi, sigma,
+                                    thetaCenter, thetaGens,
+                                    newCenter, newGens);
+
+    /* Copy result back into the shared global zonotope state. */
+    for (int i = 0; i < nTheta; i++) {
+        thetaCenter[i] = newCenter[i];
+        for (int j = 0; j < nGens; j++)
+            thetaGens[i][j] = newGens[i][j];
     }
-#endif  /* CTRL_MODE == CTRL_MODE_PL */
+
+    #ifdef DEBUG_PRINT
+    printf("\n--- PL: updated zonotope ---\n");
+    printf("thetaCenter: ");
+    for (int i = 0; i < nTheta; i++) printf("%f ", (double)thetaCenter[i]);
+    printf("\nthetaGens:\n");
+    for (int i = 0; i < nTheta; i++) {
+        for (int j = 0; j < nGens; j++)
+            printf("%8.4f ", (double)thetaGens[i][j]);
+        printf("\n");
+    }
+    #endif
+    #endif  /* CTRL_MODE == CTRL_MODE_PL */
 
     /* ------------------------------------------------------------------ */
     /*  Step 3 - [AL mode] Active learning stub (WIP)                     */
     /* ------------------------------------------------------------------ */
-#if CTRL_MODE == CTRL_MODE_AL
+    #if CTRL_MODE == CTRL_MODE_AL
     {
         /* TODO: dual-control probing perturbation on uOpt. */
     }
-#endif
+    #endif
 
     /* ------------------------------------------------------------------ */
     /*  Step 4 - Generate uncertainty scenarios                            */
@@ -158,7 +200,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* ------------------------------------------------------------------ */
     for (int i = na - 1; i > 0; i--)
         yHist[i] = yHist[i - 1];
-    yHist[0] = yCurr;   /* yHist = [y(k), y(k−1), ..., y(k−na+1)] */
+    yHist[0] = yCurrNorm;   /* yHist = [y(k), y(k−1), ..., y(k−na+1)] */
 
     /* ------------------------------------------------------------------ */
     /*  Step 6 - Snapshot input history for MADS                          */
@@ -168,31 +210,40 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * roll out predictions for y(k+1), ..., y(k+N) alongside uOpt.
      * Must be taken BEFORE uHist is updated with uOpt[0] in step 9.
      */
-    input_type uPast[nb + nk - 2];
+    norm_input_type uPast[nb + nk - 2];
     for (int i = 0; i < nb + nk - 2; i++)
         uPast[i] = uHist[i];
 
     /* ------------------------------------------------------------------ */
     /*  Step 7 - Run MADS optimisation                                    */
     /* ------------------------------------------------------------------ */
-    MADSARX(uOpt, uPast, yHist, yref, thetaScenarios);
+    MADSARX(uOptNorm, uPast, yHist, yrefNorm, thetaScenarios);
 
     /* ------------------------------------------------------------------ */
-    /*  Step 8 - Convert uOpt back to digital                             */
-    /* ------------------------------------------------------------------ */
-    digital_input_type uOptDig;
-    #ifdef CONVERSIONS_MODE
-    uOptDig = ADConvertU(uOpt[0]);
-    #else
-    uOptDig = uOpt[0];
-    #endif
-
-    /* ------------------------------------------------------------------ */
-    /*  Step 9 - Update input history: push uOpt[0] into uHist           */
+    /*  Step 8 - Update input history: push uOpt[0] into uHist           */
     /* ------------------------------------------------------------------ */
     for (int i = nb + nk - 2; i > 0; i--)
         uHist[i] = uHist[i - 1];
-    uHist[0] = uOpt[0];   /* receding horizon: only u(k) is applied */
+    uHist[0] = uOptNorm[0];   /* receding horizon: only u(k) is applied */
+ 
+    uOptDig = ctrlU2dig(uOptNorm[0]);
+
+    /* Denormalize output if NRMLZ is defined */
+    // input_type uOpt;
+    // #ifdef NRMLZ
+    // uOpt = denormalizeU(uOptNorm[0]);
+    // #else
+    // uOpt = uOptNorm[0];
+    // #endif
+    
+    /* ------------------------------------------------------------------ */
+    /*  Step 9 - Convert uOpt back to digital                             */
+    /* ------------------------------------------------------------------ */
+    // #ifdef CONVERSIONS_MODE
+    // uOptDig = ADConvertU(uOpt);
+    // #else
+    // uOptDig = uOpt;
+    // #endif
 
     return uOptDig;
 }

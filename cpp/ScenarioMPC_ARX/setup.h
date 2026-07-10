@@ -45,7 +45,11 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-// #define FIXED
+// #define FIXED            /* fixed point representation */
+#define CONVERSIONS_MODE /* ADC/DAC conversions */
+// #define NRMLZ               /* normalization */
+// #define PRNG_STDLIB         /* use rand() as prng */
+// #define DEBUG_PRINT      /* debug printfs */
 
 /** Active plant - choose one of: 
  * SYSTEM_SIMPLE, 
@@ -70,14 +74,36 @@
    Derived feature flags (do NOT edit)
    ====================================================================== */
 #ifdef FIXED
-  #define PRAGMAS           /* enable HLS synthesis pragmas in .cpp files  */
-  #define CONVERSIONS_MODE  /* ADC/DAC functions always needed in hardware  */
-  #include <ap_fixed.h>
-#else
-  // #define DEBUG_PRINT    /* uncomment to see debug printfs */
-  // #define PRNG_STDLIB    /* use rand() as prng */
-  // #define CONVERSIONS_MODE  /* sue ADC/DAC functions */
+    #define PRAGMAS         /* enable all HLS synthesis pragmas in .cpp files  */
+    #include <ap_fixed.h>   /* include fixed point data types */
+    #undef PRNG_STDLIB      /* can't use rand() in fixed point */
 #endif
+
+/* ======================================================================
+    Macros for printing active modes in main.
+    These are automatically derived from the target selection section.
+   ====================================================================== */
+#ifdef FIXED
+    #define FIXED_PRINT "true"
+#else 
+    #define FIXED_PRINT "false"
+#endif
+#ifdef CONVERSIONS_MODE
+    #define CONVERSIONS_MODE_PRINT "true"
+#else 
+    #define CONVERSIONS_MODE_PRINT "false"
+#endif
+#ifdef NRMLZ
+    #define NRMLZ_PRINT "true"
+#else 
+    #define NRMLZ_PRINT "false"
+#endif
+#ifdef PRNG_STDLIB
+    #define PRNG_STDLIB_PRINT "true"
+#else 
+    #define PRNG_STDLIB_PRINT "false"
+#endif
+
 
 /* ======================================================================
    Core headers
@@ -101,49 +127,6 @@
     (CTRL_MODE != CTRL_MODE_AL)
   #error "Unrecognized CTRL_MODE!"
 #endif
-
-/* ======================================================================
-   ARX MODEL DIMENSIONS  (compile-time macros - must remain #define)
-   ======================================================================
-   These are #define macros rather than constexpr ints because they appear
-   as array sizes inside function prototypes, where the C++ standard
-   requires an integral constant expression at the point of declaration.
-   constexpr works in a single-TU build under C++14 but #define is the
-   safest choice across all HLS front-ends.
-   ====================================================================== */
-#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-  #define na   2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
-  #define sigma 0.0
-#elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-  #define na   2
-  #define nb   2
-  #define nk   1
-  #define nGens 6
-  #define sigma 0.20
-#elif ACTIVE_SYSTEM == SYSTEM_MILANO
-  #define na   3
-  #define nb   3
-  #define nk   1
-  #define nGens 6
-  #define sigma 4.4655
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK
-  #define na   2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
-  #define sigma 0.2
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-  #define na  2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
-  #define sigma 0.02
-#endif
-
-#define nTheta  (na + nb)       /* total ARX parameter count */
 
 /* ======================================================================
    CONTROLLER STATE
@@ -170,8 +153,8 @@
    ====================================================================== */
 extern theta_type  thetaCenter[nTheta];
 extern theta_type  thetaGens  [nTheta][nGens];
-extern output_type yHist[na];
-extern input_type  uHist[nb + nk - 1];
+extern norm_output_type yHist[na];
+extern norm_input_type  uHist[nb + nk - 1];
 
 
 /* ======================================================================
@@ -192,7 +175,7 @@ constexpr int NhorU = 3;
  * The cost is evaluated on Nscen + 1 models simultaneously.
  * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
  */
-constexpr int Nscen      = 4;
+constexpr int Nscen      = 4;   /* should always be a power of 2 */
 constexpr int LOG2NSCEN  = 2;   /* must satisfy (1 << LOG2NSCEN) == Nscen */
 
 static_assert(NhorU <= Nhor,
@@ -208,46 +191,6 @@ static_assert(Nhor - nk >= NhorU - 1,
 #define nOpt NhorU
 
 /* ======================================================================
-   INPUT / OUTPUT HARD CONSTRAINTS
-   ======================================================================
-   These are the box constraints used by the progressive barrier in MADSARX.
-   They must be consistent with the ones for the ACTIVE_SYSTEM.
-   They are repeated as separate constants because ap_fixed<> prevents
-   deriving them from the config struct at compile time via constexpr.
-   ====================================================================== */
-#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-  static const input_type  UMIN = -0.3;
-  static const input_type  UMAX =  0.3;
-  static const output_type YMIN =  0.0;
-  static const output_type YMAX =  8.0;
-
-#elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-  static const input_type  UMIN = -1.9;
-  static const input_type  UMAX =  1.9;
-  static const output_type YMIN = -10.0;
-  static const output_type YMAX =  8.0;
-
-#elif ACTIVE_SYSTEM == SYSTEM_MILANO
-static const input_type  UMIN = -200.0;
-static const input_type  UMAX =  200.0;
-static const output_type YMIN = -110.0;
-static const output_type YMAX =  110.0;
-
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK
-static const input_type  UMIN = 0;
-static const input_type  UMAX = 1;
-static const output_type YMIN = 0;
-static const output_type YMAX = 10;
-
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-static const input_type  UMIN = 0;
-static const input_type  UMAX = 1;
-static const output_type YMIN = 0;
-static const output_type YMAX = 10;
-
-#endif
-
-/* ======================================================================
    MPC COST-FUNCTION WEIGHTS
    ======================================================================
    Stage cost per step:  l(y, u) = Q*(y - y_ref)^2 + R*u^2
@@ -255,7 +198,7 @@ static const output_type YMAX = 10;
    ====================================================================== */
 static const weights_type P =  5.0;   /* terminal output weight */
 static const weights_type Q =  5.0;   /* stage   output weight  */
-static const weights_type R = 0.1;   /* stage   input  weight  */
+static const weights_type RBaseLine = 0.1;
 
 /* ======================================================================
    MADS SOLVER PARAMETERS
@@ -277,8 +220,9 @@ constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
  */
 #ifdef FIXED
   static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5;
+//   static const norm_input_type expC = 0.5;
 #else
-  static const input_type expC = 0.5;
+  static const norm_input_type expC = 0.5;
 #endif
 
 /*
@@ -307,6 +251,7 @@ static const mesh_exp_type D0[nOpt] = { -8, -8, -8 };
    In fixed-point mode they are explicit literals (ap_fixed<> prevents
    compile-time arithmetic on non-constexpr types).
    ====================================================================== */
+#ifdef CONVERSIONS_MODE
 constexpr int ADC_MAX   = 4095;
 constexpr int ADC_MIN   = 0;
 constexpr int ADC_RANGE = ADC_MAX - ADC_MIN;
@@ -317,6 +262,70 @@ static const digital_output_type  YBias    = (conv_type)(ADC_MIN*YMAX - ADC_MAX*
 static const conv_type            UADCGain = (conv_type)ADC_RANGE / (conv_type)(UMAX - UMIN);
 static const conv_type            UDACGain = (conv_type)(UMAX - UMIN) / (conv_type)ADC_RANGE;
 static const digital_input_type   UBias    = (conv_type)(ADC_MIN*UMAX - ADC_MAX*UMIN) / (conv_type)(UMAX - UMIN);
+#endif
+
+#ifdef NRMLZ
+/* Set these from user? */
+static const norm_output_type YNORMMAX = 1;
+static const norm_output_type YNORMMIN = -1;
+static const norm_input_type UNORMMAX = 1;
+static const norm_input_type UNORMMIN = -1;
+
+static const norm_conv_type yNormGain = (norm_conv_type)((YNORMMAX - YNORMMIN) / (YMAX - YMIN));
+static const norm_conv_type uNormGain = (norm_conv_type)((UNORMMAX - UNORMMIN) / (UMAX - UMIN));
+static const norm_conv_type uNormGainInverse = (norm_conv_type)((UMAX - UMIN) / (UNORMMAX - UNORMMIN));
+static const norm_output_type yNormOffset = (norm_conv_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
+static const norm_input_type uNormOffset = (norm_conv_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
+
+static const weights_type R = RBaseLine * (yNormGain * yNormGain) / (uNormGain * uNormGain);
+
+/* Pre-computed in MATLAB 
+ * A better way to compute these offline is needed.
+*/
+#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
+static const norm_conv_type myInvDmDg[nTheta] = {5.544771541217021, 4.480002635302223, 0.848930417640874};
+static const norm_conv_type qmyInvDmDg[nTheta] = {5.544771541217021,   4.480002635302223,   0.848930417640874};
+static const norm_conv_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
+static const norm_conv_type qmyInvDmc0 = 0.992262713557689;
+#else
+#error "Conversion variables for unknwon system could not be defined!"
+#endif
+#else
+static const weights_type R = RBaseLine;   /* stage   input  weight  */
+static const norm_output_type YNORMMAX = YMAX;
+static const norm_output_type YNORMMIN = YMIN;
+static const norm_input_type UNORMMAX = UMAX;
+static const norm_input_type UNORMMIN = UMIN;
+#endif
+
+/* Choose appropriate coefficients based on the operation modes.
+    These serve as coefficients and offsets for computing
+    conversions functions. */
+#ifdef CONVERSIONS_MODE
+    #ifdef NRMLZ
+    static const conv_type yConvCoeff = yNormGain*YDACGain;
+    static const conv_type uConvCoeff = UADCGain*uNormGainInverse;
+    static const norm_output_type yConvOffset = yNormOffset - YDACGain*YBias*yNormGain;
+    static const digital_input_type uConvOffset = UBias - uNormOffset*uNormGainInverse*UADCGain;
+    #else
+    static const conv_type yConvCoeff = YDACGain;
+    static const conv_type uConvCoeff = UADCGain;
+    static const norm_output_type yConvOffset = -YBias*YDACGain;
+    static const digital_input_type uConvOffset = UBias;
+    #endif
+    #else
+    #ifdef NRMLZ
+    static const conv_type yConvCoeff = yNormGain;
+    static const conv_type uConvCoeff = uNormGainInverse;
+    static const norm_output_type yConvOffset = yNormOffset;
+    static const digital_input_type uConvOffset = -uNormOffset*uNormGainInverse;
+    #else
+    static const conv_type yConvCoeff = 1;
+    static const conv_type uConvCoeff = 1;
+    static const norm_output_type yConvOffset = 0;
+    static const digital_input_type uConvOffset = 0;
+    #endif
+#endif
 
 /* ======================================================================
    FUNCTION PROTOTYPES
@@ -340,20 +349,20 @@ digital_input_type controller(const digital_output_type yCurrDig,
 
 /** One-step-ahead prediction:
  *  ypred(k) = theta^T * [y(k-1),...,y(k-na), u(k-nk),...,u(k-nk-nb+1)]^T */
-output_type computeArxOutput(const output_type yPast   [na],
-                              const input_type  uSamples[nb + nk - 1],
-                              const theta_type  theta   [nTheta]);
+norm_output_type computeArxOutput(const norm_output_type yPast[na],
+                                  const norm_input_type uSamples[nb+nk-1],
+                                  const theta_type theta[nTheta]);
 
 /* --- MPC cost function ------------------------------------------------ */
 
 /** Evaluate scenario-based MPC cost over the control horizon.
  *  cost[0] = objective value;  cost[1] = constraint violation. */
-void costFunctionArx(cost_type         cost            [2],
-                     const output_type yPast           [na],
-                     const input_type  currU           [nOpt],
-                     const input_type  uPast           [nb + nk - 2],
-                     const output_type yref,
-                     const theta_type  thetaScenarios  [Nscen][nTheta]);
+void costFunctionArx(cost_type              cost[2],
+                     const norm_output_type yPast          [na],
+                     const norm_input_type  currU          [nOpt],
+                     const norm_input_type  uPast          [nb + nk - 2],
+                     const norm_output_type yref,
+                     const theta_type       thetaScenarios [Nscen][nTheta]);
 
 /* --- MADS poll-step --------------------------------------------------- */
 
@@ -365,10 +374,10 @@ void generatePollDirectionsArx(const rand_type     randomVector[nOpt],
                                 direction_type      directions  [nOpt][2*nOpt]);
 
 /** Scale the poll directions into a full poll matrix. */
-void generatePollMatrixArx(const input_type    currU     [nOpt],
-                            const mesh_exp_type frameIdx  [nOpt],
-                            const mesh_exp_type meshIdx   [nOpt],
-                            input_type          pollMatrix[nOpt][2*nOpt]);
+void generatePollMatrixArx(const norm_input_type currU[nOpt], 
+                            const mesh_exp_type frameIdx[nOpt], 
+                            const mesh_exp_type meshIdx[nOpt],
+                            norm_input_type pollMatrix[nOpt][2 * nOpt]);
 
 /* --- Scenario generation --------------------------------------------- */
 
@@ -392,22 +401,22 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nTheta],
 /* --- MADS main loop --------------------------------------------------- */
 
 /** Run MADS_ITER iterations and return the optimal input sequence. */
-void MADSARX(input_type uOpt[nOpt], 
-                const input_type uInit[nb + nk - 2], 
-                const output_type yInit[na], 
-                const output_type yref, 
-                const theta_type thetaScenarios[Nscen][nTheta]);
+void MADSARX(norm_input_type uOpt[nOpt], 
+            const norm_input_type uInit[nb + nk - 2], 
+            const norm_output_type yInit[na], 
+            const norm_output_type yref, 
+            const theta_type thetaScenarios[Nscen][nTheta]);
 
 /** Evaluate all 2*nOpt poll candidates; update the best feasible point
  *  via the progressive barrier strategy. */
-void progressiveBarrierPollingArx(cost_type         bestCost   [2],
-                                   input_type        bestPoint  [nOpt],
-                                   const output_type yPast      [na],
-                                   const input_type  uPast      [nb + nk - 2],
-                                   output_type       yref,
-                                   const input_type  pollMatrix [nOpt][2*nOpt],
-                                   mesh_exp_type     frameExp   [nOpt],
-                                   const theta_type  thetaScenarios[Nscen][nTheta]);
+void progressiveBarrierPollingArx(cost_type bestCost[2], 
+                                    norm_input_type bestPoint[nOpt], 
+                                    const norm_output_type yPast[na], 
+                                    const norm_input_type uPast[nb + nk - 2], 
+                                    const norm_output_type yref, 
+                                    const norm_input_type pollMatrix[nOpt][2 * nOpt], 
+                                    mesh_exp_type frameExp[nOpt], 
+                                    const theta_type thetaScenarios[Nscen][nTheta]);
 
 /* --- Pseudo-random generation (three overloads) ----------------------- */
 /** Random number in [-1, 1] */
@@ -420,7 +429,7 @@ void pseudoRandArx(rand_type coeffs[nGens]);
 
 /** Update cost[1] (the progressive-barrier violation term) given the
  *  current predicted output currY and the bounds YMIN/YMAX. */
-void updateConstraintViolation(cost_type cost[2], const output_type currY);
+void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr);
 
 /* --- ADC / DAC conversions -------------------------------------------- */
 #ifdef CONVERSIONS_MODE
@@ -429,6 +438,15 @@ output_type         DAConvertY(const digital_output_type yDig);
 digital_input_type  ADConvertU(const input_type         uAn);
 input_type          DAConvertU(const digital_input_type  uDig);
 #endif
+
+#ifdef NRMLZ
+norm_output_type normalizeY(output_type yAn);
+input_type denormalizeU(norm_input_type uNorm);
+#endif
+
+/* Conversion functions to/from type used in controller */
+norm_output_type dig2ctrlY(const digital_output_type yDig);
+digital_input_type ctrlU2dig(const norm_input_type uCtrl);
 
 /* --- Passive learning (PL mode only) ---------------------------------- */
 #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
@@ -456,9 +474,9 @@ input_type          DAConvertU(const digital_input_type  uDig);
  *   newGens       - updated generator matrix (nTheta * nGens);
  *                   exactly nGen columns are written (same as input)
  */
-void boundStripZonotopeIntersectionNew(const output_type yCurr, 
-                                    const output_type yPast[na], 
-                                    const input_type uSamples[nb + nk - 1], 
+void boundStripZonotopeIntersectionNew(const norm_output_type stripCenter, 
+                                    const alg_type phi[nTheta],
+                                    const alg_type stripRadius,
                                     const theta_type oldCenter[nTheta],
                                     const theta_type oldGens[nTheta][nGens], 
                                     theta_type newCenter[nTheta], 

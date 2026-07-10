@@ -48,12 +48,12 @@
 
 #include "setup.h"
 
-void costFunctionArx(cost_type         cost           [2],
-                     const output_type yPast          [na],
-                     const input_type  currU          [nOpt],
-                     const input_type  uPast          [nb + nk - 2],
-                     const output_type yref,
-                     const theta_type  thetaScenarios [Nscen][nTheta])
+void costFunctionArx(cost_type              cost[2],
+                     const norm_output_type yPast          [na],
+                     const norm_input_type  currU          [nOpt],
+                     const norm_input_type  uPast          [nb + nk - 2],
+                     const norm_output_type yref,
+                     const theta_type       thetaScenarios [Nscen][nTheta])
 {
     #ifdef PRAGMAS
     /* Unrolling the outer prediction loop allows HLS to compute all N steps
@@ -83,8 +83,8 @@ void costFunctionArx(cost_type         cost           [2],
      * Initial fill: uSamples[1..nb+nk-2] <= uPast[0..nb+nk-3].
      * uSamples[0] is set at the start of each prediction step.
      */
-    output_type yPastCurr[na];
-    input_type  uSamples [nb + nk - 1];
+    norm_output_type yPastCurr[na];
+    norm_input_type  uSamples [nb + nk - 1];
 
     for (int i = 0; i < na; i++)
         yPastCurr[i] = yPast[i];
@@ -102,7 +102,7 @@ void costFunctionArx(cost_type         cost           [2],
      */
     for (int i = 0; i < nOpt; i++)
     {
-        if (currU[i] < UMIN || currU[i] > UMAX)
+        if (currU[i] < UNORMMIN || currU[i] > UNORMMAX)
         {
             cost[1] = 500;
             return;   /* early exit: no point computing a cost for an
@@ -115,10 +115,10 @@ void costFunctionArx(cost_type         cost           [2],
     /* ------------------------------------------------------------------ */
     /*
      * All Nhor steps share the same structure; the only differences are:
-     *   • k < NhorU   : uSamples[0] = currU[k]  (within control horizon)
-     *   • k >= NhorU  : uSamples[0] unchanged    (zero-order hold)
-     *   • k < Nhor-1  : terminal weight = Q      (stage cost)
-     *   • k = Nhor-1  : terminal weight = P      (terminal cost, no input term)
+     *   * k < NhorU   : uSamples[0] = currU[k]  (within control horizon)
+     *   * k >= NhorU  : uSamples[0] unchanged    (zero-order hold)
+     *   * k < Nhor-1  : terminal weight = Q      (stage cost)
+     *   * k = Nhor-1  : terminal weight = P      (terminal cost, no input term)
      *
      * Encoding these as conditional expressions inside a single loop avoids
      * the three near-identical code blocks in the original and makes the
@@ -137,7 +137,7 @@ void costFunctionArx(cost_type         cost           [2],
         /* --- Input cost term (all steps except the terminal one) ------- */
         /* --- Input term is difference with respect to previous sample -- */
         if (k < Nhor - 1)
-            cost[0] += (uSamples[0] - uSamples[1]) * R * (uSamples[0] - uSamples[1]);
+            cost[0] += ((cost_type)(uSamples[0] - uSamples[1]) * R * (cost_type)(uSamples[0] - uSamples[1]));
 
         /* --- Scenario loop: constraint check + PL/AL cost contribution - */
         cost_type scenariosContrib = 0;
@@ -147,12 +147,12 @@ void costFunctionArx(cost_type         cost           [2],
             #ifdef PRAGMAS
             // #pragma HLS UNROLL
             #endif
-            output_type yNext = computeArxOutput(yPastCurr, uSamples,
+            norm_output_type yNext = computeArxOutput(yPastCurr, uSamples,
                                                   thetaScenarios[l]);
 
             #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
             err_type err_s = yNext - yref;
-            scenariosContrib += err_s * err_s;
+            scenariosContrib += (cost_type)(err_s * err_s);
             #endif
             updateConstraintViolation(cost, yNext);
         }
@@ -170,12 +170,12 @@ void costFunctionArx(cost_type         cost           [2],
         #endif
 
         /* --- Nominal prediction and output cost ----------------------- */
-        output_type yNext_nom = computeArxOutput(yPastCurr, uSamples,
+        norm_output_type yNext_nom = computeArxOutput(yPastCurr, uSamples,
                                                    thetaCenter);
         err_type err_nom = yNext_nom - yref;
 
         /* Select stage weight Q or terminal weight P. */
-        cost[0] += ((k < Nhor - 1) ? Q : P) * (err_nom * err_nom + scenariosContrib);
+        cost[0] += (cost_type)(((k < Nhor - 1) ? Q : P) * (err_nom * err_nom + scenariosContrib));
 
         /* --- Shift rolling-window buffers for next prediction step ---- */
         for (int i = na - 1; i > 0; i--)

@@ -1,9 +1,15 @@
 %% Passive learning SCMPC with normalization
-% Passive learning written very closely to C code and with normalization
-% applied.
+% This script compares the results from performing zonotope update and
+% SCMPC optimization with and without normalizations applied.
+% 
+% Two distinct normalizations are applied:
+% - one is such that the input and output samples are all within a known
+% interval
+% - one is such that the initial zonotope (and hopefully the next ones) are
+% all within the box [-1, 1]^n, with n n.o. parameters.
 % 
 clc;
-% clear;
+clear;
 close all;
 
 rng("default"); % set random seed
@@ -11,13 +17,13 @@ rng("default"); % set random seed
 allZonsPlot = false;    % plot all simulation zonotopes 
 useSlack = true;        % use slack variables   
 interruptBool = true;   % if optimization fails at some point, don't try again
-scnConstr = true;       % include scenarios constraints
-scnCost = true;         % include scenarios in cost
+useScnConstr = true;    % include scenarios constraints
+useScnCost = true;      % include scenarios in cost
 
 % Script doesn't work for every feasible value of these hyperparameters
 nSim = 300;
 tHzn = 10;
-nhoru = 5;
+tHznU = 5;
 nScen = 4;
 sys = 'buckloss';
 refstr = 'square2';
@@ -31,44 +37,66 @@ disp("ARX Passive learning scenario-based MPC:");
 disp(['System: ', sys]);
 disp(['Reference: ', refstr]);
 
-[na, nb, nk, thetaTrue, Z0, uMax, uMin, yMax, yMin, yRef] = selectSys(sys, refstr, nSim, tHzn);
+[na, nb, nk, thetaTrue, Z0, uMax, uMin, yMax, yMin, yRef] = ...
+    selectSys(sys, refstr, nSim, tHzn);
 
 assert(tHzn >= nk, 'Prediction horizon too short for current system delay!');
-assert(tHzn - nk >= nhoru - 1, 'Inconsistent control horizon');
+assert(tHzn - nk >= tHznU - 1, 'Inconsistent control horizon');
 assert(noiseAmp > 0, 'There must be some noise, otherwise strip becomes line');
+
+n = na + nb;
+
+% Normalization parameters
+c0 = Z0.c;
+Dg = diag(sum(abs(Z0.G),2));
+thetaTrueNorm = Dg \ (thetaTrue - c0);
 
 ZNotNorms = cell(nSim+1,2); % first column for not normalized, second column for normalized
 ZNorms = cell(nSim+1,1);
-
-c0 = Z0.c;
-Dg = diag(sum(abs(Z0.G),2));
-thetaTrueNorm = diag(diag(Dg) .^ -1) * (thetaTrue - c0);
-
 ZNotNorms{1,1} = Z0;
 ZNorms{1} = normalizeZonotope(Z0, c0, Dg);
 ZNotNorms{1,2} = normalizeZonotope(Z0, c0, Dg);
 
+% Normalized variables constraints
 yNormMax = 1;
 yNormMin = -1;
 uNormMax = 1;
 uNormMin = -1;
 
-% my = (yNormMax - yNormMin) ./ (yMax - yMin);
-% qy = (yNormMin .* yMax - yNormMax .* yMin) ./ (yMax - yMin);
-% mu = (uNormMax- uNormMin) ./ (uMax - uMin);
-% qu = (uNormMin .* uMax - uNormMax .* uMin) ./ (uMax - uMin);
-% 
-% Dm = diag([my * ones(na, 1); mu * ones(nb, 1)]);
-% q = [qy * ones(na, 1); qu * ones(nb, 1)];
+my = (yNormMax - yNormMin) ./ (yMax - yMin);
+qy = (yNormMin .* yMax - yNormMax .* yMin) ./ (yMax - yMin);
+mu = (uNormMax- uNormMin) ./ (uMax - uMin);
+qu = (uNormMin .* uMax - uNormMax .* uMin) ./ (uMax - uMin);
 
-% adcmax = 4095;
-% adcmin = 0;
-n = na + nb;
+Dm = blkdiag(my * eye(na), mu * eye(nb));
+q = [qy * ones(na, 1); qu * ones(nb, 1)];
 
 %% Yalmip setup
 yalmip('clear');
 
-scmpc = defineOptimization(tHzn,nb,nk,na,nScen,n,nhoru,uMin,uMax,yMin,useSlack,yMax,scnConstr,R,Q,scnCost);
+sysParams = struct('na', na, 'nb', nb, 'nd', nk, 'n', n);
+
+horizParams = struct('tHzn', tHzn, ...
+    'tHznU', tHznU, ...
+    'nScen', nScen);
+
+costParams = struct('Q', Q, ...
+    'R', R, ...
+    'useSlack', useSlack, ...
+    'useScnConstr', useScnConstr, ...
+    'useScnCost', useScnCost);
+
+normParams = struct('useIONorm', true, ...
+    'useZonNorm', true, ...
+    'my', my, 'mu', mu, ...
+    'qy', qy, 'qu', qu, ...
+    'Dm', Dm, 'q', q, ...
+    'Dg', Dg, 'c0', c0);
+
+solverOps = [];
+
+scmpc = buildscmpcoptimizer(sysParams, horizParams, costParams);
+scmpcNorm = buildscmpcoptimizer(sysParams, horizParams, costParams, normParams, solverOps);
 
 %% Simulation
 ySim = zeros(1,nSim);
@@ -82,12 +110,10 @@ thetaSeq = zeros(n,nSim);
 noise = 2*noiseAmp*(0.5-rand(1, nSim));
 
 yInit = zeros(1,na); % recent -> old
-yInitNorm = map(yInit, yMin, yMax, yNormMin, yNormMax, false);
 % uInit = [u(k-1),...,u(k-nk),...,u(k-nk-nb+1)]
 %         |_____|
 %       to be optimized
 uInit = zeros(1,nb+nk-1); % recent -> old
-uInitNorm = map(uInit, uMin, uMax, uNormMin, uNormMax, false);
 
 % Simulation loop
 for k=1:nSim
@@ -113,48 +139,61 @@ for k=1:nSim
         uInit * Dg(na+1:end, na+1:end), ...
         noiseAmp, nb, nk, 'new');
     yInit = [ySim(k), yInit(1:end-1)];
-    % yInitNorm = map(yInit, yMin, yMax, yNormMin, yNormMax, false);
 
     % Optimization
     [thetaScenariosNorm, thetaNominalNorm] = stableScenary(ZNorms{k+1}, nScen, na);
-    thetaScenarios = Dg * thetaScenariosNorm + c0;
-    thetaNominal = Dg * thetaNominalNorm + c0;
-    inputs = {thetaScenarios, thetaNominal, yInit, uInit(1:nb+nk-2), yRef(k+1)};
-    [optimalVars, errCode] = scmpc(inputs);
+    yInitNorm = my * yInit + qy;
+    uInitNorm = mu * uInit + qu;
+    yRefNorm = my * yRef(k+1) + qy;
+    inputs = {thetaScenariosNorm, thetaNominalNorm, ...
+        yInitNorm, uInitNorm(1:nb+nk-2), ...
+        yNormMin, yNormMax, uNormMin, uNormMax, ...
+        yRefNorm};
+    [optimalVars, errCode] = scmpcNorm(inputs);
 
-    if errCode == 1
+    if errCode ~= 0
         warning(['Unfeasible... at k = ', num2str(k)]);
         if interruptBool
             disp('Run interrupted.');
             break;
         else
-            while(errCode == 1)
-                [thetaScenarios, thetaNominal] = scenary(ZNorms{k+1}, nScen);
-                inputs = {thetaScenarios, thetaNominal, yInit, uInit(1:nb+nk-2), yRef(k+1:k+tHzn)};
-                [optimalVars, errCode] = scmpc(inputs);
+            while(errCode ~= 0)
+                [thetaScenariosNorm, thetaNominalNorm] = stableScenary(ZNorms{k+1}, nScen, na);
+                inputs = {thetaScenariosNorm, thetaNominalNorm, ...
+                    yInitNorm, uInitNorm(1:nb+nk-2), ...
+                    yNormMin, yNormMax, uNormMin, uNormMax,...
+                    yRefNorm};
+                [optimalVars, errCode] = scmpcNorm(inputs);
             end
             disp('Feasible optimization found!!!');
         end
     end
 
     slackSeq(k) = optimalVars{4};      % retrieve slack for this k
-    uSim(k) = optimalVars{1}(nb+nk-1); % retrieve first optimized input
-    % uSim(k) = map(uSim(k), uNormMin, uNormMax, uMin, uMax, false);
+    uNormSim(k) = optimalVars{1}(nb+nk-1); % retrieve first optimized input
+    uSim(k) = (uNormSim(k) - qu) / mu;
+    yNormSim(k) = my * ySim(k) + qy;
     uInit = [uSim(k), uInit(1:end-1)]; % input initial conditions update
-    % uInitNorm = map(uInit, uMin, uMax, uNormMin, uNormMax, false);
 end
 
 %% Error computation 
 err = ySim - yRef(1:nSim);
-errRmse = sqrt(sum(err.^2)/length(err));
+rmse = sqrt(sum(err.^2)/length(err));
 
+disp(['RMSE: ', num2str(rmse)]);
 disp(['Slack mean: ', num2str(mean(slackSeq))]);
 
+%% Zonotope comparison
 lastNotEmptyIdx = find(~cellfun('isempty', ZNorms), 1, 'last');
 
 % Compare normalized zonotopes
 centerdiffs = cellfun(@(znotnorm, znorm) znotnorm.c - znorm.c, ZNotNorms(1:lastNotEmptyIdx,2), ZNorms(1:lastNotEmptyIdx), 'UniformOutput',false);
 generatorsdiff = cellfun(@(znotnorm, znorm) znotnorm.G - znorm.G, ZNotNorms(1:lastNotEmptyIdx,2), ZNorms(1:lastNotEmptyIdx), 'UniformOutput',false);
+
+maxCenterDist = max(cellfun(@(diff) norm(diff), centerdiffs));
+maxGeneratorFrobNorm = max(cellfun(@(gendiff) norm(gendiff, 'fro'), generatorsdiff));
+disp(['Max center discrepancy: ', num2str(maxCenterDist)]);
+disp(['Max generator discrepancy: ', num2str(maxGeneratorFrobNorm)]);
 
 %% Zonotope plots
 figure;
@@ -189,8 +228,9 @@ legend('-DynamicLegend');
 legend('boxoff');
 
 %% Simpler plots
+% Simulation plots
 figure;
-subplot(2,1,1);
+subplot(3,1,1);
 hold on;
 plot(ySim, 'LineWidth', 1.5);
 plot(yRef(1:nSim), 'LineWidth', 1.5, 'LineStyle', '-.');
@@ -198,14 +238,14 @@ plot(0*ySim+yMax, 'k--');
 plot(0*ySim+yMin, 'k--');
 hold off;
 grid on;
-legend('Simulated output','Power reference', 'max', 'min');
+legend('Simulated output','Power reference', 'y_M', 'y_m');
 xlabel('Time step');
 title('System true output');
 
-subplot(2,1,2);
+subplot(3,1,2);
 hold on;
 plot(err, 'LineWidth', 1.5);
-plot([1, nSim], [errRmse, errRmse], 'LineWidth', 1.5, 'LineStyle','--','Color','r');
+plot([1, nSim], [rmse, rmse], 'LineWidth', 1.5, 'LineStyle','--','Color','r');
 plot([1 nSim], mean(err)*[1, 1], 'LineWidth',1.5,'Color', 'k');
 hold off;
 grid on;
@@ -213,15 +253,17 @@ legend('Error', 'RMSE', 'Mean');
 ylabel('Error');
 xlabel('Time step');
 
-figure;
+subplot(3,1,3);
 hold on;
 plot(uSim, 'LineWidth',1.5);
 plot(0*uSim + uMin, 'k--');
 plot(0*uSim + uMax, 'k--');
 grid on;
-title('Optimal control');
+legend('u(k)', 'u_m', 'u_M');
+ylabel('Optimal control');
 xlabel('Time step');
 
+% Zonotope diagnostic plots
 figure;
 subplot(3,1,1);
 plot(vols / volume(Z0), 'LineWidth',1.5);

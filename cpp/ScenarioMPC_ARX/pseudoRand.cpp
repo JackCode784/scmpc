@@ -50,7 +50,7 @@ void pseudoRandArx(rand_type coeffs[nGens])
 	#ifdef PRNG_STDLIB
 	for (int i = 0; i < nGens; i++)
     {
-		randomVector[i] = (rand_type)2 * ((rand_type)rand() / (rand_type)RAND_MAX)- (rand_type)1;
+		coeffs[i] = (rand_type)2 * ((rand_type)rand() / (rand_type)RAND_MAX)- (rand_type)1;
     }
 	#else
 	// Random number generator implementation

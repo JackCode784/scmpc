@@ -40,7 +40,6 @@ yRef = selectRef(sys, refStr, tHzn, nSim, moreArgs);
 return;
 end
 
-
 function yRef = selectRef(sys, refStr, tHzn, nSim, moreArgs)
 
 switch sys
@@ -48,39 +47,37 @@ switch sys
         vIn = moreArgs{1};
         switch refStr
             case 'square1'
-                yRef = idinput(nSim+tHzn,'prbs',[0, 0.005], [vIn / 4, 3*vIn/4]);
+                yRef = idinput(nSim,'prbs',[0, 0.005], [vIn / 4, 3*vIn/4]);
             case 'square2'
-                yRef = [repmat(3,1,round(nSim/4)) repmat(4,1,round(nSim/4)) repmat(5,1,round(nSim/4)) repmat(7, 1, round(nSim/4+tHzn))]';
+                yRef = [repmat(3,1,round(nSim/4)) repmat(4,1,round(nSim/4)) repmat(5,1,round(nSim/4)) repmat(7, 1, round(nSim/4))]';
             case 'sin'
-                ii = 1:nSim+tHzn;
-                yRef = sin(0.1*ii);
+                yRef = sin(0.1*(1:nSim));
             case 'const'
-                yRef = zeros(1,nSim+tHzn)+7.5;
+                yRef = zeros(1,nSim)+7.5;
         end
     case {'milano','milanorand'}
         switch refStr
             case 'default'
-                yRef = idinput(nSim+tHzn,'prbs',[0, 0.05], [-100,100]); % Power reference
+                yRef = idinput(nSim,'prbs',[0, 0.05], [-100,100]); % Power reference
             case 'sin'
                 Ts = moreArgs{1};
-                yRef = 100*sin(2*pi*3*(0:nSim+tHzn-1)*Ts)';
+                yRef = 100*sin(2*pi*3*(0:nSim-1)*Ts)';
             case 'const'
-                yRef = 5 + zeros(nSim + tHzn, 1);
+                yRef = 5 + zeros(nSim, 1);
         end
     case 'bm'
         switch refStr
             case 'prbs'
-                yRef = idinput(nSim+tHzn, 'prbs', [0, 0.05], [-1.5, 1.5]);
+                yRef = idinput(nSim, 'prbs', [0, 0.05], [-1.5, 1.5]);
             case 'sin'
-                ii = (0:nSim+tHzn-1)';
-                yRef = 1.5 * sin(0.05 * ii);
+                yRef = 1.5 * sin(0.05 * (0:nSim-1));
             case 'square'
-                yRef = [repmat(-1.2, 1, round((nSim+tHzn)/2)), ...
-                    repmat( 1.2, 1, ceil((nSim+tHzn)/2))]';
+                yRef = [repmat(-1.2, 1, round(nSim/2)), ...
+                    repmat( 1.2, 1, ceil(nSim/2))]';
             case 'const'
                 yRef = zeros(1,nSim) - 8;
             otherwise
-                yRef = idinput(nSim+tHzn, 'prbs', [0, 0.05], [-1.5, 1.5]);
+                yRef = idinput(nSim, 'prbs', [0, 0.05], [-1.5, 1.5]);
         end
     case 'rand'
         % WIP
@@ -90,7 +87,6 @@ end
 
 yRef = yRef(:)';
 
-return;
 end
 
 % Local function for selecting buck system

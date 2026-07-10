@@ -62,7 +62,7 @@
  *
  *  THERE IS ONE DIVISION HERE!!!
    ====================================================================== */
-void boundStripZonotopeIntersection(const output_type yCurr, 
+void boundStripZonotopeIntersection(const output_type stripCenter, 
                                     const output_type yPast[na], 
                                     const input_type uSamples[nb + nk - 1], 
                                     const theta_type oldCenter[nTheta],
@@ -105,7 +105,7 @@ void boundStripZonotopeIntersection(const output_type yCurr,
         lambda[i] /= div;
 
     /* New center */
-    alg_type term = yCurr;
+    alg_type term = stripCenter;
     for (int i = 0; i < nTheta; i++)
     {
         term -= ((i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i - na + nk - 1]) * (alg_type)oldCenter[i];
@@ -137,9 +137,9 @@ void boundStripZonotopeIntersection(const output_type yCurr,
     }
 }
 
-void boundStripZonotopeIntersectionNew(const output_type yCurr, 
-                                    const output_type yPast[na], 
-                                    const input_type uSamples[nb + nk - 1], 
+void boundStripZonotopeIntersectionNew(const norm_output_type stripCenter, 
+                                    const alg_type phi[nTheta],
+                                    const alg_type stripRadius,
                                     const theta_type oldCenter[nTheta],
                                     const theta_type oldGens[nTheta][nGens], 
                                     theta_type newCenter[nTheta], 
@@ -148,12 +148,10 @@ void boundStripZonotopeIntersectionNew(const output_type yCurr,
     /* ------------------------------------------------------------------
     * Step 1 — Assemble the regressor vector phi = [yPast | uSamples]
     * ------------------------------------------------------------------ */
-   alg_type phi[nTheta];
-   for(int i = 0; i < nTheta; i++) phi[i] = (i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i-na+nk-1];
    
    /* Normal strip generation */
-    alg_type stripOffset[2] = { (alg_type)yCurr + (alg_type)sigma, 
-                                 (alg_type)sigma - (alg_type)yCurr};
+    alg_type stripOffset[2] = { (alg_type)stripCenter + stripRadius, 
+                                 stripRadius - (alg_type)stripCenter};
     
     /* Support strip for current zonotope */
     alg_type cproj = 0;
