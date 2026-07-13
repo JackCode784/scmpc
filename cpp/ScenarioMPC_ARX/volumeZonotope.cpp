@@ -244,7 +244,7 @@ alg_type zonotopeVolume(const theta_type G[nTheta][nGens])
         if (nbits == nTheta)
         {
             /* Extract the nTheta * nTheta submatrix corresponding to mask. */
-            alg_type sub[nTheta][nTheta];
+            theta_type sub[nTheta][nTheta];
 
             /* Fill active columns in the order they appear in the mask. */
             int col = 0;

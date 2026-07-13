@@ -45,9 +45,9 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-// #define FIXED            /* fixed point representation */
+//  #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
-// #define NRMLZ               /* normalization */
+#define NRMLZ               /* normalization */
 // #define PRNG_STDLIB         /* use rand() as prng */
 // #define DEBUG_PRINT      /* debug printfs */
 
@@ -196,9 +196,12 @@ static_assert(Nhor - nk >= NhorU - 1,
    Stage cost per step:  l(y, u) = Q*(y - y_ref)^2 + R*u^2
    Terminal cost:        V_f(y)   = P*(y(k+N) - y_ref)^2
    ====================================================================== */
-static const weights_type P =  5.0;   /* terminal output weight */
-static const weights_type Q =  5.0;   /* stage   output weight  */
-static const weights_type RBaseLine = 0.1;
+static const weights_type P =  4.0;   /* terminal output weight */
+static const weights_type Q =  4.0;   /* stage   output weight  */
+static const weights_type RBaseLine = 0.09765625;
+constexpr int log2Q = 2;
+constexpr int log2P = 2;
+constexpr int log2R = -10;
 
 /* ======================================================================
    MADS SOLVER PARAMETERS
@@ -230,8 +233,8 @@ constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
  * Initial frame size = tau^D0[j].  More negative -> finer initial mesh.
  * HLS hint: #pragma HLS ARRAY_PARTITION variable=D0 complete dim=1
  */
-#define D0_VAL -8 // used in MADSARX, frameIdx init
-static const mesh_exp_type D0[nOpt] = { -8, -8, -8 };
+static const mesh_exp_type D0_VAL = -8; // used in MADSARX, frameIdx init
+// static const mesh_exp_type D0[nOpt] = { -8, -8, -8 }; // not used
 
 /* ======================================================================
    ADC / DAC CONVERTER PARAMETERS

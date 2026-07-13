@@ -136,9 +136,13 @@ void costFunctionArx(cost_type              cost[2],
 
         /* --- Input cost term (all steps except the terminal one) ------- */
         /* --- Input term is difference with respect to previous sample -- */
-        if (k < Nhor - 1)
+        if (k < Nhor - 1){
+            #ifndef FIXED
             cost[0] += ((cost_type)(uSamples[0] - uSamples[1]) * R * (cost_type)(uSamples[0] - uSamples[1]));
-
+            #else
+            cost[0] += ((cost_type)(uSamples[0] - uSamples[1]) * (cost_type)(uSamples[0] - uSamples[1])) >> -log2R;
+            #endif
+        }
         /* --- Scenario loop: constraint check + PL/AL cost contribution - */
         cost_type scenariosContrib = 0;
 
@@ -175,7 +179,11 @@ void costFunctionArx(cost_type              cost[2],
         err_type err_nom = yNext_nom - yref;
 
         /* Select stage weight Q or terminal weight P. */
+        #ifndef FIXED
         cost[0] += (cost_type)(((k < Nhor - 1) ? Q : P) * (err_nom * err_nom + scenariosContrib));
+        #else
+        cost[0] += (cost_type)((err_nom * err_nom + scenariosContrib) << (k < Nhor - 1) ? log2Q : log2P);
+        #endif
 
         /* --- Shift rolling-window buffers for next prediction step ---- */
         for (int i = na - 1; i > 0; i--)

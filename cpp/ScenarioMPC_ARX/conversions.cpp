@@ -38,7 +38,7 @@ norm_output_type dig2ctrlY(const digital_output_type yDig)
 	#ifdef PRAGMAS
 	#pragma hls inline
 	#endif
-	norm_output_type yCtrl = yConvCoeff*yDig + yConvOffset;
+	norm_output_type yCtrl = (norm_output_type)(yConvCoeff*yDig) + yConvOffset;
 	return yCtrl;
 }
 
@@ -48,7 +48,7 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl)
 	#ifdef PRAGMAS
 	#pragma hls inline
 	#endif
-	digital_input_type uDig = uConvCoeff*uCtrl + uConvOffset;
+	digital_input_type uDig = (digital_input_type)(uConvCoeff*uCtrl) + uConvOffset;
 	#ifndef FIXED
 	/* Emulate ADC saturation when using floating point */
 	uDig = (uDig < ADC_MIN) ? ADC_MIN : 

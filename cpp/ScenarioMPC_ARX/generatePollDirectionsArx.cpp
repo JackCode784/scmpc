@@ -78,11 +78,17 @@ void generateHouseholderMatrix(const rand_type v[nOpt], norm_input_type H[nOpt][
 
 		for (int j = 0; j < nOpt; j++)
 		{
-		#ifdef PRAGMAS
-		#pragma HLS UNROLL
-		#endif
+			#ifdef PRAGMAS
+			#pragma HLS UNROLL
+			#endif
 		
-			H[i][j] = (norm_input_type)(-2 * v[i] * v[j]);
+			#ifndef FIXED
+			H[i][j] = (-2 * v[i] * v[j]);
+			#else
+			H[i][j] = (v[i] * v[j]) << 1;
+			H[i][j] = -H[i][j];
+			#endif
+
 		}
 
 		// Sum with identity matrix
