@@ -108,7 +108,7 @@ typedef ap_ufixed<32, 16>                         u16_type;
 
 #else
 /* ---------------------------------------------------------------------- */
-/*  Software types for PC simulation / debugging                          */
+/*  Floating point types for PC simulation / debugging                          */
 /* ---------------------------------------------------------------------- */
 typedef double       cost_type;
 typedef double       rand_type;
@@ -116,6 +116,8 @@ typedef double       mesh_type;
 typedef int          mesh_exp_type;
 typedef int          direction_type;
 typedef double       conv_type;
+typedef double       dig2ctrl_type;
+typedef double       ctrl2dig_type;
 typedef double       alg_type;
 typedef double       output_type;
 typedef double       input_type;
