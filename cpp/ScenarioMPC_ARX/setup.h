@@ -312,20 +312,20 @@ static const norm_input_type UNORMMIN = UMIN;
     static const norm_output_type yConvOffset = yNormOffset - YDACGain*YBias*yNormGain;
     static const digital_input_type uConvOffset = UBias - uNormOffset*uNormGainInverse*UADCGain;
     #else
-    static const conv_type yConvCoeff = YDACGain;
-    static const conv_type uConvCoeff = UADCGain;
+    static const dig2ctrl_type yConvCoeff = YDACGain;
+    static const ctrl2dig_type uConvCoeff = UADCGain;
     static const norm_output_type yConvOffset = -YBias*YDACGain;
     static const digital_input_type uConvOffset = UBias;
     #endif
     #else
     #ifdef NRMLZ
-    static const conv_type yConvCoeff = yNormGain;
-    static const conv_type uConvCoeff = uNormGainInverse;
+    static const dig2ctrl_type yConvCoeff = yNormGain;
+    static const ctrl2dig_type uConvCoeff = uNormGainInverse;
     static const norm_output_type yConvOffset = yNormOffset;
     static const digital_input_type uConvOffset = -uNormOffset*uNormGainInverse;
     #else
-    static const conv_type yConvCoeff = 1;
-    static const conv_type uConvCoeff = 1;
+    static const dig2ctrl_type yConvCoeff = 1;
+    static const ctrl2dig_type uConvCoeff = 1;
     static const norm_output_type yConvOffset = 0;
     static const digital_input_type uConvOffset = 0;
     #endif

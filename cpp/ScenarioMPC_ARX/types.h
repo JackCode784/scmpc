@@ -48,7 +48,28 @@ typedef ap_ufixed<8,4> output_type;
 typedef ap_ufixed<8,1> input_type;
    #ifndef NRMLZ
    typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
-   #endif // case when normalized and no fixed in #ifdef NRMLZ section
+      /* Coefficients types for conversions functions */
+      #ifdef CONVERSIONS_MODE
+      /* WIP */
+      typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
+      typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
+      #else
+      /* WIP */
+      typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
+      typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
+      #endif
+   #else
+   typedef ap_fixed<18,2, AP_SAT> theta_type;
+      /* Coefficients types for conversions functions */
+      #ifdef CONVERSIONS_MODE
+      typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
+      typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
+      #else
+      /* WIP */
+      typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
+      typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
+      #endif
+   #endif 
 #else
 #error "Unrecognized ACTIVE_SYSTEM."
 #endif
@@ -130,9 +151,8 @@ typedef output_type  digital_output_type;
 #ifdef NRMLZ
 #ifdef FIXED
 /** Normalized quantities types */
-typedef ap_fixed<18,2> norm_output_type;
-typedef ap_fixed<18,2> norm_input_type;
-typedef ap_fixed<18,2> theta_type;
+typedef ap_fixed<18,2, AP_SAT> norm_output_type;
+typedef ap_fixed<18,2, AP_SAT> norm_input_type;
 #else
 typedef double norm_output_type;
 typedef double norm_input_type;
@@ -141,3 +161,5 @@ typedef double norm_input_type;
 typedef output_type norm_output_type;
 typedef input_type norm_input_type;
 #endif
+
+typedef norm_output_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
