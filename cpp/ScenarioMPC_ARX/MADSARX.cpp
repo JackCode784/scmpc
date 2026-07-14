@@ -20,18 +20,20 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 		// update mesh size
 		for (int i = 0; i < nOpt; i++)
 		{
-			if (frameExp[i] < -12)
+			if (frameExp[i] < FRAME_EXP_MIN)
 			{
 				break;
 			}
-			else if (frameExp[i] < 0)
-			{
-				meshExp[i] = frameExp[i] + frameExp[i];
-			}
-			else
-			{
-				meshExp[i] = frameExp[i];
-			}
+			// Mesh update
+			meshExp[i] = (frameExp[i] < 0) ? (frameExp[i] << 1) : frameExp[i];
+			// else if (frameExp[i] < 0)
+			// {
+			// 	meshExp[i] = frameExp[i] + frameExp[i];
+			// }
+			// else
+			// {
+			// 	meshExp[i] = frameExp[i];
+			// }
 		}
 
 		generatePollMatrixArx(uOpt, frameExp, meshExp, pollMatrix);

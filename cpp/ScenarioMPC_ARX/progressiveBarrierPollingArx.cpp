@@ -27,7 +27,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 
 	// cost function and constraints violation of the test point
 	cost_type costTestPoint[2];
-	cost_type originalCost = bestCost[0];
+	const cost_type originalCost = bestCost[0];
 
 	#ifdef PRAGMAS
 	// #pragma HLS ARRAY_PARTITION variable = costTestPoint dim = 1 complete
@@ -64,7 +64,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 				bestPoint[i] = testPoint[i];
 			}
 			bestCost[0] = costTestPoint[0];
-			bestCost[1] = costTestPoint[1];	// possibly useless, bestCost[1] == costTestPoint[1] == 0 already
+			// bestCost[1] = costTestPoint[1];	// possibly useless, bestCost[1] == costTestPoint[1] == 0 already
 		}
 		else if ((bestCost[1] > 0 && costTestPoint[1] < bestCost[1]) || (costTestPoint[1] == bestCost[1] && costTestPoint[0] < bestCost[0]))
 		{

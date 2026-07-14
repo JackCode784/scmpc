@@ -127,7 +127,7 @@ static const output_type YMAX = 10;
 #ifndef NRMLZ
 #define sigma SIGMA_UNNORM
 #else
-#define sigma yNormGain*SIGMA_UNNORM
+#define sigma (yNormGain*SIGMA_UNNORM)
 #endif
 
 #if ACTIVE_SYSTEM == SYSTEM_SIMPLE

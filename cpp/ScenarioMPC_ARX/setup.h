@@ -45,7 +45,7 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-//  #define FIXED            /* fixed point representation */
+// #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 // #define PRNG_STDLIB         /* use rand() as prng */
@@ -74,7 +74,7 @@
    Derived feature flags (do NOT edit)
    ====================================================================== */
 #ifdef FIXED
-    #define PRAGMAS         /* enable all HLS synthesis pragmas in .cpp files  */
+    // #define PRAGMAS         /* enable all HLS synthesis pragmas in .cpp files  */
     #include <ap_fixed.h>   /* include fixed point data types */
     #undef PRNG_STDLIB      /* can't use rand() in fixed point */
 #endif
@@ -214,6 +214,7 @@ constexpr int log2R = -10;
 constexpr int MADS_ITER = 7;   /* MADS iterations per controller call     */
 constexpr int TAU       = 1;   /* frame-size update base                  */
 constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
+constexpr int FRAME_EXP_MIN = -12; /* frameExp minimum value */
 
 /*
  * expC = 2^{-MADS_C}: pre-computed scaling factor for the mesh update.
@@ -306,8 +307,8 @@ static const norm_input_type UNORMMIN = UMIN;
     conversions functions. */
 #ifdef CONVERSIONS_MODE
     #ifdef NRMLZ
-    static const conv_type yConvCoeff = yNormGain*YDACGain;
-    static const conv_type uConvCoeff = UADCGain*uNormGainInverse;
+    static const dig2ctrl_type yConvCoeff = yNormGain*YDACGain;
+    static const ctrl2dig_type uConvCoeff = UADCGain*uNormGainInverse;
     static const norm_output_type yConvOffset = yNormOffset - YDACGain*YBias*yNormGain;
     static const digital_input_type uConvOffset = UBias - uNormOffset*uNormGainInverse*UADCGain;
     #else
