@@ -130,7 +130,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
         In brief, phi should become (phi_norm-q)*my*Dm^-1*Dg
         */
     phi_type phi[nTheta];
-    strip_center_type stripCenter = yCurrNorm - yNormOffset;
+    strip_center_type stripCenter = yCurrNorm;
     #ifdef NRMLZ
 
     /* Compute \tilde{phi} - offsets */
@@ -138,6 +138,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     for(int i = 0; i < nb; i++) phi[i+na] = (uHist[i+nk-1] - uNormOffset);
 
     /* Use (\tilde{phi} - offsets) to multiply by my*Dm^-1*c0 */
+    stripCenter -= yNormOffset;
     for(int i = 0; i < nTheta; i++) stripCenter -= phi[i] * myInvDmc0[i];
 
     /* Conclude phi computation */
