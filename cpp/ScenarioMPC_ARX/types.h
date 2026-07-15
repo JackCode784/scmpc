@@ -20,7 +20,6 @@
  * and makes the intent of every variable unambiguous at the call site.
  *
  * Do NOT put constants or function prototypes here (setup.h).
- * Do NOT put system-specific data here (system_configs.h).
  */
 
 #pragma once
@@ -118,6 +117,7 @@ typedef int          direction_type;
 typedef double       conv_type;
 typedef double       dig2ctrl_type;
 typedef double       ctrl2dig_type;
+typedef double       phi_type;
 typedef double       alg_type;
 typedef double       output_type;
 typedef double       input_type;
@@ -136,6 +136,7 @@ typedef alg_type  weights_type;  /**< MPC cost-weight matrix entry.        */
 typedef alg_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
 typedef alg_type  norm_conv_type;
 
+/* Only derives digital_input_type and digital_output_type */
 #ifdef CONVERSIONS_MODE
 #ifdef FIXED
 /** Raw 12-bit ADC/DAC sample, integer range {0, ..., 4095}. */
@@ -149,12 +150,14 @@ typedef int          digital_output_type;
 typedef input_type   digital_input_type;
 typedef output_type  digital_output_type;
 #endif
-   
+
+/* Only derives norm_input_type and norm_output_type */
 #ifdef NRMLZ
 #ifdef FIXED
 /** Normalized quantities types */
 typedef ap_fixed<18,2, AP_SAT> norm_output_type;
 typedef ap_fixed<18,2, AP_SAT> norm_input_type;
+typedef ap_fixed<18,4,AP_TRN,AP_SAT> phi_type;
 #else
 typedef double norm_output_type;
 typedef double norm_input_type;
@@ -162,6 +165,7 @@ typedef double norm_input_type;
 #else
 typedef output_type norm_output_type;
 typedef input_type norm_input_type;
+typedef output_type phi_type; // output_type likely "larger" than input_type
 #endif
 
 typedef norm_output_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
