@@ -478,8 +478,8 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl);
  *   newGens       - updated generator matrix (nTheta * nGens);
  *                   exactly nGen columns are written (same as input)
  */
-void boundStripZonotopeIntersectionNew(const norm_output_type stripCenter, 
-                                    const alg_type phi[nTheta],
+void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter, 
+                                    const phi_type phi[nTheta],
                                     const alg_type stripRadius,
                                     const theta_type oldCenter[nTheta],
                                     const theta_type oldGens[nTheta][nGens], 

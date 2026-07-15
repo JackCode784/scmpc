@@ -130,7 +130,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
         In brief, phi should become (phi_norm-q)*my*Dm^-1*Dg
         */
     phi_type phi[nTheta];
-    norm_output_type stripCenter = yCurrNorm - yNormOffset;
+    strip_center_type stripCenter = yCurrNorm - yNormOffset;
     #ifdef NRMLZ
 
     /* Compute \tilde{phi} - offsets */

@@ -118,6 +118,7 @@ typedef double       conv_type;
 typedef double       dig2ctrl_type;
 typedef double       ctrl2dig_type;
 typedef double       phi_type;
+typedef double       strip_center_type;
 typedef double       alg_type;
 typedef double       output_type;
 typedef double       input_type;
@@ -158,6 +159,7 @@ typedef output_type  digital_output_type;
 typedef ap_fixed<18,2, AP_SAT> norm_output_type;
 typedef ap_fixed<18,2, AP_SAT> norm_input_type;
 typedef ap_fixed<18,4,AP_TRN,AP_SAT> phi_type;
+typedef ap_fixed<18,2,AP_SAT> strip_center_type;
 #else
 typedef double norm_output_type;
 typedef double norm_input_type;
@@ -166,6 +168,7 @@ typedef double norm_input_type;
 typedef output_type norm_output_type;
 typedef input_type norm_input_type;
 typedef output_type phi_type; // output_type likely "larger" than input_type
+typedef output_type strip_center_type; // output_type likely "larger" than input_type
 #endif
 
 typedef norm_output_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
