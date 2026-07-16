@@ -77,7 +77,7 @@ typedef ap_ufixed<8,1> input_type;
 typedef ap_ufixed<32,  9, AP_RND_CONV, AP_SAT>  cost_type;
 
 /** Random numbers and direction-vector coefficients for the MADS poll step. */
-typedef ap_fixed <18,  3, AP_TRN,      AP_WRAP>  rand_type;
+typedef ap_fixed<18,2,AP_TRN,AP_SAT>  rand_type;
 
 /** Mesh-point coordinates (same range as input_type, unsigned). */
 typedef ap_fixed<36, 12, AP_TRN,      AP_WRAP>  mesh_type;
@@ -100,10 +100,12 @@ typedef ap_ufixed<32, 14, AP_RND_CONV, AP_SAT>   conv_type;
 typedef ap_fixed <18,  5>                         alg_type;
 
 /** Fractional type used inside the pseudo-random number generator. */
-typedef ap_ufixed<18,  2>                         frac_type;
+typedef ap_ufixed<16,0>                         frac_type;
 
 /** Unsigned 32-bit helper for intermediate products in pseudorand. */
-typedef ap_ufixed<32, 16>                         u16_type;
+// NOTE: Vitis may want 32 bits to compute shift and mask correctly
+// typedef ap_ufixed<32,32> u16_type;
+typedef ap_uint<16>                         u16_type;
 
 #else
 /* ---------------------------------------------------------------------- */
