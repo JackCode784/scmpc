@@ -256,16 +256,16 @@ static const mesh_exp_type D0_VAL = -8; // used in MADSARX, frameIdx init
    compile-time arithmetic on non-constexpr types).
    ====================================================================== */
 #ifdef CONVERSIONS_MODE
-constexpr int ADC_MAX   = 4095;
-constexpr int ADC_MIN   = 0;
-constexpr int ADC_RANGE = ADC_MAX - ADC_MIN;
+constexpr unsigned int ADC_MAX   = 4095;
+constexpr unsigned int ADC_MIN   = 0;
+constexpr unsigned int ADC_RANGE = ADC_MAX - ADC_MIN;
 
-static const conv_type            YADCGain = (conv_type)ADC_RANGE / (conv_type)(YMAX - YMIN);
-static const conv_type            YDACGain = (conv_type)(YMAX - YMIN) / (conv_type)ADC_RANGE;
-static const digital_output_type  YBias    = (conv_type)(ADC_MIN*YMAX - ADC_MAX*YMIN) / (conv_type)(YMAX - YMIN);
-static const conv_type            UADCGain = (conv_type)ADC_RANGE / (conv_type)(UMAX - UMIN);
-static const conv_type            UDACGain = (conv_type)(UMAX - UMIN) / (conv_type)ADC_RANGE;
-static const digital_input_type   UBias    = (conv_type)(ADC_MIN*UMAX - ADC_MAX*UMIN) / (conv_type)(UMAX - UMIN);
+static const output_adc_coeff_type YADCGain = ADC_RANGE / (YMAX - YMIN);
+static const output_dac_coeff_type YDACGain = (YMAX - YMIN) / ADC_RANGE;
+static const digital_output_type  YBias    = (ADC_MIN*YMAX - ADC_MAX*YMIN) / (YMAX - YMIN);
+static const input_adc_coeff_type UADCGain = ADC_RANGE / (UMAX - UMIN);
+static const input_dac_coeff_type UDACGain = (UMAX - UMIN) / ADC_RANGE;
+static const digital_input_type   UBias    = (ADC_MIN*UMAX - ADC_MAX*UMIN) / (UMAX - UMIN);
 #endif
 
 #ifdef NRMLZ

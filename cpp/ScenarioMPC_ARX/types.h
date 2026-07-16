@@ -50,6 +50,10 @@ typedef ap_ufixed<8,1> input_type;
       /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
       /* WIP */
+      typedef ap_ufixed<10,9> output_adc_coeff_type; // positive gain & needs 9 bits for 409.5
+      typedef ap_ufixed<12,12> input_adc_coeff_type; // positive gain & needs 12 bits for 4095.
+      typedef ap_ufixed<20,0> output_dac_coeff_type; // 2.442442...e-3
+      typedef ap_ufixed<12,0> input_dac_coeff_type; // 2.442442...e-4
       typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
       typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
       #else
@@ -65,6 +69,12 @@ typedef ap_ufixed<8,1> input_type;
    typedef ap_fixed<1,1> u_norm_inv_coeff_type;  // 0.5 = 0.10...
       /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
+      /* output_adc_coeff_type, input_adc_coeff_type same as before */
+      /* output_dac_coeff_type, input_dac_coeff_type same as before */
+      typedef ap_ufixed<10,9> output_adc_coeff_type; // 9 bits for 409.5
+      typedef ap_ufixed<12,12> input_adc_coeff_type; // 12 bits for 4095.
+      typedef ap_ufixed<20,0> output_dac_coeff_type; // 2.442442...e-3
+      typedef ap_ufixed<12,0> input_dac_coeff_type; // 2.442442...e-4
       typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
       typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
       #else
@@ -118,6 +128,10 @@ typedef ap_uint<16>                         u16_type;
 typedef double       y_norm_coeff_type;
 typedef double       u_norm_coeff_type;
 typedef double       u_norm_inv_coeff_type;
+typedef double       output_adc_coeff_type;
+typedef double       input_adc_coeff_type;
+typedef double       output_dac_coeff_type;
+typedef double       input_dac_coeff_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;
