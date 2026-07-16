@@ -275,11 +275,11 @@ static const norm_output_type YNORMMIN = -1;
 static const norm_input_type UNORMMAX = 1;
 static const norm_input_type UNORMMIN = -1;
 
-static const norm_conv_type yNormGain = (norm_conv_type)((YNORMMAX - YNORMMIN) / (YMAX - YMIN));
-static const norm_conv_type uNormGain = (norm_conv_type)((UNORMMAX - UNORMMIN) / (UMAX - UMIN));
-static const norm_conv_type uNormGainInverse = (norm_conv_type)((UMAX - UMIN) / (UNORMMAX - UNORMMIN));
-static const norm_output_type yNormOffset = (norm_conv_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
-static const norm_input_type uNormOffset = (norm_conv_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
+static const y_norm_coeff_type yNormGain = (y_norm_coeff_type)((YNORMMAX - YNORMMIN) / (YMAX - YMIN));
+static const u_norm_coeff_type uNormGain = (u_norm_coeff_type)((UNORMMAX - UNORMMIN) / (UMAX - UMIN));
+static const u_norm_inv_coeff_type uNormGainInverse = (u_norm_inv_coeff_type)((UMAX - UMIN) / (UNORMMAX - UNORMMIN));
+static const norm_output_type yNormOffset = (norm_output_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
+static const norm_input_type uNormOffset = (norm_input_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
 
 static const weights_type R = RBaseLine * (yNormGain * yNormGain) / (uNormGain * uNormGain);
 

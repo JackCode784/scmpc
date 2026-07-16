@@ -59,6 +59,10 @@ typedef ap_ufixed<8,1> input_type;
       #endif
    #else
    typedef ap_fixed<18,2, AP_SAT> theta_type;
+   /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
+   typedef ap_fixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
+   typedef ap_fixed<2,2> u_norm_coeff_type;  // 2 = 10.0...
+   typedef ap_fixed<1,1> u_norm_inv_coeff_type;  // 0.5 = 0.10...
       /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
       typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
@@ -111,6 +115,9 @@ typedef ap_uint<16>                         u16_type;
 /* ---------------------------------------------------------------------- */
 /*  Floating point types for PC simulation / debugging                          */
 /* ---------------------------------------------------------------------- */
+typedef double       y_norm_coeff_type;
+typedef double       u_norm_coeff_type;
+typedef double       u_norm_inv_coeff_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;
