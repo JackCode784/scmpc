@@ -54,12 +54,12 @@ typedef ap_ufixed<8,1> input_type;
       typedef ap_ufixed<12,12> input_adc_coeff_type; // positive gain & needs 12 bits for 4095.
       typedef ap_ufixed<20,0> output_dac_coeff_type; // 2.442442...e-3
       typedef ap_ufixed<12,0> input_dac_coeff_type; // 2.442442...e-4
-      typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
-      typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
+      typedef output_dac_coeff_type dig2ctrl_type; // corresponds to YDACGain
+      typedef input_adc_coeff_type ctrl2dig_type; // corresponds to UADCGain
       #else
       /* WIP */
-      typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
-      typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
+      typedef ap_ufixed<1,1> dig2ctrl_type; // 1
+      typedef ap_ufixed<1,1> ctrl2dig_type; // 0
       #endif
    #else
    typedef ap_fixed<18,2, AP_SAT> theta_type;
@@ -75,12 +75,12 @@ typedef ap_ufixed<8,1> input_type;
       typedef ap_ufixed<12,12> input_adc_coeff_type; // 12 bits for 4095.
       typedef ap_ufixed<20,0> output_dac_coeff_type; // 2.442442...e-3
       typedef ap_ufixed<12,0> input_dac_coeff_type; // 2.442442...e-4
-      typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
-      typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
+      typedef ap_ufixed<11,0,AP_RND_CONV,AP_SAT> dig2ctrl_type; // 4.884884...e-4
+      typedef ap_ufixed<12,11,AP_RND_CONV,AP_SAT> ctrl2dig_type; // 2047.5
       #else
       /* WIP */
-      typedef ap_ufixed<28,4,AP_RND_CONV,AP_SAT> dig2ctrl_type;
-      typedef ap_ufixed<28,24,AP_RND_CONV,AP_SAT> ctrl2dig_type;
+      typedef y_norm_coeff_type dig2ctrl_type;
+      typedef u_norm_inv_coeff_type ctrl2dig_type;
       #endif
    #endif 
 #else
@@ -101,9 +101,6 @@ typedef ap_int<6>                                 mesh_exp_type;
 
 /** Elements of the poll-direction matrix D (values in {-1, 0, +1}). */
 typedef ap_int<12>                                direction_type;
-
-/** Intermediate type for ADC/DAC conversion arithmetic. */
-typedef ap_ufixed<32, 14, AP_RND_CONV, AP_SAT>   conv_type;
 
 /**
  * Primary algorithmic type.
@@ -137,7 +134,6 @@ typedef double       rand_type;
 typedef double       mesh_type;
 typedef int          mesh_exp_type;
 typedef int          direction_type;
-typedef double       conv_type;
 typedef double       dig2ctrl_type;
 typedef double       ctrl2dig_type;
 typedef double       phi_type;
