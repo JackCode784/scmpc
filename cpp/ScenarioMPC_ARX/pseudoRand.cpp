@@ -33,13 +33,15 @@ rand_type pseudoRandArx()
 	unsigned int r = xorshift32Step();
 	u16_type u16 = (r >> 16) & 0xFFFFu;
 	#ifdef FIXED
-	frac_type frac = u16 >> 16;
+	frac_type frac;
+	frac.range(15,0) = u16.range(15,0);
+	res = (rand_type)(frac << 1);
+	res -= 1;
 	#else
-	frac_type frac = u16 / 65536.0;
-	#endif
-
+	frac_type frac = u16 / 65536.0; // frac in [0,1]
 	res = rand_type(2) * (rand_type)(frac) - rand_type(1);
 	#endif
+	#endif // PRNG_STDLIB
 	
 	return res;
 }
@@ -62,15 +64,18 @@ void pseudoRandArx(rand_type coeffs[nGens])
 		unsigned int r = xorshift32Step();
 		u16_type u16 = (r >> 16) & 0xFFFFu;
 		#ifdef FIXED
-		frac_type frac = u16 >> 16;
+		frac_type frac;
+		frac.range(15,0) = u16.range(15,0);
+		coeffs[i] = (rand_type)(frac) << 1;
+		coeffs[i] -= 1;
 		#else
 		frac_type frac = u16 / 65536.0;
+		coeffs[i] = (rand_type(2) * (rand_type)(frac)) - rand_type(1);
 		#endif
 
 		// #ifdef FIXED
 		// 		float fracf = frac.to_float();
 		// #endif
-		coeffs[i] = (rand_type(2) * (rand_type)(frac)) - rand_type(1);
 	}
 	#endif
 }
