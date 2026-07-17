@@ -118,6 +118,8 @@ typedef ap_ufixed<16,0>                         frac_type;
 // typedef ap_ufixed<32,32> u16_type;
 typedef ap_uint<16>                         u16_type;
 
+/* Data type for Q, P = 4 weight matrices */
+typedef ap_ufixed<2,2> output_weight_type;
 #else
 /* ---------------------------------------------------------------------- */
 /*  Floating point types for PC simulation / debugging                          */
@@ -129,6 +131,8 @@ typedef double       output_adc_coeff_type;
 typedef double       input_adc_coeff_type;
 typedef double       output_dac_coeff_type;
 typedef double       input_dac_coeff_type;
+typedef float        input_weight_type;
+typedef float        output_weight_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;
@@ -152,7 +156,6 @@ typedef unsigned int u16_type;
    variable at every call site.  Use these everywhere - never use
    alg_type, double, or ap_fixed<> directly outside this file.
    ====================================================================== */
-typedef alg_type  weights_type;  /**< MPC cost-weight matrix entry.        */
 typedef alg_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
 typedef alg_type  norm_conv_type;
 
@@ -175,10 +178,11 @@ typedef output_type  digital_output_type;
 #ifdef NRMLZ
 #ifdef FIXED
 /** Normalized quantities types */
-typedef ap_fixed<18,2, AP_SAT> norm_output_type;
-typedef ap_fixed<18,2, AP_SAT> norm_input_type;
+typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_output_type;
+typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_input_type;
 typedef ap_fixed<18,4,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<18,2,AP_SAT> strip_center_type;
+typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
 #else
 typedef double norm_output_type;
 typedef double norm_input_type;
@@ -188,6 +192,9 @@ typedef output_type norm_output_type;
 typedef input_type norm_input_type;
 typedef output_type phi_type; // output_type likely "larger" than input_type
 typedef output_type strip_center_type; // output_type likely "larger" than input_type
+#ifdef FIXED
+typedef ap_ufixed<5,4> input_weight_type; /* R = RBaseline = 12.5 */
+#endif
 #endif
 
 typedef norm_output_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */

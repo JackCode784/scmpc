@@ -196,12 +196,18 @@ static_assert(Nhor - nk >= NhorU - 1,
    Stage cost per step:  l(y, u) = Q*(y - y_ref)^2 + R*u^2
    Terminal cost:        V_f(y)   = P*(y(k+N) - y_ref)^2
    ====================================================================== */
-static const weights_type P =  4.0;   /* terminal output weight */
-static const weights_type Q =  4.0;   /* stage   output weight  */
-static const weights_type RBaseLine = 0.09765625;
+static const output_weight_type P =  4.0;   /* terminal output weight */
+static const output_weight_type Q =  4.0;   /* stage   output weight  */
+static const input_weight_type RBaseLine = 12.5; /* so that R = 0.125 = 2^(-3) in NRMLZ */
+/* 
+    log2X are used for shift operations instead of multiplications in
+    cost function computation. These should be consistent with the Q, P, R
+    values and with R value in particular since it depends on FIXED and NRMLZ
+    operation modes.
+*/
 constexpr int log2Q = 2;
 constexpr int log2P = 2;
-constexpr int log2R = -10;
+constexpr int log2R = -3;
 
 /* ======================================================================
    MADS SOLVER PARAMETERS
@@ -281,7 +287,7 @@ static const u_norm_inv_coeff_type uNormGainInverse = (u_norm_inv_coeff_type)((U
 static const norm_output_type yNormOffset = (norm_output_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
 static const norm_input_type uNormOffset = (norm_input_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
 
-static const weights_type R = RBaseLine * (yNormGain * yNormGain) / (uNormGain * uNormGain);
+static const input_weight_type R = RBaseLine * (yNormGain * yNormGain) / (uNormGain * uNormGain); // 2^(-10)
 
 /* Pre-computed in MATLAB 
  * A better way to compute these offline is needed.
@@ -295,7 +301,7 @@ static const norm_conv_type qmyInvDmc0 = 0.992262713557689;
 #error "Conversion variables for unknwon system could not be defined!"
 #endif
 #else
-static const weights_type R = RBaseLine;   /* stage   input  weight  */
+static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
 static const norm_output_type YNORMMAX = YMAX;
 static const norm_output_type YNORMMIN = YMIN;
 static const norm_input_type UNORMMAX = UMAX;
