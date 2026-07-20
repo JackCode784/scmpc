@@ -63,6 +63,10 @@ typedef ap_ufixed<8,1> input_type;
       #endif
    #else
    typedef ap_fixed<18,2, AP_SAT> theta_type;
+   typedef ap_ufixed<23,3> strip_coeff_type;
+   typedef ap_ufixed<23,3> strip_q_coeff_type;
+   typedef ap_fixed<22,3> strip_coeff_c0_type;
+   typedef ap_ufixed<21,0> strip_q_coeff_c0_type;
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_fixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
    typedef ap_fixed<2,2> u_norm_coeff_type;  // 2 = 10.0...
@@ -133,6 +137,10 @@ typedef double       output_dac_coeff_type;
 typedef double       input_dac_coeff_type;
 typedef float        input_weight_type;
 typedef float        output_weight_type;
+typedef double       strip_coeff_type;
+typedef double       strip_q_coeff_type;
+typedef double       strip_coeff_c0_type;
+typedef double       strip_q_coeff_c0_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;

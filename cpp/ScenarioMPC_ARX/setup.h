@@ -293,10 +293,10 @@ static const input_weight_type R = RBaseLine * (yNormGain * yNormGain) / (uNormG
  * A better way to compute these offline is needed.
 */
 #if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-static const norm_conv_type myInvDmDg[nTheta] = {5.544771541217021, 4.480002635302223, 0.848930417640874};
-static const norm_conv_type qmyInvDmDg[nTheta] = {5.544771541217021,   4.480002635302223,   0.848930417640874};
-static const norm_conv_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
-static const norm_conv_type qmyInvDmc0 = 0.992262713557689;
+static const strip_coeff_type myInvDmDg[nTheta] = {5.544771541217021, 4.480002635302223, 0.848930417640874};
+static const strip_q_coeff_type qmyInvDmDg[nTheta] = {5.544771541217021,   4.480002635302223,   0.848930417640874}; // includes '-' sign for output sample prediction
+static const strip_coeff_c0_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
+static const strip_q_coeff_c0_type qmyInvDmc0 = 0.992262713557689; // includes '-' sign for output sample prediction
 #else
 #error "Conversion variables for unknwon system could not be defined!"
 #endif
