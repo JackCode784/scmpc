@@ -139,7 +139,7 @@ void boundStripZonotopeIntersection(const output_type stripCenter,
 
 void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter, 
                                     const phi_type phi[nTheta],
-                                    const alg_type stripRadius,
+                                    const norm_noise_type stripRadius,
                                     const theta_type oldCenter[nTheta],
                                     const theta_type oldGens[nTheta][nGens], 
                                     theta_type newCenter[nTheta], 

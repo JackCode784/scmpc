@@ -115,7 +115,7 @@ int main(void)
         for(int i = 0; i < nTheta; i++)
             yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];
         #endif
-        yCurr += (output_type)noise[k] * (output_type)SIGMA_UNNORM;
+        yCurr += noise[k] * SIGMA_UNNORM;
         ySim[k] = yCurr;
 
         /* --- Convert y(k) to digital ----------------------------------- */

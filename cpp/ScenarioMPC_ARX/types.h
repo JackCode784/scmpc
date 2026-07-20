@@ -43,8 +43,9 @@
  * Taken care of by MATLAB?
  */
 #if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-typedef ap_ufixed<8,4> output_type;
-typedef ap_ufixed<8,1> input_type;
+typedef ap_fixed<18,5> output_type; // [YMIN-SIGMA_UNNORM, YMAX+SIGMA_UNNORM] = [-0.02, 10.02]
+typedef ap_ufixed<18,1> input_type; // [UMIN, UMAX] = [0, 1]
+typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    #ifndef NRMLZ
    typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
       /* Coefficients types for conversions functions */
@@ -67,6 +68,7 @@ typedef ap_ufixed<8,1> input_type;
    typedef ap_ufixed<23,3> strip_q_coeff_type;
    typedef ap_fixed<22,3> strip_coeff_c0_type;
    typedef ap_ufixed<21,0> strip_q_coeff_c0_type;
+   typedef ap_fixed<20,0> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_ufixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
    typedef ap_ufixed<2,2> u_norm_coeff_type;  // 2 = 10.0...
@@ -141,6 +143,7 @@ typedef double       strip_coeff_type;
 typedef double       strip_q_coeff_type;
 typedef double       strip_coeff_c0_type;
 typedef double       strip_q_coeff_c0_type;
+typedef double       noise_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;
@@ -192,12 +195,14 @@ typedef ap_fixed<18,4,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<18,2,AP_SAT> strip_center_type;
 typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
 #else
+typedef double norm_noise_type;
 typedef double norm_output_type;
 typedef double norm_input_type;
 #endif
 #else
 typedef output_type norm_output_type;
 typedef input_type norm_input_type;
+typedef noise_type norm_noise_type;
 typedef output_type phi_type; // output_type likely "larger" than input_type
 typedef output_type strip_center_type; // output_type likely "larger" than input_type
 #ifdef FIXED

@@ -91,43 +91,43 @@ static const input_type  UMIN = -0.3;
 static const input_type  UMAX =  0.3;
 static const output_type YMIN =  0.0;
 static const output_type YMAX =  8.0;
-#define SIGMA_UNNORM` 0.0
+static const noise_type SIGMA_UNNORM` = 0.0;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
 static const input_type  UMIN = -1.9;
 static const input_type  UMAX =  1.9;
 static const output_type YMIN = -10.0;
 static const output_type YMAX =  8.0;
-#define SIGMA_UNNORM 0.20
+static const noise_type SIGMA_UNNORM = 0.20;
 
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
 static const input_type  UMIN = -200.0;
 static const input_type  UMAX =  200.0;
 static const output_type YMIN = -110.0;
 static const output_type YMAX =  110.0;
-#define SIGMA_UNNORM 4.4655
+static const noise_type SIGMA_UNNORM = 4.4655;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
 static const input_type  UMIN = 0;
 static const input_type  UMAX = 1;
 static const output_type YMIN = 0;
 static const output_type YMAX = 10;
-#define SIGMA_UNNORM 0.2
+static const noise_type SIGMA_UNNORM = 0.2;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
 static const input_type  UMIN = 0;
 static const input_type  UMAX = 1;
 static const output_type YMIN = 0;
 static const output_type YMAX = 10;
-#define SIGMA_UNNORM 0.02
+static const noise_type SIGMA_UNNORM = 0.02;
 
 #endif
 
 /* WIP */
 #ifndef NRMLZ
-#define sigma SIGMA_UNNORM
+const norm_noise_type sigma = SIGMA_UNNORM;
 #else
-#define sigma (yNormGain*SIGMA_UNNORM)
+const norm_noise_type sigma = (yNormGain*SIGMA_UNNORM);
 #endif
 
 #if ACTIVE_SYSTEM == SYSTEM_SIMPLE
