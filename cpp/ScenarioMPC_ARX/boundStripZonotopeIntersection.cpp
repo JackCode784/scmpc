@@ -160,9 +160,9 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
     /* Support strip for current zonotope */
     proj_type cproj = 0;
     for(int i = 0; i < nTheta; i++) cproj += phi[i] * oldCenter[i];
-    
+
     proj_type gproj[nGens];
-    alg_type supStripOffset[2] = {0, 0};
+    support_strip_offset_type supStripOffset[2] = {0, 0};
     
     for(int i = 0; i < nGens; i++)
     {
@@ -170,20 +170,20 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
         #pragma HLS UNROLL
         #endif
         gproj[i] = 0;
-        for(int j = 0; j < nTheta; j++) gproj[i] += phi[j] * (alg_type)oldGens[j][i];
+        for(int j = 0; j < nTheta; j++) gproj[i] += phi[j] * oldGens[j][i];
 
-        supStripOffset[0] += (gproj[i] < (alg_type)0) ? (alg_type)(-gproj[i]) : gproj[i];
+        supStripOffset[0] += (gproj[i] < 0) ? (-gproj[i]) : gproj[i];
     }
     supStripOffset[1] = supStripOffset[0] - cproj;
     supStripOffset[0] += cproj;
     
     /* Tight strip */
-    alg_type tightStripOffset[2] = {
+    tight_strip_offset_type tightStripOffset[2] = {
         (stripOffset[0] < supStripOffset[0]) ? stripOffset[0] : supStripOffset[0],
         (stripOffset[1] < supStripOffset[1]) ? stripOffset[1] : supStripOffset[1]
     };
-    alg_type tsc = tightStripOffset[0] - tightStripOffset[1];
-    alg_type tsr = tightStripOffset[0] + tightStripOffset[1];
+    tight_strip_center_type tsc = tightStripOffset[0] - tightStripOffset[1];
+    tight_strip_radius_type tsr = tightStripOffset[0] + tightStripOffset[1];
     #ifdef FIXED
     tsc = tsc >> 1;
     tsr = tsr >> 1;

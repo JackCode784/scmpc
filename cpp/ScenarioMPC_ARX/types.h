@@ -51,6 +51,8 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
    typedef ap_fixed<18,5> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
    typedef ap_fixed<18,7> proj_type; // |cproj| <= nTheta*10.88, |gproj| <=  
+   typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
+   typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
       /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
       /* WIP */
@@ -74,6 +76,8 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_fixed<20,0> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
    typedef ap_fixed<18,4> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
    typedef ap_fixed<18,7> proj_type; // |cproj| <= nTheta*10.88, |gproj| <=  
+   typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
+   typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_ufixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
    typedef ap_ufixed<2,2> u_norm_coeff_type;  // 2 = 10.0...
@@ -151,6 +155,9 @@ typedef double       strip_q_coeff_c0_type;
 typedef double       noise_type;
 typedef double       output_strip_offset_type;
 typedef double       proj_type;
+typedef double       support_strip_offset_type;
+typedef double       tight_strip_center_type;
+typedef double       tight_strip_radius_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;
@@ -176,6 +183,8 @@ typedef unsigned int u16_type;
    ====================================================================== */
 typedef alg_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
 typedef alg_type  norm_conv_type;
+typedef support_strip_offset_type tight_strip_offset_type; // conservative, intersection of output and support strip
+typedef tight_strip_center_type tight_strip_radius_type; // they are sum/diff of same things
 
 /* Only derives digital_input_type and digital_output_type */
 #ifdef CONVERSIONS_MODE
