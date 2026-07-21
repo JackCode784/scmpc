@@ -71,7 +71,7 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_fixed<22,3> strip_coeff_c0_type;
    typedef ap_ufixed<21,0> strip_q_coeff_c0_type;
    typedef ap_fixed<20,0> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
-   typedef ap_fixed<18,3> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
+   typedef ap_fixed<18,4> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_ufixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
    typedef ap_ufixed<2,2> u_norm_coeff_type;  // 2 = 10.0...
@@ -195,7 +195,7 @@ typedef output_type  digital_output_type;
 /** Normalized quantities types */
 typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_output_type;
 typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_input_type;
-typedef ap_fixed<18,4,AP_TRN,AP_SAT> phi_type;
+typedef ap_fixed<18,5,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<18,2,AP_SAT> strip_center_type;
 typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
 #else
