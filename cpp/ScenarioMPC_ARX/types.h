@@ -34,6 +34,7 @@
    ====================================================================== */
 
 #ifdef FIXED
+#define TOTAL_LENGTH 18
 /* ---------------------------------------------------------------------- */
 /*  Vitis HLS fixed-point types                                           */
 /* ---------------------------------------------------------------------- */
@@ -48,6 +49,7 @@ typedef ap_ufixed<18,1> input_type; // [UMIN, UMAX] = [0, 1]
 typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    #ifndef NRMLZ
    typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
+   typedef ap_fixed<18,5> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
       /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
       /* WIP */
@@ -69,6 +71,7 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_fixed<22,3> strip_coeff_c0_type;
    typedef ap_ufixed<21,0> strip_q_coeff_c0_type;
    typedef ap_fixed<20,0> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
+   typedef ap_fixed<18,3> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_ufixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
    typedef ap_ufixed<2,2> u_norm_coeff_type;  // 2 = 10.0...
@@ -144,6 +147,7 @@ typedef double       strip_q_coeff_type;
 typedef double       strip_coeff_c0_type;
 typedef double       strip_q_coeff_c0_type;
 typedef double       noise_type;
+typedef double       output_strip_offset_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;

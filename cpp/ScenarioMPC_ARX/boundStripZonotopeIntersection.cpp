@@ -5,7 +5,7 @@
  * TWO FUNCTIONS
  * -------------
  * boundStripZonotopeIntersection()
- *   Original algorithm (lambda-optimal, Combastel 2003 / Bravo 2006 §II).
+ *   Original algorithm (lambda-optimal, Combastel 2003 / Bravo 2006 II).
  *   Produces a zonotope with nTheta+1 generator columns from one with nTheta.
  *   Kept for reference and regression testing.
  *
@@ -17,13 +17,13 @@
  *
  * STRIP REPRESENTATION
  * ---------------------
- * The strip  S = { θ : |h'θ − y| ≤ ε }  is represented by two offsets:
- *   offset[0] = y + ε   (upper bound of  h'θ)
- *   offset[1] = ε − y   (upper bound of −h'θ, i.e. negative of lower bound)
+ * The strip  S = { theta : |h'theta − y| <= sigma }  is represented by two offsets:
+ *   offset[0] = y + sigma   (upper bound of  h'theta)
+ *   offset[1] = sigma − y   (upper bound of −h'theta, i.e. negative of lower bound)
  *
  * Given a zonotope Z = { c + Gξ : ‖ξ‖∞ ≤ 1 }, the support of Z along ±h is:
- *   supOffset[0] =  h'c + Σ_j |h'g_j|   (max of  h'θ over Z)
- *   supOffset[1] = −h'c + Σ_j |h'g_j|   (max of −h'θ over Z)
+ *   supOffset[0] =  h'c + sum_j |h'g_j|   (max of  h'theta over Z)
+ *   supOffset[1] = −h'c + sum_j |h'g_j|   (max of −h'theta over Z)
  *
  * The tight strip is the intersection of S with the projection of Z:
  *   tightOffset[i] = min(offset[i], supOffset[i])
@@ -34,10 +34,10 @@
  *
  * BRAVO ALGORITHM (new function)
  * --------------------------------
- * For each candidate generator index s = 0…nGens−1 with h'g_s ≠ 0:
- *   1. New selected generator:  g_s^new = (tsr / h'g_s) · g_s
- *   2. Other generators:        g_j^new = g_j − (h'g_j / h'g_s) · g_s,  j ≠ s
- *   3. New centre:              c^new   = c + (tsc − h'c) / h'g_s · g_s
+ * For each candidate generator index s = 0…nGens−1 with h'g_s != 0:
+ *   1. New selected generator:  g_s^new = (tsr / h'g_s) * g_s
+ *   2. Other generators:        g_j^new = g_j − (h'g_j / h'g_s) * g_s,  j != s
+ *   3. New centre:              c^new   = c + (tsc − h'c) / h'g_s * g_s
  *   4. Compute volume of the candidate zonotope.
  * Keep the candidate with the smallest volume.
  * If no candidate improves on the original, return the original unchanged.
@@ -47,7 +47,7 @@
  * EPSILON is the worst-case noise bound (deterministic upper bound on |e(k)|).
  * sigma is the noise standard deviation (a statistical parameter).
  * The strip MUST use EPSILON — using sigma would make the strip too narrow,
- * potentially excluding the true parameter θ* on noise realisations above sigma,
+ * potentially excluding the true parameter theta* on noise realisations above sigma,
  * which defeats the bounded-error guarantee.
  */
 
@@ -137,6 +137,11 @@ void boundStripZonotopeIntersection(const output_type stripCenter,
     }
 }
 
+/* 
+    New Bravo et al. 2006 algorithm for zonotope update.
+    Check for DIVISIONS, since they are costly on
+    resource-constrained hardware like FPGAs/microcontrollers.
+*/
 void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter, 
                                     const phi_type phi[nTheta],
                                     const norm_noise_type stripRadius,
@@ -150,12 +155,11 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
     * ------------------------------------------------------------------ */
    
    /* Normal strip generation */
-    alg_type stripOffset[2] = { (alg_type)stripCenter + stripRadius, 
-                                 stripRadius - (alg_type)stripCenter};
+    output_strip_offset_type stripOffset[2] = {stripCenter + stripRadius, stripRadius - stripCenter};
     
     /* Support strip for current zonotope */
     alg_type cproj = 0;
-    for(int i = 0; i < nTheta; i++) cproj += phi[i] * (alg_type)oldCenter[i];
+    for(int i = 0; i < nTheta; i++) cproj += phi[i] * oldCenter[i];
 
     alg_type gproj[nGens];
     alg_type supStripOffset[2] = {0, 0};
@@ -184,8 +188,8 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
     tsc = tsc >> 1;
     tsr = tsr >> 1;
     #else
-    tsc /= (alg_type)2;
-    tsr /= (alg_type)2;
+    tsc /= 2;
+    tsr /= 2;
     #endif
 
     /* Search over generator candidates */
