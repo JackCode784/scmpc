@@ -158,10 +158,10 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
     output_strip_offset_type stripOffset[2] = {stripCenter + stripRadius, stripRadius - stripCenter};
     
     /* Support strip for current zonotope */
-    alg_type cproj = 0;
+    proj_type cproj = 0;
     for(int i = 0; i < nTheta; i++) cproj += phi[i] * oldCenter[i];
-
-    alg_type gproj[nGens];
+    
+    proj_type gproj[nGens];
     alg_type supStripOffset[2] = {0, 0};
     
     for(int i = 0; i < nGens; i++)
