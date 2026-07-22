@@ -50,7 +50,8 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    #ifndef NRMLZ
    typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
    typedef ap_fixed<18,5> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
-   typedef ap_fixed<18,7> proj_type; // |cproj| <= nTheta*10.88, |gproj| <=  
+   typedef ap_fixed<18,7> proj_type; // |cproj| <= nTheta*10.88, same for |gproj|
+   typedef ap_fixed<18,11> proj_inv_type; // inverse of proj_type
    typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
    typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
    typedef ap_ufixed<18,9> vol_type; // could be anything without normalization
@@ -78,6 +79,7 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_fixed<20,0> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
    typedef ap_fixed<18,4> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
    typedef ap_fixed<18,7> proj_type; // |cproj| <= nTheta*10.88, |gproj| <=  
+   typedef ap_fixed<18,11> proj_inv_type; // inverse of proj_type
    typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
    typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
    typedef ap_ufixed<18,nTheta+1> vol_type; // with normalization, it surely is smaller than 2^nTheta (max possible initial zonotope volume)
@@ -164,6 +166,7 @@ typedef double       tight_strip_center_type;
 typedef double       tight_strip_radius_type;
 typedef double       vol_type;
 typedef double       det_type;
+typedef double       proj_inv_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;

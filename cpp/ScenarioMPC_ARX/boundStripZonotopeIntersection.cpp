@@ -203,9 +203,9 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
         #pragma HLS PIPELINE
         #endif
 
-        if(gproj[genId] != (alg_type)0)
+        if(gproj[genId] != 0)
         {
-            alg_type gprojinv = (alg_type)1 / gproj[genId];
+            proj_inv_type gprojinv = 1 / gproj[genId];
             for(int i = 0; i < nTheta; i++)
             {
                 #ifdef PRAGMAS
@@ -217,8 +217,8 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
                     #pragma HLS UNROLL
                     #endif
                     tmpGens[i][j] = (j == genId) ? 
-                                    (theta_type)((theta_type)(tsr * gprojinv) * oldGens[i][j]) :
-                                    (theta_type)(oldGens[i][j] - ((theta_type)(gproj[j] * gprojinv) * oldGens[i][genId]));
+                                    ((tsr * gprojinv) * oldGens[i][j]) :
+                                    (oldGens[i][j] - ((gproj[j] * gprojinv) * oldGens[i][genId]));
                 }
             }
             vol_type tmpVol = zonotopeVolume(tmpGens);
