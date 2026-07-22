@@ -36,7 +36,7 @@
  *   rather than an if/break, keeping the loop body regular and pipeline-
  *   friendly.
  *
- * * The permutation sign is stored as alg_type (+1 or -1) to avoid a
+ * * The permutation sign is stored as det_type (+1 or -1) to avoid a
  *   type conversion at the final multiply.
  *
  * * No dynamic memory allocation, no recursion, no variable-length arrays.
@@ -71,10 +71,10 @@
                      C++ requires a compile-time constant second dimension.
    @return           det(M[0..nTheta-1][0..nTheta-1]).  Returns 0 for singular M.
    ====================================================================== */
-alg_type matDet(const theta_type M[nTheta][nTheta])
+det_type matDet(const theta_type M[nTheta][nTheta])
 {
     /* Working copy */
-    alg_type A[nTheta][nTheta];
+    theta_type A[nTheta][nTheta];
 
     for (int i = 0; i < nTheta; i++)
     {
@@ -86,12 +86,12 @@ alg_type matDet(const theta_type M[nTheta][nTheta])
             #ifdef PRAGMAS
             #pragma HLS UNROLL
             #endif
-            A[i][j] = (alg_type)M[i][j];
+            A[i][j] = M[i][j];
 
         }
     }
 
-    alg_type sign = 1;
+    det_type sign = 1;
 
     /* ------------------------------------------------------------------ */
     /*  Elimination steps k = 0 ... nTheta - 1                     */
@@ -104,14 +104,14 @@ alg_type matDet(const theta_type M[nTheta][nTheta])
 
         /* --- Partial pivoting: find row with largest |A[i][k]|, i >= k -- */
         int      pivotRow = k;
-        alg_type pivotAbs = (A[k][k] < 0) ? (alg_type)(-A[k][k]) : A[k][k];
+        theta_type pivotAbs = (A[k][k] < 0) ? -A[k][k] : A[k][k];
 
         for (int i = k + 1; i < nTheta; i++)
         {
             #ifdef PRAGMAS
             #pragma HLS UNROLL
             #endif
-            alg_type absVal = (A[i][k] < 0) ? (alg_type)(-A[i][k]) : A[i][k];
+            theta_type absVal = (A[i][k] < 0) ? (-A[i][k]) : A[i][k];
             if (absVal > pivotAbs)
             {
                 pivotAbs = absVal;
@@ -127,7 +127,7 @@ alg_type matDet(const theta_type M[nTheta][nTheta])
                 #ifdef PRAGMAS
                 #pragma HLS UNROLL
                 #endif
-                alg_type tmp  = A[k][j];
+                theta_type tmp  = A[k][j];
                 A[k][j]       = A[pivotRow][j];
                 A[pivotRow][j] = tmp;
             }
@@ -139,21 +139,21 @@ alg_type matDet(const theta_type M[nTheta][nTheta])
          * If the pivot is zero the matrix is singular.
          * Return 0.
          */
-        if (A[k][k] == (alg_type)0)
-            return (alg_type)0;
+        if (A[k][k] == 0)
+            return 0;
 
         /* --- Eliminate rows below pivot -------------------------------- */
         // Alternative
-        // alg_type partialFactor = (alg_type)1 / A[k][k];
+        // theta_type partialFactor = 1 / A[k][k];
         for (int i = k + 1; i < nTheta; i++)
         {
             #ifdef PRAGMAS
             #pragma HLS UNROLL
             #endif
-            alg_type factor = A[i][k] / A[k][k];
+            theta_type factor = A[i][k] / A[k][k];
 
             // Alternative
-            // alg_type factor = partialFactor * A[i][k];
+            // theta_type factor = partialFactor * A[i][k];
             // A[i][k] = 0;
             // and upcoming for starts from j=k+1.
 
@@ -170,7 +170,7 @@ alg_type matDet(const theta_type M[nTheta][nTheta])
     /* ------------------------------------------------------------------ */
     /*  Determinant = sign * product of diagonal entries                  */
     /* ------------------------------------------------------------------ */
-    alg_type det = sign;
+    det_type det = sign;
 
     for (int i = 0; i < nTheta; i++)
     {
@@ -205,9 +205,9 @@ alg_type matDet(const theta_type M[nTheta][nTheta])
    This is the maximum area / minimum latency configuration; if area
    is constrained, remove the unroll pragma and let HLS pipeline instead.
    ====================================================================== */
-alg_type zonotopeVolume(const theta_type G[nTheta][nGens])
+vol_type zonotopeVolume(const theta_type G[nTheta][nGens])
 {
-    alg_type vol = 0;
+    vol_type vol = 0;
 
     /*
      * Iterate over all 2^nGens = 64 bitmasks.
@@ -256,13 +256,13 @@ alg_type zonotopeVolume(const theta_type G[nTheta][nGens])
                 if (mask & (1 << j))
                 {
                     for (int i = 0; i < nTheta; i++)
-                        sub[i][col] = (alg_type)G[i][j];
+                        sub[i][col] = G[i][j];
                     col++;
                 }
             }
 
-            alg_type d = matDet(sub);
-            vol += (d < (alg_type)(0)) ? (alg_type)(-d) :d;
+            det_type d = matDet(sub);
+            vol += (d < 0) ? -d : d;
         }
     }
 

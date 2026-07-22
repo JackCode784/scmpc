@@ -53,6 +53,8 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_fixed<18,7> proj_type; // |cproj| <= nTheta*10.88, |gproj| <=  
    typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
    typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
+   typedef ap_ufixed<18,9> vol_type; // could be anything without normalization
+   typedef ap_fixed<18,10> det_type; // could be anything without normalization
       /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
       /* WIP */
@@ -78,6 +80,8 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_fixed<18,7> proj_type; // |cproj| <= nTheta*10.88, |gproj| <=  
    typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
    typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
+   typedef ap_ufixed<18,nTheta+1> vol_type; // with normalization, it surely is smaller than 2^nTheta (max possible initial zonotope volume)
+   typedef ap_fixed<18,nTheta+2> det_type; // with normalization, it can be proven that det is in [-2^(nTheta-1),2^(nTheta-1)]
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_ufixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
    typedef ap_ufixed<2,2> u_norm_coeff_type;  // 2 = 10.0...
@@ -158,6 +162,8 @@ typedef double       proj_type;
 typedef double       support_strip_offset_type;
 typedef double       tight_strip_center_type;
 typedef double       tight_strip_radius_type;
+typedef double       vol_type;
+typedef double       det_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;

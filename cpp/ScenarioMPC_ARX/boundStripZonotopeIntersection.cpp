@@ -193,7 +193,7 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
     #endif
 
     /* Search over generator candidates */
-    alg_type bestVol = zonotopeVolume(oldGens);
+    vol_type bestVol = zonotopeVolume(oldGens);
     int changed = 0;
     theta_type tmpGens[nTheta][nGens];
     
@@ -221,7 +221,7 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
                                     (theta_type)(oldGens[i][j] - ((theta_type)(gproj[j] * gprojinv) * oldGens[i][genId]));
                 }
             }
-            alg_type tmpVol = zonotopeVolume(tmpGens);
+            vol_type tmpVol = zonotopeVolume(tmpGens);
 
             // Change best zonotope if volume is smaller
             if(tmpVol < bestVol)
