@@ -72,8 +72,8 @@ int main(void)
     generateReference(yref, nSim);
 
     /* Measurement noise amplitude and values */
-    rand_type noise[nSim];
-    for(int i=0; i < nSim; i++) noise[i] = pseudoRandArx(); // noise in [-1, 1]
+    noise_type noise[nSim];
+    for(int i=0; i < nSim; i++) noise[i] = pseudoRandArx() * SIGMA_UNNORM; // noise in [-1, 1]
 
 #if defined(CONVERSIONS_MODE) || defined(FIXED)
     digital_output_type ySimDig[nSim];
@@ -115,7 +115,7 @@ int main(void)
         for(int i = 0; i < nTheta; i++)
             yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];
         #endif
-        yCurr += noise[k] * SIGMA_UNNORM;
+        yCurr += noise[k];
         ySim[k] = yCurr;
 
         /* --- Convert y(k) to digital ----------------------------------- */

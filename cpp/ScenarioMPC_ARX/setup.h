@@ -289,6 +289,9 @@ static const norm_input_type uNormOffset = (norm_input_type)((UNORMMIN*UMAX - UN
 
 static const input_weight_type R = RBaseLine * (yNormGain * yNormGain) / (uNormGain * uNormGain); // 2^(-10)
 
+/* Normalization, use "normalized" noise in output strip */
+const norm_noise_type sigma = (yNormGain*SIGMA_UNNORM);
+
 /* Pre-computed in MATLAB 
  * A better way to compute these offline is needed.
 */
@@ -301,6 +304,7 @@ static const strip_q_coeff_c0_type qmyInvDmc0 = 0.992262713557689; // includes '
 #error "Conversion variables for unknwon system could not be defined!"
 #endif
 #else
+const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
 static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
 static const norm_output_type YNORMMAX = YMAX;
 static const norm_output_type YNORMMIN = YMIN;

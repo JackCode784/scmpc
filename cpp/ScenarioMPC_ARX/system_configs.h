@@ -123,13 +123,6 @@ static const noise_type SIGMA_UNNORM = 0.02;
 
 #endif
 
-/* WIP */
-#ifndef NRMLZ
-const norm_noise_type sigma = SIGMA_UNNORM;
-#else
-const norm_noise_type sigma = (yNormGain*SIGMA_UNNORM);
-#endif
-
 #if ACTIVE_SYSTEM == SYSTEM_SIMPLE
     #define THETA_NOMINAL_INIT   2.0, -1.0, 1.0
     #define GENERATORS_INIT \

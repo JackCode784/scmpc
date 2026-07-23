@@ -1,9 +1,9 @@
 %% Plot output data from CPP MADS ARX implementation
-function plotOutputCpp(isVitisSim, plotSpecsBool)
+function plotOutputCpp(opts)
 clc;
 % close all;
 
-if isVitisSim
+if opts.isVitisSim
     d = "..\..\VitisProj\ARX\solution1\csim\build\";
     % d = dir(fullfile(cd, '**', 'output.txt'));
     % d = d(1).folder;
@@ -53,7 +53,7 @@ title('Normalized zonotope volume');
 % Latency/area occupation dependency on number of scenarios
 % Keeping the same FPGA board, same #pragma directives
 
-if plotSpecsBool
+if opts.plotSpecs
     plotBoardSpecs();
 end
 
