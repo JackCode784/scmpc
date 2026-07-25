@@ -50,7 +50,7 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    #ifndef NRMLZ
    typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
    typedef ap_fixed<18,5> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
-   typedef ap_fixed<18,7> proj_type; // |cproj| <= nTheta*10.88, same for |gproj|
+   typedef ap_fixed<18,2> proj_type; // |cproj| <= nTheta*0.44, same for |gproj|
    typedef ap_fixed<18,11> proj_inv_type; // inverse of proj_type
    typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
    typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
@@ -78,7 +78,7 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_ufixed<21,0> strip_q_coeff_c0_type;
    typedef ap_fixed<20,0> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
    typedef ap_fixed<18,4> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
-   typedef ap_fixed<18,7> proj_type; // |cproj| <= nTheta*10.88, |gproj| <=  
+   typedef ap_fixed<18,2> proj_type; // |cproj| <= nTheta*0.44, |gproj| <=  
    typedef ap_fixed<18,11> proj_inv_type; // inverse of proj_type
    typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
    typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
@@ -216,7 +216,7 @@ typedef output_type  digital_output_type;
 /** Normalized quantities types */
 typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_output_type;
 typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_input_type;
-typedef ap_fixed<18,5,AP_TRN,AP_SAT> phi_type;
+typedef ap_fixed<18,1,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<18,2,AP_SAT> strip_center_type;
 typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
 #else

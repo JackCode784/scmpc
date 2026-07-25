@@ -296,8 +296,8 @@ const norm_noise_type sigma = (yNormGain*SIGMA_UNNORM);
  * A better way to compute these offline is needed.
 */
 #if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-static const strip_coeff_type myInvDmDg[nTheta] = {5.544771541217021, 4.480002635302223, 0.848930417640874};
-static const strip_q_coeff_type qmyInvDmDg[nTheta] = {5.544771541217021,   4.480002635302223,   0.848930417640874}; // includes '-' sign for output sample prediction
+static const strip_coeff_type myInvDmDg[nTheta] = {0.221790861648681, 0.179200105412089, 0.033957216705635};
+static const strip_q_coeff_type qmyInvDmDg[nTheta] = {0.221790861648681,   0.179200105412089,   0.033957216705635}; // includes '-' sign for output sample prediction
 static const strip_coeff_c0_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
 static const strip_q_coeff_c0_type qmyInvDmc0 = 0.992262713557689; // includes '-' sign for output sample prediction
 #else
