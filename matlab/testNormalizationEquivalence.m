@@ -72,7 +72,7 @@ Dm = blkdiag(my * eye(na), mu * eye(nb));
 q = [qy * ones(na, 1); qu * ones(nb, 1)];
 
 % Compute constants for C code
-myInvDmDg = my * Dm \ Dg;
+myInvDmDg = my * (Dm \ Dg);
 qmyInvDmDg = -q' * myInvDmDg;
 myInvDmc0 = my * (Dm \ c0);
 qmyInvDmc0 = -q'*myInvDmc0;
