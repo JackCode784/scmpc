@@ -287,7 +287,7 @@ static const u_norm_inv_coeff_type uNormGainInverse = (u_norm_inv_coeff_type)((U
 static const norm_output_type yNormOffset = (norm_output_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
 static const norm_input_type uNormOffset = (norm_input_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
 
-static const input_weight_type R = RBaseLine * (yNormGain * yNormGain) / (uNormGain * uNormGain); // 2^(-10)
+static const input_weight_type R = RBaseLine * (yNormGain * yNormGain) / (uNormGain * uNormGain); // 2^(-3)
 
 /* Normalization, use "normalized" noise in output strip */
 const norm_noise_type sigma = (yNormGain*SIGMA_UNNORM);

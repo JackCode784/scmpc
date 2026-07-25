@@ -8,8 +8,8 @@ void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr)
     #endif
     
     if (yCurr > YNORMMAX)
-        cost[1] += (cost_type)(yCurr - YNORMMAX);
+        cost[1] += (yCurr - YNORMMAX);
 
     if (yCurr < YNORMMIN)
-        cost[1] += (cost_type)(YNORMMIN - yCurr);
+        cost[1] += (YNORMMIN - yCurr);
 }

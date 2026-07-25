@@ -233,7 +233,7 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
                     #ifdef PRAGMAS
                     #pragma HLS UNROLL
                     #endif
-                    newCenter[i] = oldCenter[i] + (theta_type)(tsc - cproj) * (theta_type)gprojinv * oldGens[i][genId];
+                    newCenter[i] = oldCenter[i] + (tsc - cproj) * gprojinv * oldGens[i][genId];
 
                     for(int j = 0; j < nGens; j++) 
                     {

@@ -104,7 +104,7 @@ void costFunctionArx(cost_type              cost[2],
     {
         if (currU[i] < UNORMMIN || currU[i] > UNORMMAX)
         {
-            cost[1] = 500;
+            cost[1] = 512; // power of two
             return;   /* early exit: no point computing a cost for an
                          infeasible input sequence                        */
         }
@@ -138,9 +138,9 @@ void costFunctionArx(cost_type              cost[2],
         /* --- Input term is difference with respect to previous sample -- */
         if (k < Nhor - 1){
             #ifndef FIXED
-            cost[0] += ((cost_type)(uSamples[0] - uSamples[1]) * R * (cost_type)(uSamples[0] - uSamples[1]));
+            cost[0] += (uSamples[0] - uSamples[1]) * R * (uSamples[0] - uSamples[1]);
             #else
-            cost[0] += ((cost_type)(uSamples[0] - uSamples[1]) * (cost_type)(uSamples[0] - uSamples[1])) >> -log2R;
+            cost[0] += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) >> -log2R;
             #endif
         }
         /* --- Scenario loop: constraint check + PL/AL cost contribution - */
@@ -156,7 +156,7 @@ void costFunctionArx(cost_type              cost[2],
 
             #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
             err_type err_s = yNext - yref;
-            scenariosContrib += (cost_type)(err_s * err_s);
+            scenariosContrib += (err_s * err_s);
             #endif
             updateConstraintViolation(cost, yNext);
         }
@@ -180,9 +180,9 @@ void costFunctionArx(cost_type              cost[2],
 
         /* Select stage weight Q or terminal weight P. */
         #ifndef FIXED
-        cost[0] += (cost_type)(((k < Nhor - 1) ? Q : P) * (err_nom * err_nom + scenariosContrib));
+        cost[0] += (((k < Nhor - 1) ? Q : P) * (err_nom * err_nom + scenariosContrib));
         #else
-        cost[0] += (cost_type)((err_nom * err_nom + scenariosContrib) << (k < Nhor - 1) ? log2Q : log2P);
+        cost[0] += ((err_nom * err_nom + scenariosContrib) << (k < Nhor - 1) ? log2Q : log2P);
         #endif
 
         /* --- Shift rolling-window buffers for next prediction step ---- */
