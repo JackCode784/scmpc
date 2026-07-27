@@ -120,8 +120,11 @@ typedef ap_fixed<18,2,AP_TRN,AP_SAT>  rand_type;
 /** Signed log2 frame-size exponent (small integer). */
 typedef ap_int<6>                                 mesh_exp_type;
 
-/** Elements of the poll-direction matrix D (values in {-1, 0, +1}). */
-typedef ap_int<12>                                direction_type;
+/** Elements of the poll-direction matrix D (integer values). */
+typedef ap_int<-FRAME_EXP_MIN+1>                                direction_type;
+
+/* Householder matrix entries data types in [-2,3] */
+typedef ap_fixed<18,3,AP_TRN,AP_SAT> householder_type;
 
 /**
  * Primary algorithmic type.
@@ -167,6 +170,7 @@ typedef double       tight_strip_radius_type;
 typedef double       vol_type;
 typedef double       det_type;
 typedef double       proj_inv_type;
+typedef double       householder_type;
 typedef double       cost_type;
 typedef double       rand_type;
 typedef double       mesh_type;

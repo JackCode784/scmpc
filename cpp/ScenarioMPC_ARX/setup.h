@@ -232,7 +232,7 @@ constexpr int FRAME_EXP_MIN = -12; /* frameExp minimum value */
   static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5;
 //   static const norm_input_type expC = 0.5;
 #else
-  static const norm_input_type expC = 0.5;
+  static const householder_type expC = 0.5;
 #endif
 
 /*

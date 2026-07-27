@@ -7,12 +7,6 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 	// #pragma HLS INLINE
 	#endif
 
-	#ifndef FIXED
-	/* mesh_type is double so subsequent shifts do not work */
-	// mesh size (2^meshIdx)
-	mesh_type mesh[nOpt];
-	#endif
-
 	// polling directions
 	direction_type directions[nOpt][2 * nOpt];
 
@@ -34,17 +28,17 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 		#endif
 
 		#ifndef FIXED
-		mesh[i] = 1;
+		mesh_type mesh = 1;
 
 		if (meshIdx[i] < 0)
 		{
 			for (int j = 0; j < -meshIdx[i]; j++)
-				mesh[i] /= 2;
+				mesh /= 2;
 		}
 		else
 		{
 			for (int j = 0; j < meshIdx[i]; j++)
-				mesh[i] *= 2;
+				mesh *= 2;
 		}
 		
 		for (int j = 0; j < 2 * nOpt; j++)
@@ -52,7 +46,7 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 			#ifdef PRAGMAS
 			// #pragma HLS UNROLL
 			#endif
-			pollMatrix[i][j] = currU[i] + (mesh[i] * directions[i][j]);
+			pollMatrix[i][j] = currU[i] + (mesh * directions[i][j]);
 		}
 		#else 
 		/* Using fixed point */
