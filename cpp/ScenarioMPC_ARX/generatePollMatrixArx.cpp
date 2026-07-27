@@ -7,8 +7,11 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 	// #pragma HLS INLINE
 	#endif
 
+	#ifndef FIXED
+	/* mesh_type is double so subsequent shifts do not work */
 	// mesh size (2^meshIdx)
 	mesh_type mesh[nOpt];
+	#endif
 
 	// polling directions
 	direction_type directions[nOpt][2 * nOpt];
@@ -30,25 +33,18 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 		// #pragma HLS UNROLL
 		#endif
 
-		mesh[i] = (mesh_type)1;
+		#ifndef FIXED
+		mesh[i] = 1;
 
-		if (meshIdx[i] < (mesh_exp_type)0)
+		if (meshIdx[i] < 0)
 		{
-			#ifdef FIXED
-			mesh[i] = mesh[i] >> (-meshIdx[i]);
-			#else
 			for (int j = 0; j < -meshIdx[i]; j++)
 				mesh[i] /= 2;
-			#endif
 		}
 		else
 		{
-			#ifdef FIXED
-			mesh[i] = mesh[i] << meshIdx[i];
-			#else
 			for (int j = 0; j < meshIdx[i]; j++)
 				mesh[i] *= 2;
-			#endif
 		}
 		
 		for (int j = 0; j < 2 * nOpt; j++)
@@ -56,7 +52,20 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 			#ifdef PRAGMAS
 			// #pragma HLS UNROLL
 			#endif
-			pollMatrix[i][j] = currU[i] + (norm_input_type)(mesh[i] * directions[i][j]);
+			pollMatrix[i][j] = currU[i] + (mesh[i] * directions[i][j]);
 		}
+		#else 
+		/* Using fixed point */
+		if(meshIdx[i] < 0)
+		{
+			for(int j = 0; j < 2 * nOpt; j++)
+				pollMatrix[i][j] = currU[i] + (directions[i][j] >> -meshIdx[i]);
+		}
+		else
+		{
+			for(int j = 0; j < 2 * nOpt; j++)
+				pollMatrix[i][j] = currU[i] + (directions[i][j] << meshIdx[i]);
+		}
+		#endif
 	}
 }

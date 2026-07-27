@@ -115,7 +115,7 @@ typedef ap_ufixed<32,  9, AP_RND_CONV, AP_SAT>  cost_type;
 typedef ap_fixed<18,2,AP_TRN,AP_SAT>  rand_type;
 
 /** Mesh-point coordinates (same range as input_type, unsigned). */
-typedef ap_fixed<36, 12, AP_TRN,      AP_WRAP>  mesh_type;
+// typedef ap_fixed<36, 12, AP_TRN,      AP_WRAP>  mesh_type;
 
 /** Signed log2 frame-size exponent (small integer). */
 typedef ap_int<6>                                 mesh_exp_type;
