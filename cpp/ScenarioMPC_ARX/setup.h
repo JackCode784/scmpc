@@ -45,7 +45,7 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-// #define FIXED            /* fixed point representation */
+//  #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 // #define PRNG_STDLIB         /* use rand() as prng */
@@ -490,16 +490,16 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl);
  */
 void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter, 
                                     const phi_type phi[nTheta],
-                                    const alg_type stripRadius,
+                                    const norm_noise_type stripRadius,
                                     const theta_type oldCenter[nTheta],
                                     const theta_type oldGens[nTheta][nGens], 
                                     theta_type newCenter[nTheta], 
                                     theta_type newGens[nTheta][nGens]);
 
 // Zonotope volume computation
-alg_type zonotopeVolume(const theta_type G[nTheta][nGens]);
+vol_type zonotopeVolume(const theta_type G[nTheta][nGens]);
 
 // (Generators) matrix determinant computation
-alg_type matDet(const theta_type M[nTheta][nTheta]);
+det_type matDet(const theta_type M[nTheta][nTheta]);
 
 #endif  /* CTRL_MODE == CTRL_MODE_PL */

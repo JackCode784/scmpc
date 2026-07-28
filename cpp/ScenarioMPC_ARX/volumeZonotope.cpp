@@ -74,7 +74,7 @@
 det_type matDet(const theta_type M[nTheta][nTheta])
 {
     /* Working copy */
-    theta_type A[nTheta][nTheta];
+    elim_type A[nTheta][nTheta];
 
     for (int i = 0; i < nTheta; i++)
     {
@@ -104,14 +104,14 @@ det_type matDet(const theta_type M[nTheta][nTheta])
 
         /* --- Partial pivoting: find row with largest |A[i][k]|, i >= k -- */
         int      pivotRow = k;
-        theta_type pivotAbs = (A[k][k] < 0) ? -A[k][k] : A[k][k];
+        elim_type pivotAbs = (A[k][k] < 0) ? -A[k][k] : A[k][k];
 
         for (int i = k + 1; i < nTheta; i++)
         {
             #ifdef PRAGMAS
             #pragma HLS UNROLL
             #endif
-            theta_type absVal = (A[i][k] < 0) ? (-A[i][k]) : A[i][k];
+            elim_type absVal = (A[i][k] < 0) ? (-A[i][k]) : A[i][k];
             if (absVal > pivotAbs)
             {
                 pivotAbs = absVal;
@@ -127,7 +127,7 @@ det_type matDet(const theta_type M[nTheta][nTheta])
                 #ifdef PRAGMAS
                 #pragma HLS UNROLL
                 #endif
-                theta_type tmp  = A[k][j];
+                elim_type tmp  = A[k][j];
                 A[k][j]       = A[pivotRow][j];
                 A[pivotRow][j] = tmp;
             }
@@ -144,7 +144,7 @@ det_type matDet(const theta_type M[nTheta][nTheta])
 
         /* --- Eliminate rows below pivot -------------------------------- */
         // Alternative
-        // theta_type partialFactor = 1 / A[k][k];
+        // elim_type partialFactor = 1 / A[k][k];
         for (int i = k + 1; i < nTheta; i++)
         {
             #ifdef PRAGMAS

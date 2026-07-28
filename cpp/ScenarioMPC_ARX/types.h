@@ -34,7 +34,7 @@
    ====================================================================== */
 
 #ifdef FIXED
-#define TOTAL_LENGTH 18
+#define W 18
 /* ---------------------------------------------------------------------- */
 /*  Vitis HLS fixed-point types                                           */
 /* ---------------------------------------------------------------------- */
@@ -44,62 +44,57 @@
  * Taken care of by MATLAB?
  */
 #if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-typedef ap_fixed<18,5> output_type; // [YMIN-SIGMA_UNNORM, YMAX+SIGMA_UNNORM] = [-0.02, 10.02]
-typedef ap_ufixed<18,1> input_type; // [UMIN, UMAX] = [0, 1]
+typedef ap_fixed<18,5,AP_RND_CONV,AP_SAT> output_type; // [YMIN-SIGMA_UNNORM, YMAX+SIGMA_UNNORM] = [-0.02, 10.02]
+typedef ap_ufixed<18,1,AP_RND_CONV,AP_SAT> input_type; // [UMIN, UMAX] = [0, 1]
 typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    #ifndef NRMLZ
-   typedef ap_fixed<18,5> theta_type; // System-dependent theta dynamic range
-   typedef ap_fixed<18,5> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
-   typedef ap_fixed<18,2> proj_type; // |cproj| <= nTheta*0.44, same for |gproj|
-   typedef ap_fixed<18,11> proj_inv_type; // inverse of proj_type
-   typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
-   typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
+   /* No normalization */
+   typedef ap_fixed<18,5,AP_RND_CONV,AP_SAT> theta_type; // System-dependent theta dynamic range
+   typedef ap_fixed<18,5> output_strip_offset_type; // System-dependent output strip offset [SIGMA_UNNORM - YMAX, SIGMA_UNNORM+YMAX]=[-9.98, 10.02]
+   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> proj_type; // |cproj| <= nTheta*..., same for |gproj|
+   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
+   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
+   typedef ap_fixed<18,9> tight_strip_center_type; // difference of tight strip offset
    typedef ap_ufixed<18,9> vol_type; // could be anything without normalization
    typedef ap_fixed<18,10> det_type; // could be anything without normalization
+   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> elim_type; // possibly almost-singular matrix, factor variable, pivotAbs in matDet
       /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
-      /* WIP */
-      typedef ap_ufixed<10,9> output_adc_coeff_type; // positive gain & needs 9 bits for 409.5
-      typedef ap_ufixed<12,12> input_adc_coeff_type; // positive gain & needs 12 bits for 4095.
-      typedef ap_ufixed<20,0> output_dac_coeff_type; // 2.442442...e-3
-      typedef ap_ufixed<12,0> input_dac_coeff_type; // 2.442442...e-4
+      /* No normalization, yes ADC/DAC conversions */
       typedef output_dac_coeff_type dig2ctrl_type; // corresponds to YDACGain
       typedef input_adc_coeff_type ctrl2dig_type; // corresponds to UADCGain
       #else
-      /* WIP */
+      /* No normalization, no ADC/DAC conversions */
       typedef ap_ufixed<1,1> dig2ctrl_type; // 1
       typedef ap_ufixed<1,1> ctrl2dig_type; // 0
       #endif
    #else
-   typedef ap_fixed<18,2, AP_SAT> theta_type;
-   typedef ap_ufixed<23,3> strip_coeff_type;
-   typedef ap_ufixed<23,3> strip_q_coeff_type;
-   typedef ap_fixed<22,3> strip_coeff_c0_type;
-   typedef ap_ufixed<21,0> strip_q_coeff_c0_type;
-   typedef ap_fixed<20,0> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
-   typedef ap_fixed<18,4> output_strip_offset_type; // System-dependent output strip offset [-9.98, 10.02]
-   typedef ap_fixed<18,2> proj_type; // |cproj| <= nTheta*0.44, |gproj| <=  
-   typedef ap_fixed<18,11> proj_inv_type; // inverse of proj_type
-   typedef ap_fixed<18,9> support_strip_offset_type; // sum of nGen + 1 proj_type variables
-   typedef ap_fixed<19,10> tight_strip_center_type; // difference of tight strip offset
+   typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> theta_type;
+   /* MATLAB-computed offline normalization constants */
+   typedef ap_ufixed<23,3> strip_coeff_type;       // myInvDmDg
+   typedef ap_ufixed<23,3> strip_q_coeff_type;     // qmyInvDmDg
+   typedef ap_fixed<22,3> strip_coeff_c0_type;     // myInvDmc0
+   typedef ap_ufixed<21,0> strip_q_coeff_c0_type;  // qmyInvDmc0
+
+   typedef ap_fixed<18,-2> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
+   typedef ap_fixed<18,4,AP_RND_CONV,AP_SAT> output_strip_offset_type; // [-my*SIGMA_UNNORM-YNORMMAX,my*SIGMA_UNNORM+YNORMMAX]
+   typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> proj_type; // |cproj| <= nTheta*0.44, |gproj| <=  
+   typedef ap_fixed<18,11,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
+   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
+   typedef ap_fixed<19,10,AP_RND_CONV,AP_SAT> tight_strip_center_type; // difference of tight strip offset
    typedef ap_ufixed<18,nTheta+1> vol_type; // with normalization, it surely is smaller than 2^nTheta (max possible initial zonotope volume)
    typedef ap_fixed<18,nTheta+2> det_type; // with normalization, it can be proven that det is in [-2^(nTheta-1),2^(nTheta-1)]
+   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> elim_type; // possibly almost-singular matrix, factor variable, pivotAbs in matDet
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_ufixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
    typedef ap_ufixed<2,2> u_norm_coeff_type;  // 2 = 10.0...
    typedef ap_ufixed<1,0> u_norm_inv_coeff_type;  // 0.5 = 0.10...
-      /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
-      /* output_adc_coeff_type, input_adc_coeff_type same as before */
-      /* output_dac_coeff_type, input_dac_coeff_type same as before */
-      typedef ap_ufixed<10,9> output_adc_coeff_type; // 9 bits for 409.5
-      typedef ap_ufixed<12,12> input_adc_coeff_type; // 12 bits for 4095.
-      typedef ap_ufixed<20,0> output_dac_coeff_type; // 2.442442...e-3
-      typedef ap_ufixed<12,0> input_dac_coeff_type; // 2.442442...e-4
-      typedef ap_ufixed<11,0,AP_RND_CONV,AP_SAT> dig2ctrl_type; // 4.884884...e-4
+      /* Yes normalization & ADC/DAC conversions */
+      typedef ap_ufixed<11,-9,AP_RND_CONV,AP_SAT> dig2ctrl_type; // 4.884884...e-4
       typedef ap_ufixed<12,11,AP_RND_CONV,AP_SAT> ctrl2dig_type; // 2047.5
       #else
-      /* WIP */
+      /* Yes normalization, no ADC/DAC conversions */
       typedef y_norm_coeff_type dig2ctrl_type;
       typedef u_norm_inv_coeff_type ctrl2dig_type;
       #endif
@@ -126,13 +121,11 @@ typedef ap_int<-FRAME_EXP_MIN+1>                                direction_type;
 /* Householder matrix entries data types in [-2,3] */
 typedef ap_fixed<18,3,AP_TRN,AP_SAT> householder_type;
 
-/**
+/*
  * Primary algorithmic type.
- * Format: ap_fixed<18, 5> - 18 total bits, 5 integer bits.
- * Range ~ [-16, +16), resolution ~ 7.6 × 10⁻⁵.
  * Increase the integer-bit count if signal ranges exceed +/-16.
  */
-typedef ap_fixed <18,  5>                         alg_type;
+// typedef ap_fixed <18,  5>                         alg_type;
 
 /** Fractional type used inside the pseudo-random number generator. */
 typedef ap_ufixed<16,0>                         frac_type;
@@ -169,6 +162,7 @@ typedef double       tight_strip_center_type;
 typedef double       tight_strip_radius_type;
 typedef double       vol_type;
 typedef double       det_type;
+typedef double       elim_type;
 typedef double       proj_inv_type;
 typedef double       householder_type;
 typedef double       cost_type;
@@ -188,23 +182,17 @@ typedef double       frac_type;
 typedef unsigned int u16_type;
 #endif  /* FIXED */
 
-/* ======================================================================
-   Semantic aliases.
-   All resolve to alg_type; the distinct names document the ROLE of each
-   variable at every call site.  Use these everywhere - never use
-   alg_type, double, or ap_fixed<> directly outside this file.
-   ====================================================================== */
-typedef alg_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
-typedef alg_type  norm_conv_type;
-typedef support_strip_offset_type tight_strip_offset_type; // conservative, intersection of output and support strip
-typedef tight_strip_center_type tight_strip_radius_type; // they are sum/diff of same things
-
 /* Only derives digital_input_type and digital_output_type */
 #ifdef CONVERSIONS_MODE
 #ifdef FIXED
 /** Raw 12-bit ADC/DAC sample, integer range {0, ..., 4095}. */
 typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_input_type;
 typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_output_type;
+/* Conversions constants */
+typedef ap_ufixed<10,9> output_adc_coeff_type; // 9 bits for 409.5
+typedef ap_ufixed<12,12> input_adc_coeff_type; // 12 bits for 4095.
+typedef ap_ufixed<20,0> output_dac_coeff_type; // 2.442442...e-3
+typedef ap_ufixed<12,-10> input_dac_coeff_type; // 2.442442...e-4
 #else
 typedef int          digital_input_type;   /**< ADC raw integer {0,...,4095} */
 typedef int          digital_output_type;
@@ -221,7 +209,7 @@ typedef output_type  digital_output_type;
 typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_output_type;
 typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_input_type;
 typedef ap_fixed<18,1,AP_TRN,AP_SAT> phi_type;
-typedef ap_fixed<18,2,AP_SAT> strip_center_type;
+typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> strip_center_type;
 typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
 #else
 typedef double norm_noise_type;
@@ -239,4 +227,7 @@ typedef ap_ufixed<5,4> input_weight_type; /* R = RBaseline = 12.5 */
 #endif
 #endif
 
-typedef norm_output_type  err_type;      /**< Tracking error  e(k) = y(k) - y_ref. */
+/* Aliases */
+typedef support_strip_offset_type tight_strip_offset_type; // conservative, intersection of output and support strip
+typedef tight_strip_center_type tight_strip_radius_type; // they are sum/diff of same things
+typedef norm_output_type  err_type;      // Tracking error  e(k) = y(k) - y_ref

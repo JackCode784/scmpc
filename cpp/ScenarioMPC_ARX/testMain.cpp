@@ -66,7 +66,7 @@ int main(void)
     output_type ySim[nSim];
     input_type  uSim[nSim];
     output_type yref[nSim] = {0}; // output follows this
-    alg_type volumes[nSim];
+    vol_type volumes[nSim];
 
     // generate reference trajectory based on ACTIVE_SYSTEM
     generateReference(yref, nSim);
@@ -105,7 +105,7 @@ int main(void)
 
         // Current zonotope volume computation
         volumes[k] = matDet(thetaGens);
-        volumes[k] = (volumes[k] < 0) ? (alg_type)(-volumes[k]) : volumes[k];
+        volumes[k] = (volumes[k] < 0) ? (-volumes[k]) : volumes[k];
 
         output_type yCurr = 0;
         #ifdef NRMLZ
