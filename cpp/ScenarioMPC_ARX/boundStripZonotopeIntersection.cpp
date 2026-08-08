@@ -62,80 +62,80 @@
  *
  *  THERE IS ONE DIVISION HERE!!!
    ====================================================================== */
-void boundStripZonotopeIntersection(const output_type stripCenter, 
-                                    const output_type yPast[na], 
-                                    const input_type uSamples[nb + nk - 1], 
-                                    const theta_type oldCenter[nTheta],
-                                    const theta_type oldGens[nTheta][nTheta], 
-                                    theta_type newCenter[nTheta], 
-                                    theta_type newGens[nTheta][nTheta + 1])
-{
-    // Lambda computation
-    alg_type lambda[nTheta];
-    alg_type tmp[nTheta][nTheta];
-    alg_type div = (alg_type)sigma * (alg_type)sigma;
+// void boundStripZonotopeIntersection(const output_type stripCenter, 
+//                                     const output_type yPast[na], 
+//                                     const input_type uSamples[nb + nk - 1], 
+//                                     const theta_type oldCenter[nTheta],
+//                                     const theta_type oldGens[nTheta][nTheta], 
+//                                     theta_type newCenter[nTheta], 
+//                                     theta_type newGens[nTheta][nTheta + 1])
+// {
+//     // Lambda computation
+//     alg_type lambda[nTheta];
+//     alg_type tmp[nTheta][nTheta];
+//     alg_type div = (alg_type)sigma * (alg_type)sigma;
 
-    for (int i = 0; i < nTheta; i++)
-    {
-        // newCenter[i] = oldCenter[i]; // useful afterwards
-        lambda[i] = 0;
+//     for (int i = 0; i < nTheta; i++)
+//     {
+//         // newCenter[i] = oldCenter[i]; // useful afterwards
+//         lambda[i] = 0;
 
-        for (int j = 0; j < nTheta; j++)
-        {
-            tmp[i][j] = 0;
-            for (int k = 0; k < nTheta; k++)
-                tmp[i][j] += (alg_type)(oldGens[i][k] * oldGens[j][k]);
-        }
+//         for (int j = 0; j < nTheta; j++)
+//         {
+//             tmp[i][j] = 0;
+//             for (int k = 0; k < nTheta; k++)
+//                 tmp[i][j] += (alg_type)(oldGens[i][k] * oldGens[j][k]);
+//         }
 
-        for (int j = 0; j < nTheta; j++)
-        {
-            // From most recent to oldest sample
-            lambda[i] += tmp[i][j] * 
-                        ((j < na) ? (alg_type)yPast[j] 
-                                : (alg_type)uSamples[j - na + nk - 1]);
-        }
-    }
+//         for (int j = 0; j < nTheta; j++)
+//         {
+//             // From most recent to oldest sample
+//             lambda[i] += tmp[i][j] * 
+//                         ((j < na) ? (alg_type)yPast[j] 
+//                                 : (alg_type)uSamples[j - na + nk - 1]);
+//         }
+//     }
 
-    for (int i = 0; i < nTheta; i++)
-    {
-        div += ((i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i - na + nk - 1]) * lambda[i];
-    }
+//     for (int i = 0; i < nTheta; i++)
+//     {
+//         div += ((i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i - na + nk - 1]) * lambda[i];
+//     }
 
-    for (int i = 0; i < nTheta; i++) 
-        lambda[i] /= div;
+//     for (int i = 0; i < nTheta; i++) 
+//         lambda[i] /= div;
 
-    /* New center */
-    alg_type term = stripCenter;
-    for (int i = 0; i < nTheta; i++)
-    {
-        term -= ((i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i - na + nk - 1]) * (alg_type)oldCenter[i];
-    }
+//     /* New center */
+//     alg_type term = stripCenter;
+//     for (int i = 0; i < nTheta; i++)
+//     {
+//         term -= ((i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i - na + nk - 1]) * (alg_type)oldCenter[i];
+//     }
 
-    for (int i = 0; i < nTheta; i++)
-        newCenter[i] = (theta_type)(lambda[i] * term) + oldCenter[i];
+//     for (int i = 0; i < nTheta; i++)
+//         newCenter[i] = (theta_type)(lambda[i] * term) + oldCenter[i];
         
-    /* New generators */
-    for (int i = 0; i < nTheta; i++)
-    {
-        newGens[i][nTheta] = (theta_type)(lambda[i] * (alg_type)sigma);
+//     /* New generators */
+//     for (int i = 0; i < nTheta; i++)
+//     {
+//         newGens[i][nTheta] = (theta_type)(lambda[i] * (alg_type)sigma);
 
-        for (int j = 0; j < nTheta; j++)
-        {
-            newGens[i][j] = 0; // preparation for upcoming for loop
-            tmp[i][j] = (i == j) ? (alg_type)1 : (alg_type)0;
-            tmp[i][j] -= lambda[i] * 
-                        ((j < na) ? (alg_type)yPast[j] : (alg_type)uSamples[j - na + nk - 1]);
-        }
+//         for (int j = 0; j < nTheta; j++)
+//         {
+//             newGens[i][j] = 0; // preparation for upcoming for loop
+//             tmp[i][j] = (i == j) ? (alg_type)1 : (alg_type)0;
+//             tmp[i][j] -= lambda[i] * 
+//                         ((j < na) ? (alg_type)yPast[j] : (alg_type)uSamples[j - na + nk - 1]);
+//         }
 
-        for (int j = 0; j < nTheta; j++)
-        {
-            for (int k = 0; k < nTheta; k++)
-            {
-                newGens[i][j] += (theta_type)(tmp[i][k] * (alg_type)oldGens[k][j]);
-            }
-        }
-    }
-}
+//         for (int j = 0; j < nTheta; j++)
+//         {
+//             for (int k = 0; k < nTheta; k++)
+//             {
+//                 newGens[i][j] += (theta_type)(tmp[i][k] * (alg_type)oldGens[k][j]);
+//             }
+//         }
+//     }
+// }
 
 /* 
     New Bravo et al. 2006 algorithm for zonotope update.
@@ -172,15 +172,15 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
         gproj[i] = 0;
         for(int j = 0; j < nTheta; j++) gproj[i] += phi[j] * oldGens[j][i];
 
-        supStripOffset[0] += (gproj[i] < 0) ? (-gproj[i]) : gproj[i];
+        supStripOffset[0] += (gproj[i] < 0) ? support_strip_offset_type(-gproj[i]) : support_strip_offset_type(gproj[i]);
     }
     supStripOffset[1] = supStripOffset[0] - cproj;
     supStripOffset[0] += cproj;
     
     /* Tight strip */
     tight_strip_offset_type tightStripOffset[2] = {
-        (stripOffset[0] < supStripOffset[0]) ? stripOffset[0] : supStripOffset[0],
-        (stripOffset[1] < supStripOffset[1]) ? stripOffset[1] : supStripOffset[1]
+        (stripOffset[0] < supStripOffset[0]) ? tight_strip_offset_type(stripOffset[0]) : tight_strip_offset_type(supStripOffset[0]),
+        (stripOffset[1] < supStripOffset[1]) ? tight_strip_offset_type(stripOffset[1]) : tight_strip_offset_type(supStripOffset[1])
     };
     tight_strip_center_type tsc = tightStripOffset[0] - tightStripOffset[1];
     tight_strip_radius_type tsr = tightStripOffset[0] + tightStripOffset[1];
@@ -217,8 +217,8 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
                     #pragma HLS UNROLL
                     #endif
                     tmpGens[i][j] = (j == genId) ? 
-                                    ((tsr * gprojinv) * oldGens[i][j]) :
-                                    (oldGens[i][j] - ((gproj[j] * gprojinv) * oldGens[i][genId]));
+                                    theta_type((tsr * gprojinv) * oldGens[i][j]) :
+                                    theta_type(oldGens[i][j] - ((gproj[j] * gprojinv) * oldGens[i][genId]));
                 }
             }
             vol_type tmpVol = zonotopeVolume(tmpGens);
