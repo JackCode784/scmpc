@@ -34,7 +34,6 @@
    ====================================================================== */
 
 #ifdef FIXED
-#define W 18
 /* ---------------------------------------------------------------------- */
 /*  Vitis HLS fixed-point types                                           */
 /* ---------------------------------------------------------------------- */
@@ -82,8 +81,8 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_fixed<18,11,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
    typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
    typedef ap_fixed<19,10,AP_RND_CONV,AP_SAT> tight_strip_center_type; // difference of tight strip offset
-   typedef ap_ufixed<18,nTheta+1> vol_type; // with normalization, it surely is smaller than 2^nTheta (max possible initial zonotope volume)
-   typedef ap_fixed<18,nTheta+2> det_type; // with normalization, it can be proven that det is in [-2^(nTheta-1),2^(nTheta-1)]
+   typedef ap_ufixed<18,3+1> vol_type; // with normalization, it surely is smaller than 2^nTheta (max possible initial zonotope volume)
+   typedef ap_fixed<18,3+2> det_type; // with normalization, it can be proven that det is in [-2^(nTheta-1),2^(nTheta-1)]
    typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> elim_type; // possibly almost-singular matrix, factor variable, pivotAbs in matDet
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_ufixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
@@ -116,7 +115,7 @@ typedef ap_fixed<18,2,AP_TRN,AP_SAT>  rand_type;
 typedef ap_int<6>                                 mesh_exp_type;
 
 /** Elements of the poll-direction matrix D (integer values). */
-typedef ap_int<-FRAME_EXP_MIN+1>                                direction_type;
+typedef ap_int<13+1>                                direction_type;
 
 /* Householder matrix entries data types in [-2,3] */
 typedef ap_fixed<18,3,AP_TRN,AP_SAT> householder_type;
@@ -135,7 +134,7 @@ typedef ap_ufixed<16,0>                         frac_type;
 // typedef ap_ufixed<32,32> u16_type;
 typedef ap_uint<16>                         u16_type;
 
-/* Data type for Q, P = 4 weight matrices */
+/* Data type for outputWeight, terminalOutputWeight = 4 weight matrices */
 typedef ap_ufixed<2,2> output_weight_type;
 #else
 /* ---------------------------------------------------------------------- */

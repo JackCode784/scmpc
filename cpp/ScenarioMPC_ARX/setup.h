@@ -45,7 +45,7 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-//  #define FIXED            /* fixed point representation */
+  #define FIXED1q            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 // #define PRNG_STDLIB         /* use rand() as prng */
@@ -193,15 +193,15 @@ static_assert(Nhor - nk >= NhorU - 1,
 /* ======================================================================
    MPC COST-FUNCTION WEIGHTS
    ======================================================================
-   Stage cost per step:  l(y, u) = Q*(y - y_ref)^2 + R*u^2
-   Terminal cost:        V_f(y)   = P*(y(k+N) - y_ref)^2
+   Stage cost per step:  l(y, u) = outputWeight*(y - y_ref)^2 + R*u^2
+   Terminal cost:        V_f(y)   = terminalOutputWeight*(y(k+N) - y_ref)^2
    ====================================================================== */
-static const output_weight_type P =  4.0;   /* terminal output weight */
-static const output_weight_type Q =  4.0;   /* stage   output weight  */
+static const output_weight_type terminalOutputWeight =  4.0;   /* terminal output weight */
+static const output_weight_type outputWeight =  4.0;   /* stage   output weight  */
 static const input_weight_type RBaseLine = 12.5; /* so that R = 0.125 = 2^(-3) in NRMLZ */
 /* 
     log2X are used for shift operations instead of multiplications in
-    cost function computation. These should be consistent with the Q, P, R
+    cost function computation. These should be consistent with the outputWeight, terminalOutputWeight, R
     values and with R value in particular since it depends on FIXED and NRMLZ
     operation modes.
 */

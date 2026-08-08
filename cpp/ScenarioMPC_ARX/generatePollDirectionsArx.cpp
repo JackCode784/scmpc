@@ -5,7 +5,7 @@
 #include "hls_math.h"
 #endif
 
-void generateHouseholderMatrix(const rand_type v[nOpt], norm_input_type H[nOpt][nOpt]);
+void generateHouseholderMatrix(const rand_type v[nOpt], householder_type H[nOpt][nOpt]);
 
 // Genearte a matrix of directions to be summed to the current point in MADS iteration
 void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], direction_type directions[nOpt][2 * nOpt])
@@ -47,12 +47,12 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 			directions[i][j + nOpt] = -B[i][j];
 		}
 		#else
-		// B[i][j] = (direction_type)(hls::round(mesh[i] * H[i][j]));
-		B[i][j] = hls::round((frameMeshDiff[i] + MADS_C < 0) ? H[i][j] >> -frameMeshDiff[i] - MADS_C : H[i][j] << frameMeshDiff[i] + MADS_C);
-
+		
 		for(int j = 0; j < nOpt; j++)
 		{
-			directions[i][j] = B[i][j];
+			// B[i][j] = (direction_type)(hls::round(mesh[i] * H[i][j]));
+			B[i][j] = (frameMeshDiff[i] + MADS_C < 0) ? H[i][j] >> -(frameMeshDiff[i]+MADS_C) : H[i][j] << frameMeshDiff[i]+MADS_C;
+				directions[i][j] = B[i][j];
 			directions[i][j + nOpt] = -B[i][j];
 		}
 		#endif
@@ -60,7 +60,7 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 }
 
 // generate the Householder matrix starting with a random vector
-void generateHouseholderMatrix(const rand_type v[nOpt], norm_input_type H[nOpt][nOpt])
+void generateHouseholderMatrix(const rand_type v[nOpt], householder_type H[nOpt][nOpt])
 {
 	//	input_type norm = 0;
 	//
@@ -97,8 +97,8 @@ void generateHouseholderMatrix(const rand_type v[nOpt], norm_input_type H[nOpt][
 		for(int j = 0; j < nOpt; j++)
 		{
 			// Saturates householder matrix entries
-			H[i][j] = (H[i][j] > expC) ? expC :
-						((H[i][j] < -expC) ? -expC : H[i][j]);
+			H[i][j] = (H[i][j] > expC) ? householder_type(expC) :
+						((H[i][j] < -expC) ? householder_type(-expC) : H[i][j]);
 			// H[i][j] /= hMax[j];
 		}
 	}

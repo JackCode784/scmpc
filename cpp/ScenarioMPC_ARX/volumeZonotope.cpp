@@ -104,14 +104,14 @@ det_type matDet(const theta_type M[nTheta][nTheta])
 
         /* --- Partial pivoting: find row with largest |A[i][k]|, i >= k -- */
         int      pivotRow = k;
-        elim_type pivotAbs = (A[k][k] < 0) ? -A[k][k] : A[k][k];
+        elim_type pivotAbs = (A[k][k] < 0) ? elim_type(-A[k][k]) : A[k][k];
 
         for (int i = k + 1; i < nTheta; i++)
         {
             #ifdef PRAGMAS
             #pragma HLS UNROLL
             #endif
-            elim_type absVal = (A[i][k] < 0) ? (-A[i][k]) : A[i][k];
+            elim_type absVal = (A[i][k] < 0) ? elim_type(-A[i][k]) : A[i][k];
             if (absVal > pivotAbs)
             {
                 pivotAbs = absVal;
@@ -262,7 +262,7 @@ vol_type zonotopeVolume(const theta_type G[nTheta][nGens])
             }
 
             det_type d = matDet(sub);
-            vol += (d < 0) ? -d : d;
+            vol += (d < 0) ? vol_type(-d) : vol_type(d);
         }
     }
 

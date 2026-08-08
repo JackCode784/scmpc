@@ -66,7 +66,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
 
 
     /*
-        Idea: scenariosContrib accumulates all scenarios + nominal system contributions for all k=0,..., Nhor-1, then the scenarios strictly should be divided by Nscen (or equivalently shifted by LOG2NSCEN) and then everything (nominal system too) should be multiplied by Q (or P). This could cause overflow if error is large or Nscen is high (=> saturation?). The loops from k=0,...,NhorU-1 and k=NhorU,...,Nhor-1 cannot be parallelized since the latter depends on the former (output initial conditions must be computed and updated at every step). Also, since the contribution of the nominal system and the scenarios differ by a division by Nscen (but share the multiplication by Q), they should be computed separately and then summed. 
+        Idea: scenariosContrib accumulates all scenarios + nominal system contributions for all k=0,..., Nhor-1, then the scenarios strictly should be divided by Nscen (or equivalently shifted by LOG2NSCEN) and then everything (nominal system too) should be multiplied by outputWeight (or terminalOutputWeight). This could cause overflow if error is large or Nscen is high (=> saturation?). The loops from k=0,...,NhorU-1 and k=NhorU,...,Nhor-1 cannot be parallelized since the latter depends on the former (output initial conditions must be computed and updated at every step). Also, since the contribution of the nominal system and the scenarios differ by a division by Nscen (but share the multiplication by outputWeight), they should be computed separately and then summed. 
     */
    
     // Compute cost during control horizon
@@ -111,7 +111,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
         // Update cost (only nominal system contribution)
         yNext = computeArxOutput(yPastCurr, uSamples, thetaCenter);
         err = yNext - yref;
-        cost[0] += Q * (err * err + scenariosContrib);
+        cost[0] += outputWeight * (err * err + scenariosContrib);
 
         // Update initial conditions for next output
         for (int i = na - 1; i > 0; i--)
@@ -166,7 +166,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
         // Update cost (only nominal system contribution)
         yNext = computeArxOutput(yPastCurr, uSamples, thetaCenter);
         err = yNext - yref;
-        cost[0] += Q * (err * err + scenariosContrib);
+        cost[0] += outputWeight * (err * err + scenariosContrib);
 
         // Update initial conditions for next output
         for (int i = na - 1; i > 0; i--)
@@ -178,7 +178,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
     }
 
     /*
-     *   Last time instant (use P matrix)
+     *   Last time instant (use terminalOutputWeight matrix)
      */
     // uSamples[0] = uPastCurr[0];
 
@@ -216,7 +216,7 @@ void costFunctionArxOptimized(cost_type cost[2], const output_type yPast[na], co
     // Update cost (only nominal system contribution)
     yNext = computeArxOutput(yPastCurr, uSamples, thetaCenter);
     err = yNext - yref;
-    cost[0] += err * P * err + Q * scenariosContrib;
+    cost[0] += err * terminalOutputWeight * err + outputWeight * scenariosContrib;
 
     return;
 }

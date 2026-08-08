@@ -105,12 +105,12 @@ int main(void)
 
         // Current zonotope volume computation
         volumes[k] = matDet(thetaGens);
-        volumes[k] = (volumes[k] < 0) ? (-volumes[k]) : volumes[k];
+        volumes[k] = (volumes[k] < 0) ? (vol_type)(-volumes[k]) : volumes[k];
 
         output_type yCurr = 0;
         #ifdef NRMLZ
         for(int i = 0; i < nTheta; i++) 
-            yCurr += ((i < na) ? (yHist[i] - yNormOffset)/yNormGain : (uHist[i-na+nk-1] - uNormOffset)/uNormGain) * thetaTrue[i];
+            yCurr += ((i < na) ? (output_type)((yHist[i] - yNormOffset)/yNormGain) : (output_type)((uHist[i-na+nk-1] - uNormOffset)/uNormGain)) * thetaTrue[i];
         #else
         for(int i = 0; i < nTheta; i++)
             yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];

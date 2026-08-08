@@ -6,10 +6,10 @@
  * --------------
  * The MPC objective over a prediction horizon of N steps is:
  *
- *   J = sum_{k=0}^{N-2} [ u(k)*R*u(k)  +  Q*(ypred_nom(k+1) - y_ref)^2
- *                                      +  Q * scenariosContrib(k+1) ]
- *     +                  P*(ypred_nom(N) - y_ref)^2
- *     +                  Q * scenariosContrib(N)
+ *   J = sum_{k=0}^{N-2} [ u(k)*R*u(k)  +  outputWeight*(ypred_nom(k+1) - y_ref)^2
+ *                                      +  outputWeight * scenariosContrib(k+1) ]
+ *     +                  terminalOutputWeight*(ypred_nom(N) - y_ref)^2
+ *     +                  outputWeight * scenariosContrib(N)
  *
  * where:
  *   ypred_nom(k+1)       - one-step prediction using the nominal parameter
@@ -20,7 +20,7 @@
  *
  * The input cost term u*R*u is included for steps k = 0 ... N-2 (i.e. the
  * last input u(k = N-1) is not penalised separately because the terminal
- * cost P already handles the final output).
+ * cost terminalOutputWeight already handles the final output).
  *
  * CONTROL vs PREDICTION HORIZON
  * ------------------------------
@@ -117,8 +117,8 @@ void costFunctionArx(cost_type              cost[2],
      * All Nhor steps share the same structure; the only differences are:
      *   * k < NhorU   : uSamples[0] = currU[k]  (within control horizon)
      *   * k >= NhorU  : uSamples[0] unchanged    (zero-order hold)
-     *   * k < Nhor-1  : terminal weight = Q      (stage cost)
-     *   * k = Nhor-1  : terminal weight = P      (terminal cost, no input term)
+     *   * k < Nhor-1  : terminal weight = outputWeight      (stage cost)
+     *   * k = Nhor-1  : terminal weight = terminalOutputWeight      (terminal cost, no input term)
      *
      * Encoding these as conditional expressions inside a single loop avoids
      * the three near-identical code blocks in the original and makes the
@@ -178,9 +178,9 @@ void costFunctionArx(cost_type              cost[2],
                                                    thetaCenter);
         err_type err_nom = yNext_nom - yref;
 
-        /* Select stage weight Q or terminal weight P. */
+        /* Select stage weight outputWeight or terminal weight terminalOutputWeight. */
         #ifndef FIXED
-        cost[0] += (((k < Nhor - 1) ? Q : P) * (err_nom * err_nom + scenariosContrib));
+        cost[0] += (((k < Nhor - 1) ? outputWeight : terminalOutputWeight) * (err_nom * err_nom + scenariosContrib));
         #else
         cost[0] += ((err_nom * err_nom + scenariosContrib) << (k < Nhor - 1) ? log2Q : log2P);
         #endif
