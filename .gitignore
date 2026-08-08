@@ -276,5 +276,9 @@ solution*/impl/ip/
 .nfs*
 *.tmp
 
+# Additional Vitis HLS files
+.apc/
+.vitis_hls_log_all.xml
+
 # Custom
 output.txt
