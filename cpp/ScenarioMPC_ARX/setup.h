@@ -49,7 +49,6 @@
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 // #define PRNG_STDLIB         /* use rand() as prng */
-// #define DEBUG_PRINT      /* debug printfs */
 
 /** Active plant - choose one of: 
  * SYSTEM_SIMPLE, 
@@ -77,6 +76,7 @@
     // #define PRAGMAS         /* enable all HLS synthesis pragmas in .cpp files  */
     #include <ap_fixed.h>   /* include fixed point data types */
     #undef PRNG_STDLIB      /* can't use rand() in fixed point */
+    #define DEBUG_PRINT      /* debug printfs */
 #endif
 
 /* ======================================================================

@@ -65,21 +65,10 @@ int main(void)
     /* Arrays to log the full simulation trajectory. */
     output_type ySim[nSim];
     input_type  uSim[nSim];
-    output_type yref[nSim] = {0}; // output follows this
+    output_type yref[nSim]; // output follows this
+    output_type yCurr;
     vol_type volumes[nSim];
-
-    // generate reference trajectory based on ACTIVE_SYSTEM
-    generateReference(yref, nSim);
-
-    /* Measurement noise amplitude and values */
     noise_type noise[nSim];
-    for(int i=0; i < nSim; i++) noise[i] = pseudoRandArx() * SIGMA_UNNORM; // noise in [-1, 1]
-
-#if defined(CONVERSIONS_MODE) || defined(FIXED)
-    digital_output_type ySimDig[nSim];
-    digital_input_type  uSimDig[nSim];
-#endif
-
     /* ------------------------------------------------------------------ */
     /*  True system (plant)                                               */
     /* ------------------------------------------------------------------ */
@@ -91,6 +80,25 @@ int main(void)
      * hopefully, the updated zonotopes over time will still contain it.
      */
     theta_type thetaTrue[nTheta] = { THETA_TRUE_INIT };
+    #if defined(CONVERSIONS_MODE)
+    digital_output_type ySimDig[nSim];
+    digital_input_type  uSimDig[nSim];
+    #endif
+
+    /* Measurement noise amplitude and values */
+    for(int i=0; i < nSim; i++) noise[i] = pseudoRandArx() * SIGMA_UNNORM; // noise in [-1, 1]
+    
+    // generate reference trajectory based on ACTIVE_SYSTEM
+    generateReference(yref, nSim);
+    
+    #ifdef DEBUG_PRINT
+    double ySim_f[nSim], uSim_f[nSim], volumes_f[nSim], noise_f[nSim], thetaTrue_f[nTheta], yCurr_f;
+    double yHist_f[na], uHist_f[nb];
+    for(int i = 0; i < nSim; i++)           noise_f[i] = noise[i].to_double();
+    for(int i = 0; i < nTheta; i++)         thetaTrue_f[i] = thetaTrue.to_double();
+    for(int i = 0; i < na; i++)             yHist_f[i] = yHist[i].to_double();
+    for(int i = 0; i < nb + nk - 1; i++)    uHist_f[i] = uHist[i].to_double();
+    #endif
     
     /* ------------------------------------------------------------------ */
     /*  Closed-loop simulation                                            */
@@ -107,7 +115,11 @@ int main(void)
         volumes[k] = matDet(thetaGens);
         volumes[k] = (volumes[k] < 0) ? (vol_type)(-volumes[k]) : volumes[k];
 
-        output_type yCurr = 0;
+        #ifdef DEBUG_PRINT
+        volumes_f[k] = volumes[k].to_double();
+        #endif
+
+        yCurr = 0;
         #ifdef NRMLZ
         for(int i = 0; i < nTheta; i++) 
             yCurr += ((i < na) ? (output_type)((yHist[i] - yNormOffset)/yNormGain) : (output_type)((uHist[i-na+nk-1] - uNormOffset)/uNormGain)) * thetaTrue[i];
@@ -115,11 +127,17 @@ int main(void)
         for(int i = 0; i < nTheta; i++)
             yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];
         #endif
+        #ifdef DEBUG_PRINT
+        yCurr_f = yCurr.to_double();
+        #endif
         yCurr += noise[k];
         ySim[k] = yCurr;
+        #ifdef DEBUG_PRINT
+        ySim_f[k] = ySim[k].to_double();
+        #endif
 
         /* --- Convert y(k) to digital ----------------------------------- */
-        #if defined(CONVERSIONS_MODE) || defined(FIXED)
+        #if defined(CONVERSIONS_MODE)
         digital_output_type yrefDig = ADConvertY(yref[k]);
         digital_output_type yCurrDig = ADConvertY(yCurr);
         ySimDig[k] = yCurrDig;

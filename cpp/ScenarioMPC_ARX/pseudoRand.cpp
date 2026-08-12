@@ -43,6 +43,14 @@ rand_type pseudoRandArx()
 	#endif
 	#endif // PRNG_STDLIB
 	
+	#ifdef DEBUG_PRINT
+	double r_f, u16_f, frac_f, res_f;
+	r_f = r.to_double();
+	u16_f = u16.to_double();
+	frac_f = frac.to_double();
+	res_f = res.to_double();
+	#endif
+
 	return res;
 }
 
@@ -73,9 +81,14 @@ void pseudoRandArx(rand_type coeffs[nGens])
 		coeffs[i] = (rand_type(2) * (rand_type)(frac)) - rand_type(1);
 		#endif
 
-		// #ifdef FIXED
-		// 		float fracf = frac.to_float();
-		// #endif
+		#ifdef DEBUG_PRINT
+		double r_f, u16_f, frac_f, res_f, coeff_f;
+		r_f = r.to_double();
+		u16_f = u16.to_double();
+		frac_f = frac.to_double();
+		res_f = res.to_double();
+		coeff_f = coeffs[i].to_double();
+		#endif
 	}
 	#endif
 }

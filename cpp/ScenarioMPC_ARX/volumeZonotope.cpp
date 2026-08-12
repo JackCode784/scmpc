@@ -76,6 +76,10 @@ det_type matDet(const theta_type M[nTheta][nTheta])
     /* Working copy */
     elim_type A[nTheta][nTheta];
 
+    #ifdef DEBUG_PRINT
+    double A_f[nTheta][nTheta], pivotRow_f, pivotAbs_f, absVal_f;
+    #endif
+
     for (int i = 0; i < nTheta; i++)
     {
         #ifdef PRAGMAS
@@ -88,6 +92,9 @@ det_type matDet(const theta_type M[nTheta][nTheta])
             #endif
             A[i][j] = M[i][j];
 
+            #ifdef DEBUG_PRINT
+            A_f[i][j] = A[i][j].to_double();
+            #endif
         }
     }
 
@@ -105,6 +112,10 @@ det_type matDet(const theta_type M[nTheta][nTheta])
         /* --- Partial pivoting: find row with largest |A[i][k]|, i >= k -- */
         int      pivotRow = k;
         elim_type pivotAbs = (A[k][k] < 0) ? elim_type(-A[k][k]) : A[k][k];
+        #ifdef DEBUG_PRINT
+        pivotRow_f = pivotRow.to_double();
+        pivotAbs_f = pivotAbs.to_double();
+        #endif
 
         for (int i = k + 1; i < nTheta; i++)
         {
@@ -112,10 +123,17 @@ det_type matDet(const theta_type M[nTheta][nTheta])
             #pragma HLS UNROLL
             #endif
             elim_type absVal = (A[i][k] < 0) ? elim_type(-A[i][k]) : A[i][k];
+            #ifdef DEBUG_PRINT
+            absVal_f = absVal.to_double();
+            #endif
             if (absVal > pivotAbs)
             {
                 pivotAbs = absVal;
                 pivotRow = i;
+                #ifdef DEBUG_PRINT
+                pivotRow_f = pivotRow.to_double();
+                pivotAbs_f = pivotAbs.to_double();
+                #endif
             }
         }
 
@@ -130,6 +148,11 @@ det_type matDet(const theta_type M[nTheta][nTheta])
                 elim_type tmp  = A[k][j];
                 A[k][j]       = A[pivotRow][j];
                 A[pivotRow][j] = tmp;
+
+                #ifdef DEBUG_PRINT
+                A_f[k][j] = A[k][j].to_double();
+                A_f[pivotRow][j] = A[pivotRow][j].to_double();
+                #endif
             }
             sign = -sign;
         }
@@ -152,6 +175,10 @@ det_type matDet(const theta_type M[nTheta][nTheta])
             #endif
             theta_type factor = A[i][k] / A[k][k];
 
+            #ifdef DEBUG_PRINT
+            double factor_f = factor.to_double();
+            #endif
+
             // Alternative
             // theta_type factor = partialFactor * A[i][k];
             // A[i][k] = 0;
@@ -163,6 +190,10 @@ det_type matDet(const theta_type M[nTheta][nTheta])
                 #pragma HLS UNROLL
                 #endif
                 A[i][j] -= factor * A[k][j];
+                
+                #ifdef DEBUG_PRINT
+                A_f[i][j] = A[i][j].to_double();
+                #endif
             }
         }
     }
@@ -178,6 +209,10 @@ det_type matDet(const theta_type M[nTheta][nTheta])
         #pragma HLS UNROLL
         #endif
         det *= A[i][i];
+        
+        #ifdef DEBUG_PRINT
+        double det_f = det.to_double();
+        #endif
     }
     return det;
 }
@@ -208,6 +243,10 @@ det_type matDet(const theta_type M[nTheta][nTheta])
 vol_type zonotopeVolume(const theta_type G[nTheta][nGens])
 {
     vol_type vol = 0;
+
+    #ifdef DEBUG_PRINT
+    double vol_f, sub_f[nTheta][nTheta], d_f;
+    #endif
 
     /*
      * Iterate over all 2^nGens = 64 bitmasks.
@@ -260,9 +299,20 @@ vol_type zonotopeVolume(const theta_type G[nTheta][nGens])
                     col++;
                 }
             }
+            #ifdef DEBUG_PRINT
+            for(int i = 0; i < nTheta; i++)
+            {
+                for(int j = 0; j < nTheta; j++) sub_f[i][j] = sub_f[i][j].to_double();
+            }
+            #endif
 
             det_type d = matDet(sub);
             vol += (d < 0) ? vol_type(-d) : vol_type(d);
+
+            #ifdef DEBUG_PRINT
+            d_f = d.to_double();
+            vol_f = vol.to_double();
+            #endif
         }
     }
 

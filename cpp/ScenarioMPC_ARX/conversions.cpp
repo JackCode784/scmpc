@@ -6,28 +6,34 @@
 */
 digital_output_type ADConvertY(const output_type yAn)
 {
-	// #ifdef FIXED
-	// 	float YADCGainf = YADCGain.to_float();
-	// 	float yAnf = yAn.to_float();
-	// 	float YBiasf = YBias.to_float();
-	// #endif
 	digital_output_type yDig = YADCGain * yAn + YBias;
 	#ifndef FIXED
 	/* Emulate DAC saturation when using floating point */
 	yDig = (yDig < ADC_MIN) ? ADC_MIN : 
-			(yDig > ADC_MAX) ? ADC_MAX : yDig;
+	(yDig > ADC_MAX) ? ADC_MAX : yDig;
 	#endif
+
+	#ifdef DEBUG_PRINT
+	float YADCGain_f = YADCGain.to_float();
+	float yAn_f = yAn.to_float();
+	float YBias_f = YBias.to_float();
+	float yDig_f = yDig.to_float();
+	#endif
+
 	return yDig;
 }
 
 input_type DAConvertU(const digital_input_type uDig)
 {
-	// 	#ifdef FIXED
-	// 	float UDACGainf = UDACGain.to_float();
-	// 	float UDigf = uDig.to_float();
-	// 	float UBiasf = UBias.to_float();
-	// #endif
 	input_type uAn = (uDig - UBias) * UDACGain;
+	
+	#ifdef DEBUG_PRINT
+	float UDACGainf = UDACGain.to_float();
+	float UDigf = uDig.to_float();
+	float UBiasf = UBias.to_float();
+	float uAn_f = uAn.to_float();
+	#endif
+
 	return uAn;
 }
 #endif
@@ -39,6 +45,14 @@ norm_output_type dig2ctrlY(const digital_output_type yDig)
 	#pragma hls inline
 	#endif
 	norm_output_type yCtrl = (norm_output_type)(yConvCoeff*yDig) + yConvOffset;
+
+	#ifdef DEBUG_PRINT
+	float yDig_f = yDig.to_float();
+	float yConvCoeff_f = yConvCoeff.to_float();
+	float yConvOffset_f = yConvOffset.to_float();
+	float yCtrl_f = yCtrl.to_float();
+	#endif
+	
 	return yCtrl;
 }
 
@@ -55,6 +69,14 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl)
 			(uDig > ADC_MAX) ? ADC_MAX : 
 			uDig;
 	#endif
+
+	#ifdef DEBUG_PRINT
+	float uConvCoeff_f = uConvCoeff.to_float();
+	float uCtrl_f = uCtrl.to_float();
+	float uConvOffset_f = uConvOffset.to_float();
+	float uDig_f = uDig.to_float();
+	#endif
+
 	return uDig;
 }
 
