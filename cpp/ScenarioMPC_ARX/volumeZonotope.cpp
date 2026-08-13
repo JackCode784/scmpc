@@ -77,7 +77,7 @@ det_type matDet(const theta_type M[nTheta][nTheta])
     elim_type A[nTheta][nTheta];
 
     #ifdef DEBUG_PRINT
-    double A_f[nTheta][nTheta], pivotRow_f, pivotAbs_f, absVal_f;
+    double A_f[nTheta][nTheta], pivotAbs_f, absVal_f;
     #endif
 
     for (int i = 0; i < nTheta; i++)
@@ -113,7 +113,6 @@ det_type matDet(const theta_type M[nTheta][nTheta])
         int      pivotRow = k;
         elim_type pivotAbs = (A[k][k] < 0) ? elim_type(-A[k][k]) : A[k][k];
         #ifdef DEBUG_PRINT
-        pivotRow_f = pivotRow.to_double();
         pivotAbs_f = pivotAbs.to_double();
         #endif
 
@@ -131,7 +130,6 @@ det_type matDet(const theta_type M[nTheta][nTheta])
                 pivotAbs = absVal;
                 pivotRow = i;
                 #ifdef DEBUG_PRINT
-                pivotRow_f = pivotRow.to_double();
                 pivotAbs_f = pivotAbs.to_double();
                 #endif
             }
@@ -302,7 +300,7 @@ vol_type zonotopeVolume(const theta_type G[nTheta][nGens])
             #ifdef DEBUG_PRINT
             for(int i = 0; i < nTheta; i++)
             {
-                for(int j = 0; j < nTheta; j++) sub_f[i][j] = sub_f[i][j].to_double();
+                for(int j = 0; j < nTheta; j++) sub_f[i][j] = sub[i][j].to_double();
             }
             #endif
 

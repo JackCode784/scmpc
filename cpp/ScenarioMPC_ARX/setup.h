@@ -77,6 +77,8 @@
     #include <ap_fixed.h>   /* include fixed point data types */
     #undef PRNG_STDLIB      /* can't use rand() in fixed point */
     #define DEBUG_PRINT      /* debug printfs */
+#else
+    #undef DEBUG_PRINT /* use only in fixed point mode */
 #endif
 
 /* ======================================================================
