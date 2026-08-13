@@ -279,6 +279,7 @@ solution*/impl/ip/
 # Additional Vitis HLS files
 .apc/
 .vitis_hls_log_all.xml
+.cproject
 
 # Custom
 output.txt
