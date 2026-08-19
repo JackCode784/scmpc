@@ -45,7 +45,7 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-  #define FIXED            /* fixed point representation */
+//   #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 // #define PRNG_STDLIB         /* use rand() as prng */
@@ -268,12 +268,12 @@ constexpr unsigned int ADC_MAX   = 4095;
 constexpr unsigned int ADC_MIN   = 0;
 constexpr unsigned int ADC_RANGE = ADC_MAX - ADC_MIN;
 
-static const output_adc_coeff_type YADCGain = ADC_RANGE / (YMAX - YMIN);
-static const output_dac_coeff_type YDACGain = (YMAX - YMIN) / ADC_RANGE;
-static const digital_output_type  YBias    = (ADC_MIN*YMAX - ADC_MAX*YMIN) / (YMAX - YMIN);
-static const input_adc_coeff_type UADCGain = ADC_RANGE / (UMAX - UMIN);
-static const input_dac_coeff_type UDACGain = (UMAX - UMIN) / ADC_RANGE;
-static const digital_input_type   UBias    = (ADC_MIN*UMAX - ADC_MAX*UMIN) / (UMAX - UMIN);
+static const output_adc_coeff_type YADCGain = double(ADC_RANGE) / double(YMAX - YMIN);
+static const output_dac_coeff_type YDACGain = double(YMAX - YMIN) / double(ADC_RANGE);
+static const digital_output_type  YBias    = (double(ADC_MIN)*double(YMAX) - double(ADC_MAX)*double(YMIN)) / double(YMAX - YMIN);
+static const input_adc_coeff_type UADCGain = double(ADC_RANGE) / double(UMAX - UMIN);
+static const input_dac_coeff_type UDACGain = double(UMAX - UMIN) / double(ADC_RANGE);
+static const digital_input_type   UBias    = (double(ADC_MIN)*double(UMAX) - double(ADC_MAX)*double(UMIN)) / double(UMAX - UMIN);
 #endif
 
 #ifdef NRMLZ
@@ -283,16 +283,16 @@ static const norm_output_type YNORMMIN = -1;
 static const norm_input_type UNORMMAX = 1;
 static const norm_input_type UNORMMIN = -1;
 
-static const y_norm_coeff_type yNormGain = (y_norm_coeff_type)((YNORMMAX - YNORMMIN) / (YMAX - YMIN));
-static const u_norm_coeff_type uNormGain = (u_norm_coeff_type)((UNORMMAX - UNORMMIN) / (UMAX - UMIN));
-static const u_norm_inv_coeff_type uNormGainInverse = (u_norm_inv_coeff_type)((UMAX - UMIN) / (UNORMMAX - UNORMMIN));
-static const norm_output_type yNormOffset = (norm_output_type)((YNORMMIN*YMAX - YNORMMAX*YMIN) / (YMAX - YMIN));
-static const norm_input_type uNormOffset = (norm_input_type)((UNORMMIN*UMAX - UNORMMAX*UMIN) / (UMAX - UMIN));
+static const y_norm_coeff_type yNormGain = double(YNORMMAX - YNORMMIN) / double(YMAX - YMIN);
+static const u_norm_coeff_type uNormGain = double(UNORMMAX - UNORMMIN) / double(UMAX - UMIN);
+static const u_norm_inv_coeff_type uNormGainInverse = double(UMAX - UMIN) / double(UNORMMAX - UNORMMIN);
+static const norm_output_type yNormOffset = double(YNORMMIN*YMAX - YNORMMAX*YMIN) / double(YMAX - YMIN);
+static const norm_input_type uNormOffset = double(UNORMMIN*UMAX - UNORMMAX*UMIN) / double(UMAX - UMIN);
 
-static const input_weight_type R = RBaseLine * (yNormGain * yNormGain) / (uNormGain * uNormGain); // 2^(-3)
+static const input_weight_type R = double(RBaseLine) * double(yNormGain) * double(yNormGain) / double(uNormGain) * double(uNormGain); // 2^(-3)
 
 /* Normalization, use "normalized" noise in output strip */
-const norm_noise_type sigma = (yNormGain*SIGMA_UNNORM);
+const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
 
 /* Pre-computed in MATLAB 
  * A better way to compute these offline is needed.
@@ -319,14 +319,14 @@ static const norm_input_type UNORMMIN = UMIN;
     conversions functions. */
 #ifdef CONVERSIONS_MODE
     #ifdef NRMLZ
-    static const dig2ctrl_type yConvCoeff = yNormGain*YDACGain;
-    static const ctrl2dig_type uConvCoeff = UADCGain*uNormGainInverse;
-    static const norm_output_type yConvOffset = yNormOffset - YDACGain*YBias*yNormGain;
-    static const digital_input_type uConvOffset = UBias - uNormOffset*uNormGainInverse*UADCGain;
+    static const dig2ctrl_type yConvCoeff = double(yNormGain)*double(YDACGain);
+    static const ctrl2dig_type uConvCoeff = double(UADCGain)*double(uNormGainInverse);
+    static const norm_output_type yConvOffset = double(yNormOffset) - double(YDACGain)*double(YBias)*double(yNormGain);
+    static const digital_input_type uConvOffset = double(UBias) - double(uNormOffset)*double(uNormGainInverse)*double(UADCGain);
     #else
     static const dig2ctrl_type yConvCoeff = YDACGain;
     static const ctrl2dig_type uConvCoeff = UADCGain;
-    static const norm_output_type yConvOffset = -YBias*YDACGain;
+    static const norm_output_type yConvOffset = double(-YBias)*double(YDACGain);
     static const digital_input_type uConvOffset = UBias;
     #endif
     #else
@@ -334,7 +334,7 @@ static const norm_input_type UNORMMIN = UMIN;
     static const dig2ctrl_type yConvCoeff = yNormGain;
     static const ctrl2dig_type uConvCoeff = uNormGainInverse;
     static const norm_output_type yConvOffset = yNormOffset;
-    static const digital_input_type uConvOffset = -uNormOffset*uNormGainInverse;
+    static const digital_input_type uConvOffset = double(-uNormOffset)*double(uNormGainInverse);
     #else
     static const dig2ctrl_type yConvCoeff = 1;
     static const ctrl2dig_type uConvCoeff = 1;

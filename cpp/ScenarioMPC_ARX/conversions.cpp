@@ -18,6 +18,7 @@ digital_output_type ADConvertY(const output_type yAn)
 	float yAn_f = yAn.to_float();
 	float YBias_f = YBias.to_float();
 	float yDig_f = yDig.to_float();
+	float YADCGAINF = 1 / (YMAX - YMIN).to_float();
 	#endif
 
 	return yDig;
@@ -44,7 +45,7 @@ norm_output_type dig2ctrlY(const digital_output_type yDig)
 	#ifdef PRAGMAS
 	#pragma hls inline
 	#endif
-	norm_output_type yCtrl = (norm_output_type)(yConvCoeff*yDig) + yConvOffset;
+	norm_output_type yCtrl = yConvCoeff*yDig + yConvOffset;
 
 	#ifdef DEBUG_PRINT
 	float yDig_f = yDig.to_float();
@@ -62,7 +63,7 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl)
 	#ifdef PRAGMAS
 	#pragma hls inline
 	#endif
-	digital_input_type uDig = (digital_input_type)(uConvCoeff*uCtrl) + uConvOffset;
+	digital_input_type uDig = uConvCoeff*uCtrl + uConvOffset;
 	#ifndef FIXED
 	/* Emulate ADC saturation when using floating point */
 	uDig = (uDig < ADC_MIN) ? ADC_MIN : 

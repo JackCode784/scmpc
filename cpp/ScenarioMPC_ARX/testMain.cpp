@@ -84,7 +84,7 @@ int main(void)
     digital_output_type ySimDig[nSim];
     digital_input_type  uSimDig[nSim];
     #ifdef DEBUG_PRINT
-    double yrefDig_f[nSim], yCurrDig_f[nSim], uOptDig_f;
+    double yrefDig_f[nSim], ySimDig_f[nSim];
     #endif
     #endif
 
@@ -95,12 +95,19 @@ int main(void)
     generateReference(yref, nSim);
     
     #ifdef DEBUG_PRINT
-    double ySim_f[nSim], uSim_f[nSim], volumes_f[nSim], noise_f[nSim], thetaTrue_f[nTheta], yCurr_f;
+    double ySim_f[nSim], yref_f[nSim], volumes_f[nSim], noise_f[nSim], thetaTrue_f[nTheta], yCurr_f, uOpt_f;
     double yHist_f[na], uHist_f[nb];
     for(int i = 0; i < nSim; i++)           noise_f[i] = noise[i].to_double();
+    for(int i = 0; i < nSim; i++)           yref_f[i] = yref[i].to_double();
     for(int i = 0; i < nTheta; i++)         thetaTrue_f[i] = thetaTrue[i].to_double();
-    for(int i = 0; i < na; i++)             yHist_f[i] = yHist[i].to_double();
-    for(int i = 0; i < nb + nk - 1; i++)    uHist_f[i] = uHist[i].to_double();
+
+    #ifdef NRMLZ
+    double yNormGain_f, yNormOffset_f, uNormGain_f, uNormOffset_f;
+    yNormGain_f = yNormGain.to_double();
+    yNormOffset_f = yNormOffset.to_double();
+    uNormGain_f = uNormGain.to_double();
+    uNormOffset_f = uNormOffset.to_double();
+    #endif
     #endif
     
     /* ------------------------------------------------------------------ */
@@ -111,7 +118,7 @@ int main(void)
         /* --- Simulate plant output y(k) -------------------------------- */
         /*
         * computeArxOutput evaluates
-        *   y(k) = theta^T * [y(k−1),...,y(k−na), u(k−nk),...,u(k−nk−nb+1)]^T
+        *   y(k) = [y(k−1),...,y(k−na), u(k−nk),...,u(k−nk−nb+1)]^T * thetaTrue
         */
 
         // Current zonotope volume computation
@@ -120,19 +127,14 @@ int main(void)
 
         #ifdef DEBUG_PRINT
         volumes_f[k] = volumes[k].to_double();
+        for(int i = 0; i < na; i++)             yHist_f[i] = yHist[i].to_double();
+        for(int i = 0; i < nb + nk - 1; i++)    uHist_f[i] = uHist[i].to_double();
         #endif
 
         yCurr = 0;
         #ifdef NRMLZ
-        #ifdef DEBUG_PRINT
-        double yNormGain_f, yNormOffset_f, uNormGain_f, uNormOffset_f;
-        yNormGain_f = yNormGain.to_double();
-        yNormOffset_f = yNormOffset.to_double();
-        uNormGain_f = uNormGain.to_double();
-        uNormOffset_f = uNormOffset.to_double();
-        #endif
         for(int i = 0; i < nTheta; i++) 
-            yCurr += ((i < na) ? (output_type)((yHist[i] - yNormOffset)/yNormGain) : (output_type)((uHist[i-na+nk-1] - uNormOffset)/uNormGain)) * thetaTrue[i];
+            yCurr += ((i < na) ? double(yHist[i] - yNormOffset)/double(yNormGain) : double(uHist[i-na+nk-1] - uNormOffset)/double(uNormGain)) * double(thetaTrue[i]);
         #else
         for(int i = 0; i < nTheta; i++)
             yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];
@@ -147,13 +149,13 @@ int main(void)
         #endif
 
         /* --- Convert y(k) to digital ----------------------------------- */
-        #if defined(CONVERSIONS_MODE)
+        #ifdef CONVERSIONS_MODE
         digital_output_type yrefDig = ADConvertY(yref[k]);
         digital_output_type yCurrDig = ADConvertY(yCurr);
         ySimDig[k] = yCurrDig;
         #ifdef DEBUG_PRINT
         yrefDig_f[k] = yrefDig.to_double();
-        yCurrDig_f[k] = yCurrDig.to_double();
+        ySimDig_f[k] = yCurrDig.to_double();
         #endif
         #else
         digital_output_type yrefDig = yref[k];
@@ -169,8 +171,9 @@ int main(void)
          * duplicate that update here.
          */
         digital_input_type uOptDig = controller(yCurrDig, yrefDig);
+
         #ifdef DEBUG_PRINT
-        uOptDig_f = uOptDig.to_double();
+        uOpt_f = uOptDig.to_double(); // digital value if CONVERSIONS_MODE
         for(int i = 0; i < na; i++) yHist_f[i] = yHist[i].to_double();
         for(int i = 0; i < nb+nk-1; i++) uHist_f[i] = uHist[i].to_double();
         #endif
@@ -184,7 +187,7 @@ int main(void)
         #endif
         
         #ifdef DEBUG_PRINT
-        uSim_f[k] = uSim[k].to_double();
+        uOpt_f = uSim[k].to_double();
         #endif
     }
 

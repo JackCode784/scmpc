@@ -80,6 +80,20 @@ digital_input_type controller(const digital_output_type yCurrDig,
     yCurrNorm = dig2ctrlY(yCurrDig);
     yrefNorm = dig2ctrlY(yrefDig);
 
+    #ifdef DEBUG_PRINT
+    double center_f[nTheta], gens_f[nTheta][nGens];
+    double yCurrDig_f, yrefDig_f;
+    double yCurrNorm_f, yrefNorm_f;
+    for(int i = 0; i < nTheta; i++) {
+        center_f[i] = thetaCenter[i].to_double();
+        for(int j = 0; j < nGens; j++) gens_f[i][j] = thetaGens[i][j].to_double();
+    }
+    yCurrDig_f = yCurrDig.to_double();
+    yrefDig_f = yrefDig.to_double();
+    yCurrNorm_f = yCurrNorm.to_double();
+    yrefNorm_f = yrefNorm.to_double();
+    #endif
+
     // #ifdef CONVERSIONS_MODE
     // output_type yCurr;
     // output_type yref;
@@ -100,8 +114,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     // #endif
     
     norm_input_type uOptNorm[NhorU];
-    for (int i = 0; i < NhorU; i++)
-        uOptNorm[i] = uHist[0]; // warm start
+    for (int i = 0; i < NhorU; i++) uOptNorm[i] = uHist[0]; // warm start
 
     /* ------------------------------------------------------------------ */
     /*  Step 2 - [PL mode] Zonotope update                                */
@@ -162,13 +175,17 @@ digital_input_type controller(const digital_output_type yCurrDig,
     }
 
     #ifdef DEBUG_PRINT
+    for(int i = 0; i < nTheta; i++) {
+        center_f[i] = thetaCenter[i].to_double();
+        for(int j = 0; j < nGens; j++) gens_f[i][j] = thetaGens[i][j].to_double();
+    }
     printf("\n--- PL: updated zonotope ---\n");
     printf("thetaCenter: ");
     for (int i = 0; i < nTheta; i++) printf("%f ", (double)thetaCenter[i]);
     printf("\nthetaGens:\n");
     for (int i = 0; i < nTheta; i++) {
         for (int j = 0; j < nGens; j++)
-            printf("%8.4f ", (double)thetaGens[i][j]);
+            printf("%8.6f ", (double)thetaGens[i][j]);
         printf("\n");
     }
     #endif
@@ -227,6 +244,15 @@ digital_input_type controller(const digital_output_type yCurrDig,
     uHist[0] = uOptNorm[0];   /* receding horizon: only u(k) is applied */
  
     uOptDig = ctrlU2dig(uOptNorm[0]);
+    
+    #ifdef DEBUG_PRINT
+    double yHist_f[na], uHist_f[nb+nk-1];
+    double uOptDig_f = uOptDig.to_double();
+    double uOptNorm_f[NhorU];
+    for(int i = 0; i < NhorU; i++) uOptNorm_f[i] = uOptNorm[i].to_double();
+    for(int i = 0; i < na; i++) yHist_f[i] = yHist[i].to_double();
+    for(int i = 0; i < nb+nk-1; i++) uHist_f[i] = uHist[i].to_double();
+    #endif
 
     /* Denormalize output if NRMLZ is defined */
     // input_type uOpt;
