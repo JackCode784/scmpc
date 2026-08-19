@@ -264,9 +264,9 @@ static const mesh_exp_type D0_VAL = -8; // used in MADSARX, frameIdx init
    compile-time arithmetic on non-constexpr types).
    ====================================================================== */
 #ifdef CONVERSIONS_MODE
-constexpr unsigned int ADC_MAX   = 4095;
-constexpr unsigned int ADC_MIN   = 0;
-constexpr unsigned int ADC_RANGE = ADC_MAX - ADC_MIN;
+constexpr int ADC_MAX   = 4095;
+constexpr int ADC_MIN   = 0;
+constexpr int ADC_RANGE = ADC_MAX - ADC_MIN;
 
 static const output_adc_coeff_type YADCGain = double(ADC_RANGE) / double(YMAX - YMIN);
 static const output_dac_coeff_type YDACGain = double(YMAX - YMIN) / double(ADC_RANGE);
