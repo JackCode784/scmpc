@@ -96,7 +96,7 @@ int main(void)
     
     #ifdef DEBUG_PRINT
     double ySim_f[nSim], yref_f[nSim], volumes_f[nSim], noise_f[nSim], thetaTrue_f[nTheta], yCurr_f, uOpt_f;
-    double yHist_f[na], uHist_f[nb];
+    double yHist_f[na], uHist_f[nb+nk-1];
     for(int i = 0; i < nSim; i++)           noise_f[i] = noise[i].to_double();
     for(int i = 0; i < nSim; i++)           yref_f[i] = yref[i].to_double();
     for(int i = 0; i < nTheta; i++)         thetaTrue_f[i] = thetaTrue[i].to_double();
@@ -134,7 +134,7 @@ int main(void)
         yCurr = 0;
         #ifdef NRMLZ
         for(int i = 0; i < nTheta; i++) 
-            yCurr += ((i < na) ? double(yHist[i] - yNormOffset)/double(yNormGain) : double(uHist[i-na+nk-1] - uNormOffset)/double(uNormGain)) * double(thetaTrue[i]);
+            yCurr += output_type(((i < na) ? double(yHist[i] - yNormOffset)/double(yNormGain) : double(uHist[i-na+nk-1] - uNormOffset)/double(uNormGain)) * double(thetaTrue[i]));
         #else
         for(int i = 0; i < nTheta; i++)
             yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];
