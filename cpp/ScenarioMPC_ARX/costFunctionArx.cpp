@@ -61,6 +61,20 @@ void costFunctionArx(cost_type              cost[2],
     // #pragma HLS INLINE
     #endif
 
+    #ifdef DEBUG_PRINT
+    double cost_f[2];
+    double yPastCurr_f[na], uSamples_f[nb+nk-1];
+    double currU_f[nOpt], yNext_f;
+    double input_cost_term_f, output_cost_term_f, scenariosContrib_f;
+    double err_nom_f, err_s_f;
+    double outputWeight_f = outputWeight.to_double();
+    double terminalOutputWeight_f = terminalOutputWeight.to_double();
+    double yref_f = yref.to_double();
+    double center_f[nTheta];
+    for(int i = 0; i < nTheta; i++) center_f[i] = thetaCenter[i].to_double();
+    for(int i = 0; i < nOpt; i++) currU_f[i] = currU[i].to_double();
+    #endif
+
     /* ------------------------------------------------------------------ */
     /*  Initialise cost accumulators                                       */
     /* ------------------------------------------------------------------ */
@@ -105,8 +119,9 @@ void costFunctionArx(cost_type              cost[2],
         if (currU[i] < UNORMMIN || currU[i] > UNORMMAX)
         {
             cost[1] = 512; // power of two
-            return;   /* early exit: no point computing a cost for an
-                         infeasible input sequence                        */
+            break;   /* break instead of return because in barrier polling cost[0]
+                        is still used for determining optimal variable even if
+                        cost[1] > 0 */
         }
     }
 
@@ -133,6 +148,12 @@ void costFunctionArx(cost_type              cost[2],
         if (k < NhorU)
             uSamples[0] = currU[k];
         /* else: uSamples[0] retains currU[NhorU-1] from the previous step */
+        
+        #ifdef DEBUG_PRINT
+        for(int i = 0; i < na; i++) yPastCurr_f[i] = yPastCurr[i].to_double();
+        for(int i = 0; i < nb+nk-2; i++) uSamples_f[i] = uSamples[i].to_double();
+        input_cost_term_f = (uSamples_f[0] - uSamples_f[1]) * (uSamples_f[0] - uSamples_f[1]) * R.to_double();
+        #endif
 
         /* --- Input cost term (all steps except the terminal one) ------- */
         /* --- Input term is difference with respect to previous sample -- */
@@ -143,6 +164,9 @@ void costFunctionArx(cost_type              cost[2],
             cost[0] += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) >> -log2R;
             #endif
         }
+        #ifdef DEBUG_PRINT
+        cost_f[0] = cost[0].to_double();
+        #endif
         /* --- Scenario loop: constraint check + PL/AL cost contribution - */
         cost_type scenariosContrib = 0;
 
@@ -154,11 +178,25 @@ void costFunctionArx(cost_type              cost[2],
             norm_output_type yNext = computeArxOutput(yPastCurr, uSamples,
                                                   thetaScenarios[l]);
 
+            #ifdef DEBUG_PRINT
+            yNext_f = yNext.to_double();
+            #endif
+
             #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
             err_type err_s = yNext - yref;
             scenariosContrib += (err_s * err_s);
+
+            #ifdef DEBUG_PRINT
+            err_s_f = err_s.to_double();
+            scenariosContrib_f = scenariosContrib.to_double();
+            #endif
+            
             #endif
             updateConstraintViolation(cost, yNext);
+
+            #ifdef DEBUG_PRINT
+            cost_f[1] = cost[1].to_double();
+            #endif
         }
 
         #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
@@ -169,8 +207,12 @@ void costFunctionArx(cost_type              cost[2],
         #ifndef FIXED
         scenariosContrib /= Nscen;
         #else
-        scenariosContrib = scenariosContrib >> LOG2NSCEN;
+        scenariosContrib >>= LOG2NSCEN;
         #endif
+        #endif
+
+        #ifdef DEBUG_PRINT
+        scenariosContrib_f = scenariosContrib.to_double();
         #endif
 
         /* --- Nominal prediction and output cost ----------------------- */
@@ -178,11 +220,22 @@ void costFunctionArx(cost_type              cost[2],
                                                    thetaCenter);
         err_type err_nom = yNext_nom - yref;
 
+        #ifdef DEBUG_PRINT
+        yNext_f = yNext_nom.to_double();
+        err_nom_f = err_nom.to_double();
+        output_cost_term_f = (err_nom_f * err_nom_f + scenariosContrib_f);
+        output_cost_term_f *= (k < Nhor - 1) ? outputWeight.to_double() : terminalOutputWeight.to_double();
+        #endif
+
         /* Select stage weight outputWeight or terminal weight terminalOutputWeight. */
         #ifndef FIXED
         cost[0] += (((k < Nhor - 1) ? outputWeight : terminalOutputWeight) * (err_nom * err_nom + scenariosContrib));
         #else
-        cost[0] += ((err_nom * err_nom + scenariosContrib) << (k < Nhor - 1) ? log2Q : log2P);
+        cost[0] += (err_nom * err_nom + scenariosContrib) << ((k < Nhor - 1) ? log2Q : log2P);
+        #endif
+
+        #ifdef DEBUG_PRINT
+        cost_f[0] = cost[0].to_double();        
         #endif
 
         /* --- Shift rolling-window buffers for next prediction step ---- */

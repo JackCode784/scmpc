@@ -114,10 +114,10 @@ typedef ap_fixed<18,2,AP_TRN,AP_SAT>  rand_type;
 /** Signed log2 frame-size exponent (small integer). */
 typedef ap_int<6>                                 mesh_exp_type;
 
-/** Elements of the poll-direction matrix D (integer values). */
-typedef ap_int<13+1>                                direction_type;
+/** Elements of the poll-direction matrix (integer values). */
+typedef ap_fixed<24,13+1,AP_RND_CONV,AP_SAT> direction_type;
 
-/* Householder matrix entries data types in [-2,3] */
+/* Householder matrix entries data types in [-4,3] */
 typedef ap_fixed<18,3,AP_TRN,AP_SAT> householder_type;
 
 /*
@@ -135,7 +135,7 @@ typedef ap_ufixed<16,0>                         frac_type;
 typedef ap_uint<16>                         u16_type;
 
 /* Data type for outputWeight, terminalOutputWeight = 4 weight matrices */
-typedef ap_ufixed<2,2> output_weight_type;
+typedef ap_ufixed<3,3> output_weight_type;
 #else
 /* ---------------------------------------------------------------------- */
 /*  Floating point types for PC simulation / debugging                          */

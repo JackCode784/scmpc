@@ -10,6 +10,12 @@ void generateHouseholderMatrix(const rand_type v[nOpt], householder_type H[nOpt]
 // Genearte a matrix of directions to be summed to the current point in MADS iteration
 void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], direction_type directions[nOpt][2 * nOpt])
 {
+	#ifdef DEBUG_PRINT
+	double H_f[nOpt][nOpt];
+	double frameMeshDiff_f[nOpt];
+	double B_f[nOpt][2*nOpt];
+	double directions_f[nOpt][2*nOpt];
+	#endif
 
 	// Householder matrix
 	householder_type H[nOpt][nOpt];
@@ -22,6 +28,10 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 	// generate Householder matrix starting with a random vector
 	generateHouseholderMatrix(randomVector, H);
 
+	#ifdef DEBUG_PRINT
+	for(int i = 0; i < nOpt; i++) for(int j = 0; j < nOpt; j++) H_f[i][j] = H[i][j].to_double();
+	#endif
+
 	// fill B matrix with polling directions
 	for (int i = 0; i < nOpt; i++)
 	{
@@ -30,6 +40,9 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 		#endif
 
 		frameMeshDiff[i] = frameIdx[i] - meshIdx[i];
+		#ifdef DEBUG_PRINT
+		frameMeshDiff_f[i] = frameMeshDiff[i].to_double();
+		#endif
 		
 		#ifndef FIXED
 		mesh_type mesh = 1;
@@ -50,10 +63,18 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 		
 		for(int j = 0; j < nOpt; j++)
 		{
-			// B[i][j] = (direction_type)(hls::round(mesh[i] * H[i][j]));
-			B[i][j] = (frameMeshDiff[i] + MADS_C < 0) ? H[i][j] >> -(frameMeshDiff[i]+MADS_C) : H[i][j] << frameMeshDiff[i]+MADS_C;
-				directions[i][j] = B[i][j];
+			/* BUG: B[i][j] = 0 at least when i = j = 0 --- should be -256 */
+			// B[i][j] = (direction_type)(hls::round(mesh[i] * H[i][j]));	// old, needs mesh[nOpt] defined, don't know if it works
+			// B[i][j] = H[i][j] << (frameMeshDiff[i]+MADS_C);	// doesn't work
+			B[i][j] = H[i][j] * (1 << frameMeshDiff[i]+MADS_C);	// this works
+			directions[i][j] = B[i][j];
 			directions[i][j + nOpt] = -B[i][j];
+			
+			#ifdef DEBUG_PRINT
+			B_f[i][j] = B[i][j].to_double();
+			directions_f[i][j] = directions[i][j].to_double();
+			directions_f[i][j+nOpt] = directions[i][j+nOpt].to_double();
+			#endif
 		}
 		#endif
 	}
@@ -62,6 +83,12 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 // generate the Householder matrix starting with a random vector
 void generateHouseholderMatrix(const rand_type v[nOpt], householder_type H[nOpt][nOpt])
 {
+	#ifdef DEBUG_PRINT
+	double v_f[nOpt];
+	double H_f[nOpt][nOpt];
+	for(int i = 0; i < nOpt; i++) v_f[i] = v[i].to_double();
+	#endif
+
 	//	input_type norm = 0;
 	//
 	//	for (int i = 0; i < N; i++) {
@@ -87,11 +114,17 @@ void generateHouseholderMatrix(const rand_type v[nOpt], householder_type H[nOpt]
 			H[i][j] = -H[i][j];
 			#endif
 
+			#ifdef DEBUG_PRINT
+			H_f[i][j] = H[i][j].to_double();
+			#endif
 		}
 
 		// Sum with identity matrix
 		H[i][i]++;
 		// H[i][i] += norm;
+		#ifdef DEBUG_PRINT
+		H_f[i][i] = H[i][i].to_double();
+		#endif
 		
 		// Saturates householder matrix entries (use expC for previous code)
 		for(int j = 0; j < nOpt; j++)
@@ -100,6 +133,9 @@ void generateHouseholderMatrix(const rand_type v[nOpt], householder_type H[nOpt]
 			H[i][j] = (H[i][j] > expC) ? householder_type(expC) :
 						((H[i][j] < -expC) ? householder_type(-expC) : H[i][j]);
 			// H[i][j] /= hMax[j];
+			#ifdef DEBUG_PRINT
+			H_f[i][j] = H[i][j].to_double();
+			#endif
 		}
 	}
 }

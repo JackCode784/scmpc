@@ -7,6 +7,18 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 	// #pragma HLS INLINE
 	#endif
 
+	#ifdef DEBUG_PRINT
+	double frameIdx_f[nOpt], meshIdx_f[nOpt];
+	double directions_f[nOpt][2*nOpt];
+	double randVec_f[nOpt];
+	double pollMatrix_f[nOpt][2*nOpt];
+	double currU_f[nOpt];
+	for(int i = 0; i < nOpt; i++) {
+		frameIdx_f[i] = frameIdx[i].to_double(); 
+		meshIdx_f[i] = meshIdx[i].to_double(); 
+		currU_f[i]=currU[i].to_double(); }
+	#endif
+
 	// polling directions
 	direction_type directions[nOpt][2 * nOpt];
 
@@ -17,8 +29,16 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 	for(int i = 0; i < nOpt; i++)
 		randomVector[i] = pseudoRandArx();
 
+	#ifdef DEBUG_PRINT
+	for(int i = 0; i < nOpt; i++) randVec_f[i] = randomVector[i].to_double();
+	#endif
+
 	// generate poll directions starting with a random vector
 	generatePollDirectionsArx(randomVector, frameIdx, meshIdx, directions);
+
+	#ifdef DEBUG_PRINT
+	for(int i = 0; i < nOpt; i++) for(int j = 0; j < 2*nOpt; j++) directions_f[i][j] = directions[i][j].to_double();
+	#endif
 
 	// fill the columns with polling points
 	for (int i = 0; i < nOpt; i++)
@@ -48,18 +68,23 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 			#endif
 			pollMatrix[i][j] = currU[i] + (mesh * directions[i][j]);
 		}
-		#else 
-		/* Using fixed point */
-		if(meshIdx[i] < 0)
+		#else /* fixed point */
+		/* Use shift operation */
+		// for(int j = 0; j < 2 * nOpt; j++) pollMatrix[i][j] = currU[i] + (directions[i][j] << meshIdx[i]);
+
+		/* Use multiplication */
+		/* BUG: expression directions[i][j] * (1 << meshIdx[i]) returns wrong
+		value because 1 is an integer. */
+		for(int j = 0; j < 2*nOpt; j++) 
 		{
-			for(int j = 0; j < 2 * nOpt; j++)
-				pollMatrix[i][j] = currU[i] + (directions[i][j] >> -meshIdx[i]);
-		}
-		else
-		{
-			for(int j = 0; j < 2 * nOpt; j++)
-				pollMatrix[i][j] = currU[i] + (directions[i][j] << meshIdx[i]);
+			pollMatrix[i][j] = currU[i] + (directions[i][j] << meshIdx[i]);
+
+			#ifdef DEBUG_PRINT
+			double a = (directions[i][j] << meshIdx[i]).to_double();
+			pollMatrix_f[i][j] = pollMatrix[i][j].to_double();
+			#endif
 		}
 		#endif
+
 	}
 }
