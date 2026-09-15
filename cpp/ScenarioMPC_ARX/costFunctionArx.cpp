@@ -63,7 +63,7 @@ void costFunctionArx(cost_type              cost[2],
 
     #ifdef DEBUG_PRINT
     double cost_f[2];
-    double yPastCurr_f[na], uSamples_f[nb+nk-1];
+    double yPastCurr_f[Nscen+1][na], uSamples_f[nb+nk-1];
     double currU_f[nOpt], yNext_f;
     double input_cost_term_f, output_cost_term_f, scenariosContrib_f;
     double err_nom_f, err_s_f;
@@ -97,11 +97,12 @@ void costFunctionArx(cost_type              cost[2],
      * Initial fill: uSamples[1..nb+nk-2] <= uPast[0..nb+nk-3].
      * uSamples[0] is set at the start of each prediction step.
      */
-    norm_output_type yPastCurr[na];
+    norm_output_type yPastCurr[Nscen+1][na];
     norm_input_type  uSamples [nb + nk - 1];
 
-    for (int i = 0; i < na; i++)
-        yPastCurr[i] = yPast[i];
+    for (int i = 0; i < Nscen+1; i++)
+        for(int j = 0; j < na; j++)
+            yPastCurr[i][j] = yPast[j];
 
     for (int i = 0; i < nb + nk - 2; i++)
         uSamples[i + 1] = uPast[i];
@@ -150,7 +151,7 @@ void costFunctionArx(cost_type              cost[2],
         /* else: uSamples[0] retains currU[NhorU-1] from the previous step */
         
         #ifdef DEBUG_PRINT
-        for(int i = 0; i < na; i++) yPastCurr_f[i] = yPastCurr[i].to_double();
+        for(int i = 0; i < Nscen; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = yPastCurr[i][j].to_double();
         for(int i = 0; i < nb+nk-2; i++) uSamples_f[i] = uSamples[i].to_double();
         input_cost_term_f = (uSamples_f[0] - uSamples_f[1]) * (uSamples_f[0] - uSamples_f[1]) * R.to_double();
         #endif
@@ -176,7 +177,7 @@ void costFunctionArx(cost_type              cost[2],
             #ifdef PRAGMAS
             // #pragma HLS UNROLL
             #endif
-            norm_output_type yNext = computeArxOutput(yPastCurr, uSamples,
+            norm_output_type yNext = computeArxOutput(yPastCurr[l], uSamples,
                                                   thetaScenarios[l]);
 
             #ifdef DEBUG_PRINT
@@ -220,7 +221,7 @@ void costFunctionArx(cost_type              cost[2],
         #endif
 
         /* --- Nominal prediction and output cost ----------------------- */
-        norm_output_type yNext_nom = computeArxOutput(yPastCurr, uSamples,
+        norm_output_type yNext_nom = computeArxOutput(yPastCurr[Nscen], uSamples,
                                                    thetaCenter);
         err_type err_nom = yNext_nom - yref;
 
@@ -244,8 +245,8 @@ void costFunctionArx(cost_type              cost[2],
 
         /* --- Shift rolling-window buffers for next prediction step ---- */
         for (int i = na - 1; i > 0; i--)
-            yPastCurr[i] = yPastCurr[i - 1];
-        yPastCurr[0] = yNext_nom;
+            yPastCurr[Nscen][i] = yPastCurr[Nscen][i - 1];
+        yPastCurr[Nscen][0] = yNext_nom;
 
         for (int i = nb + nk - 2; i > 0; i--)
             uSamples[i] = uSamples[i - 1];
