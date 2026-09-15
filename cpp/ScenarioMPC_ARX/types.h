@@ -81,8 +81,8 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_fixed<18,11,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
    typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
    typedef ap_fixed<19,10,AP_RND_CONV,AP_SAT> tight_strip_center_type; // difference of tight strip offset
-   typedef ap_ufixed<18,3+1> vol_type; // with normalization, it surely is smaller than 2^nTheta (max possible initial zonotope volume)
-   typedef ap_fixed<18,3+2> det_type; // with normalization, it can be proven that det is in [-2^(nTheta-1),2^(nTheta-1)]
+   typedef ap_ufixed<18,3+1,AP_RND_CONV,AP_SAT> vol_type; // with normalization, it surely is smaller than 2^nTheta (max possible initial zonotope volume)
+   typedef ap_fixed<18,3+2,AP_RND_CONV,AP_SAT> det_type; // with normalization, it can be proven that det is in [-2^(nTheta-1),2^(nTheta-1)]
    typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> elim_type; // possibly almost-singular matrix, factor variable, pivotAbs in matDet
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_ufixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...

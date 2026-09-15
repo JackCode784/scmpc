@@ -4,17 +4,19 @@ clc;
 % close all;
 
 if opts.isVitisSim
+    titleStr = 'Fixed point';
     d = "..\..\VitisProj\ARX\solution1\csim\build\";
     % d = dir(fullfile(cd, '**', 'output.txt'));
     % d = d(1).folder;
 else
+    titleStr = 'Floating point';
     d = "";
 end
 
 % Save data as table instead of matrix
 data = readtable(append(d, "output.txt"), VariableNamingRule="preserve");
 
-figure; subplot(2,1,1);
+figure(Name=titleStr); subplot(2,1,1);
 hold on;
 plot(data.ySim, 'LineWidth', 1.5); grid on;xlabel('Sample');ylabel('Simulated output');
 plot(data.yref, 'r--', 'LineWidth', 1.5);
