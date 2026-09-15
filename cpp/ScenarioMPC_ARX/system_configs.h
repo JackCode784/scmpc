@@ -119,6 +119,7 @@ static const input_type  UMIN = 0;
 static const input_type  UMAX = 1;
 static const output_type YMIN = 0;
 static const output_type YMAX = 10;
+static const output_type DELTAY = 0.1;
 static const noise_type SIGMA_UNNORM = 0.02;
 
 #endif

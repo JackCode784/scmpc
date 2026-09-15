@@ -305,6 +305,7 @@ static const input_weight_type R = double(RBaseLine) * double(yNormGain) * doubl
 
 /* Normalization, use "normalized" noise in output strip */
 const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
+static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
 
 /* Pre-computed in MATLAB 
  * A better way to compute these offline is needed.
@@ -324,6 +325,7 @@ static const norm_output_type YNORMMAX = YMAX;
 static const norm_output_type YNORMMIN = YMIN;
 static const norm_input_type UNORMMAX = UMAX;
 static const norm_input_type UNORMMIN = UMIN;
+static const norm_output_type DELTAYNORM = DELTAY;
 #endif
 
 /* Choose appropriate coefficients based on the operation modes.
@@ -457,7 +459,7 @@ void pseudoRandArx(rand_type coeffs[nGens]);
 
 /** Update cost[1] (the progressive-barrier violation term) given the
  *  current predicted output currY and the bounds YMIN/YMAX. */
-void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr);
+void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr, const norm_output_type yPast);
 
 /* --- ADC / DAC conversions -------------------------------------------- */
 #ifdef CONVERSIONS_MODE

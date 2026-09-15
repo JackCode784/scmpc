@@ -223,6 +223,7 @@ void costFunctionArx(cost_type              cost[2],
         /* --- Nominal prediction and output cost ----------------------- */
         norm_output_type yNext_nom = computeArxOutput(yPastCurr[Nscen], uSamples,
                                                    thetaCenter);
+        updateConstraintViolation(cost, yNext_nom, yPastCurr[Nscen][0]);
         err_type err_nom = yNext_nom - yref;
 
         #ifdef DEBUG_PRINT
