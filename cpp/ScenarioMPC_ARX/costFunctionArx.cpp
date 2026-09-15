@@ -195,6 +195,7 @@ void costFunctionArx(cost_type              cost[2],
             
             #ifdef USE_SCENS_CONSTR
             updateConstraintViolation(cost, yNext);
+            #endif
 
             #ifdef DEBUG_PRINT
             cost_f[1] = cost[1].to_double();
