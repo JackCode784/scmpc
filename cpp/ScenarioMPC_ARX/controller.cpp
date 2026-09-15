@@ -210,7 +210,9 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * ones: updated by step 2 in PL mode, or fixed at init in SCMPC mode.
      */
     theta_type thetaScenarios[Nscen][nTheta];
+    #if defined(USE_SCENS_COST) || defined(USE_SCENS_CONSTR)
     generateScenarios(thetaScenarios, thetaCenter, thetaGens);
+    #endif
 
     /* ------------------------------------------------------------------ */
     /*  Step 5 - Update output history: push y(k) into yHist             */

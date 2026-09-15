@@ -50,6 +50,8 @@ int main(void)
     printf("\tFixed point: %s\n", FIXED_PRINT);
     printf("\tADC/DAC: %s\n", CONVERSIONS_MODE_PRINT);
     printf("\tNormalization: %s\n", NRMLZ_PRINT);
+    printf("\tUse scenarios in cost: %s\n", USE_SCENS_COST_PRINT);
+    printf("\tUse scenarios constraints: %s\n", USE_SCENS_CONSTR_PRINT);
     printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
     printf("\n\n");
 

@@ -170,6 +170,7 @@ void costFunctionArx(cost_type              cost[2],
         /* --- Scenario loop: constraint check + PL/AL cost contribution - */
         cost_type scenariosContrib = 0;
 
+        #if defined(USE_SCENS_COST) || defined(USE_SCENS_CONSTR)
         for (int l = 0; l < Nscen; l++)
         {
             #ifdef PRAGMAS
@@ -182,24 +183,26 @@ void costFunctionArx(cost_type              cost[2],
             yNext_f = yNext.to_double();
             #endif
 
-            #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
+            #ifdef USE_SCENS_COST
             err_type err_s = yNext - yref;
             scenariosContrib += (err_s * err_s);
+            #endif
 
             #ifdef DEBUG_PRINT
             err_s_f = err_s.to_double();
             scenariosContrib_f = scenariosContrib.to_double();
             #endif
             
-            #endif
+            #ifdef USE_SCENS_CONSTR
             updateConstraintViolation(cost, yNext);
 
             #ifdef DEBUG_PRINT
             cost_f[1] = cost[1].to_double();
             #endif
         }
+        #endif
 
-        #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
+        #ifdef USE_SCENS_COST
         /* Divide by Nscen to get the mean squared error across scenarios.
          * In software: floating-point division.
          * In hardware: right-shift by LOG2NSCEN (exact only if Nscen is a

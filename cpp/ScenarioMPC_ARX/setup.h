@@ -48,6 +48,8 @@
   #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
+// #define USE_SCENS_COST      /* Enable scenarios cost contribution */
+// #define USE_SCENS_CONSTR    /* Enable scenarios constraints contribution */
 // #define PRNG_STDLIB         /* use rand() as prng */
 
 /** Active plant - choose one of: 
@@ -99,6 +101,16 @@
     #define NRMLZ_PRINT "true"
 #else 
     #define NRMLZ_PRINT "false"
+#endif
+#ifdef USE_SCENS_COST
+    #define USE_SCENS_COST_PRINT "true"
+#else
+    #define USE_SCENS_COST_PRINT "false"
+#endif
+#ifdef USE_SCENS_CONSTR
+    #define USE_SCENS_CONSTR_PRINT "true"
+#else
+    #define USE_SCENS_CONSTR_PRINT "false"
 #endif
 #ifdef PRNG_STDLIB
     #define PRNG_STDLIB_PRINT "true"
@@ -289,7 +301,7 @@ static const u_norm_inv_coeff_type uNormGainInverse = double(UMAX - UMIN) / doub
 static const norm_output_type yNormOffset = double(YNORMMIN*YMAX - YNORMMAX*YMIN) / double(YMAX - YMIN);
 static const norm_input_type uNormOffset = double(UNORMMIN*UMAX - UNORMMAX*UMIN) / double(UMAX - UMIN);
 
-static const input_weight_type R = double(RBaseLine) * double(yNormGain) * double(yNormGain) / double(uNormGain) * double(uNormGain); // 2^(-3)
+static const input_weight_type R = double(RBaseLine) * double(yNormGain) * double(yNormGain) / (double(uNormGain) * double(uNormGain)); // 2^(-3)
 
 /* Normalization, use "normalized" noise in output strip */
 const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
@@ -498,10 +510,10 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
                                     theta_type newCenter[nTheta], 
                                     theta_type newGens[nTheta][nGens]);
 
+#endif  /* CTRL_MODE == CTRL_MODE_PL */
 // Zonotope volume computation
 vol_type zonotopeVolume(const theta_type G[nTheta][nGens]);
 
 // (Generators) matrix determinant computation
 det_type matDet(const theta_type M[nTheta][nTheta]);
 
-#endif  /* CTRL_MODE == CTRL_MODE_PL */
