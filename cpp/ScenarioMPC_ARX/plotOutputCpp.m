@@ -5,7 +5,7 @@ clc;
 
 if opts.isVitisSim
     titleStr = 'Fixed point';
-    d = "..\..\VitisProj\ARX\solution1\csim\build\";
+    d = "..\..\vitis\scmpc-arx\solution1\csim\build\";
     % d = dir(fullfile(cd, '**', 'output.txt'));
     % d = d(1).folder;
 else

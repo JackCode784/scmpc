@@ -48,8 +48,8 @@
   #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
-// #define USE_SCENS_COST      /* Enable scenarios cost contribution */
-// #define USE_SCENS_CONSTR    /* Enable scenarios constraints contribution */
+#define USE_SCENS_COST      /* Enable scenarios cost contribution */
+#define USE_SCENS_CONSTR    /* Enable scenarios constraints contribution */
 // #define PRNG_STDLIB         /* use rand() as prng */
 
 /** Active plant - choose one of: 
@@ -69,16 +69,16 @@
 #define CTRL_MODE_SCMPC  0
 #define CTRL_MODE_PL     1
 #define CTRL_MODE_AL     2
-#define CTRL_MODE        CTRL_MODE_PL
+#define CTRL_MODE        CTRL_MODE_SCMPC
 
 /* ======================================================================
    Derived feature flags (do NOT edit)
    ====================================================================== */
 #ifdef FIXED
-    // #define PRAGMAS         /* enable all HLS synthesis pragmas in .cpp files  */
+    #define PRAGMAS         /* enable all HLS synthesis pragmas in .cpp files  */
     #include <ap_fixed.h>   /* include fixed point data types */
     #undef PRNG_STDLIB      /* can't use rand() in fixed point */
-    #define DEBUG_PRINT      /* debug printfs */
+    // #define DEBUG_PRINT      /* debug printfs */
 #else
     #undef DEBUG_PRINT /* use only in fixed point mode */
 #endif

@@ -8,19 +8,19 @@ parameters
 norm_output_type computeArxOutput(const norm_output_type yPast[na], const norm_input_type uSamples[nb+nk-1], const theta_type theta[nTheta])
 {
     #ifdef PRAGMAS
-    // #pragma HLS INLINE
-    #endif
-    norm_output_type yRes = 0;
-
-    #ifdef PRAGMAS
+    #pragma HLS INLINE
     #pragma HLS array_partition variable=theta dim=1 complete
     #pragma HLS array_partition variable=yPast dim=1 complete
     #pragma HLS array_partition variable=uSamples dim=1 complete
-    #endif 
+    #endif
+
+    norm_output_type yRes = 0;
+
 
     for(int i = 0; i < nTheta; i++)
     {
         #ifdef PRAGMAS
+        #pragma HLS UNROLL
         #endif
         
         #ifndef NRMLZ

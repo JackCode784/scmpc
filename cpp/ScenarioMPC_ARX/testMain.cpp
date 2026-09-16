@@ -34,6 +34,7 @@
 
 #include "setup.h"
 #include <stdio.h>
+// #include <math.h>
 
 #ifdef PRNG_STDLIB
   #include <cstdlib>
@@ -264,5 +265,6 @@ inline void generateReference(output_type yref[], int nSim)
     for(int i = 0; i < nSim; i++) yref[i] = (i < 75) ? 3 :
                                             (i < 150) ? 4 :
                                             (i < 225) ? 5 : 7;
+    // for(int i = 0; i < nSim; i++) yref[i] = (sin(2 * M_PI / 3 * i * 1e-2) > 0 ? 10 * sin(2 * M_PI / 3 * i * 1e-2) : -10 * sin(2 * M_PI / 3 * i * 1e-2));
 #endif  /* ACTIVE_SYSTEM */
 }
