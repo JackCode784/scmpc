@@ -162,7 +162,7 @@ void costFunctionArx(cost_type              cost[2],
             #ifndef FIXED
             cost[0] += (uSamples[0] - uSamples[1]) * R * (uSamples[0] - uSamples[1]);
             #else
-            cost[0] += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) >> -log2R;
+            cost[0] += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) << log2R;
             #endif
         }
         #ifdef DEBUG_PRINT

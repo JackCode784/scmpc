@@ -221,7 +221,6 @@ static const input_weight_type RBaseLine = 12.5; /* so that R = 0.125 = 2^(-3) i
 */
 constexpr int log2Q = 2;
 constexpr int log2P = 2;
-constexpr int log2R = -3;
 
 /* ======================================================================
    MADS SOLVER PARAMETERS
@@ -302,6 +301,7 @@ static const norm_output_type yNormOffset = double(YNORMMIN*YMAX - YNORMMAX*YMIN
 static const norm_input_type uNormOffset = double(UNORMMIN*UMAX - UNORMMAX*UMIN) / double(UMAX - UMIN);
 
 static const input_weight_type R = double(RBaseLine) * double(yNormGain) * double(yNormGain) / (double(uNormGain) * double(uNormGain)); // 2^(-3)
+constexpr int log2R = -3;
 
 /* Normalization, use "normalized" noise in output strip */
 const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
@@ -321,6 +321,7 @@ static const strip_q_coeff_c0_type qmyInvDmc0 = 0.992262713557689; // includes '
 #else
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
 static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
+constexpr int log2R = 4;
 static const norm_output_type YNORMMAX = YMAX;
 static const norm_output_type YNORMMIN = YMIN;
 static const norm_input_type UNORMMAX = UMAX;
