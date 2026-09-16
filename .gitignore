@@ -277,9 +277,9 @@ solution*/impl/ip/
 *.tmp
 
 # Additional Vitis HLS files
-.apc/
 *.vitis_hls_log_all.xml
-*.cproject
+VitisProj/ARX/.cproject
+VitisProj/ARX/.apc/autopilot.apfmapping
 
 # Custom
 output.txt
