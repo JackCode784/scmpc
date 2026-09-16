@@ -283,3 +283,6 @@ solution*/impl/ip/
 
 # Custom
 output.txt
+costFunctionArxOptimized.cpp
+interval.h
+boundIntervalsBuckloss.h
