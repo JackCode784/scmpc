@@ -36,12 +36,14 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 		// update mesh size
 		for (int i = 0; i < nOpt; i++)
 		{
-			if (frameExp[i] < FRAME_EXP_MIN)
-			{
-				break;
-			}
-			// Mesh update
-			meshExp[i] = (frameExp[i] < 0) ? (frameExp[i] << 1) : frameExp[i];
+			#ifdef PRAGMAS
+			#pragma HLS UNROLL
+			#endif
+			/* Old method: HLS unfriendly because of break */
+			// if (frameExp[i] < FRAME_EXP_MIN)
+			// {
+			// 	break;
+			// }
 			// else if (frameExp[i] < 0)
 			// {
 			// 	meshExp[i] = frameExp[i] + frameExp[i];
@@ -50,6 +52,9 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 			// {
 			// 	meshExp[i] = frameExp[i];
 			// }
+
+			/* Alternative to break statement */
+			if(frameExp[i] >= FRAME_EXP_MIN) meshExp[i] = (frameExp[i] < 0) ? (frameExp[i] << 1) : frameExp[i];
 
 			#ifdef DEBUG_PRINT
 			frameExp_f[i] = frameExp[i].to_double();
