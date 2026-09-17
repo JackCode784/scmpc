@@ -14,6 +14,17 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 	norm_input_type pollMatrix[nOpt][2 * nOpt]; // columns are poll points
 	cost_type cost[2];					   // cost function and constraints violation
 
+	#ifdef PRAGMAS
+	/* Read/written elementwise by unrolled logic in generatePollMatrixArx,
+	 * generatePollDirectionsArx and progressiveBarrierPollingArx (all
+	 * called with these exact arrays, no local copy in between): declared
+	 * here, at their point of storage. */
+	#pragma HLS ARRAY_PARTITION variable=frameExp   complete dim=1
+	#pragma HLS ARRAY_PARTITION variable=meshExp    complete dim=1
+	#pragma HLS ARRAY_PARTITION variable=pollMatrix complete dim=0
+	#pragma HLS ARRAY_PARTITION variable=cost       complete dim=1
+	#endif
+
 	for (int i = 0; i < nOpt; i++)
 		frameExp[i] = D0_VAL; // initialize frame exp
 
@@ -31,11 +42,45 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 	#endif
 
 	// MADS alg iterates K times
+	#ifdef PRAGMAS
+	/*
+	 * Deliberately no UNROLL/PIPELINE here: this is the direct-search
+	 * algorithm's own outer loop. Iteration iter+1's poll matrix depends
+	 * on frameExp as updated by progressiveBarrierPollingArx at the END
+	 * of iteration iter, so the iterations are a true sequential
+	 * recurrence, not a candidate for either directive - MADS_ITER=7
+	 * physical copies of the whole poll-and-evaluate datapath would be
+	 * both wrong (each needs the previous one's result) and far too
+	 * large to fit. PIPELINE off documents that this is a deliberate
+	 * choice, not an oversight, matching the convention already used in
+	 * cpp/MADS_ISCAS23/admm.cpp for the same kind of loop.
+	 */
+	#pragma HLS PIPELINE off
+	#endif
 	for (int iter = 0; iter < MADS_ITER; iter++)
 	{
 		// update mesh size
 		for (int i = 0; i < nOpt; i++)
 		{
+			/*
+			 * NOTE: this "break" makes the trip count of this inner loop
+			 * data-dependent (it stops updating meshExp for all i once
+			 * ANY dimension's frameExp[i] drops below FRAME_EXP_MIN).
+			 * Every other loop in this codebase over an nOpt/nTheta-sized
+			 * range deliberately avoids break/continue for exactly this
+			 * reason (see the comments in volumeZonotope.cpp) so that it
+			 * stays eligible for #pragma HLS UNROLL. This one cannot be
+			 * unrolled or pipelined as written - Vitis HLS needs a
+			 * statically-bounded trip count for both. If the intent is
+			 * really "stop updating every dimension once the first one
+			 * bottoms out", that is worth double-checking against the
+			 * MADS reference algorithm: mesh/frame sizes are normally
+			 * per-dimension quantities updated independently, so a more
+			 * HLS-friendly (and UNROLL-able) rewrite would replace the
+			 * break with a per-dimension guard, e.g.
+			 *   if (frameExp[i] >= FRAME_EXP_MIN) meshExp[i] = ...;
+			 * which also happens to be closer to the reference behaviour.
+			 */
 			if (frameExp[i] < FRAME_EXP_MIN)
 			{
 				break;

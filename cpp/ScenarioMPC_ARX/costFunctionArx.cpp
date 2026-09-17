@@ -56,8 +56,14 @@ void costFunctionArx(cost_type              cost[2],
                      const theta_type       thetaScenarios [Nscen][nTheta])
 {
     #ifdef PRAGMAS
-    /* Unrolling the outer prediction loop allows HLS to compute all N steps
-     * in parallel.  Remove if the area cost is too high.                    */
+    /*
+     * NOT inlined: progressiveBarrierPollingArx calls this function
+     * 2*nOpt times per MADS iteration (2*nOpt*MADS_ITER = 42 times per
+     * controller() call). Keeping it a separate module means HLS builds
+     * ONE instance of its datapath and reuses it sequentially across all
+     * 42 calls; inlining would duplicate that datapath at every call
+     * site instead (42x the LUTs/DSPs for identical arithmetic).
+     */
     // #pragma HLS INLINE
     #endif
 
@@ -99,6 +105,20 @@ void costFunctionArx(cost_type              cost[2],
      */
     norm_output_type yPastCurr[Nscen+1][na];
     norm_input_type  uSamples [nb + nk - 1];
+
+    #ifdef PRAGMAS
+    /*
+     * Both are read/written by the k-loop below, which is pipelined with
+     * its inner scenario loop (l) fully unrolled: every pipeline stage
+     * therefore needs concurrent access to all Nscen+1 rows of yPastCurr
+     * and to every element of uSamples. Complete partitioning turns them
+     * into individual registers (max (Nscen+1)*na = 10 and nb+nk-1 = 2
+     * elements for this design), removing the BRAM-port limit that would
+     * otherwise force the schedule back to one row/element per cycle.
+     */
+    #pragma HLS ARRAY_PARTITION variable=yPastCurr complete dim=0
+    #pragma HLS ARRAY_PARTITION variable=uSamples  complete dim=1
+    #endif
 
     for (int i = 0; i < Nscen+1; i++)
         for(int j = 0; j < na; j++)
@@ -143,7 +163,23 @@ void costFunctionArx(cost_type              cost[2],
     for (int k = 0; k < Nhor; k++)
     {
         #ifdef PRAGMAS
-        // #pragma HLS UNROLL
+        /*
+         * PIPELINE, not UNROLL: yPastCurr/uSamples make this a genuine
+         * recurrence (step k+1 rolls forward the state written at step
+         * k), so there is no independent work to unroll into parallel
+         * copies - unrolling would just duplicate computeArxOutput's
+         * datapath Nhor times for a chain that must still execute in
+         * order. Pipelining reuses ONE copy of that datapath and starts
+         * a new k-iteration every II cycles while the previous one is
+         * still draining, which gives the same steady-state throughput
+         * as unrolling without the extra area.
+         *
+         * Applying PIPELINE to this loop also makes Vitis HLS unroll the
+         * inner Nscen loop (l) automatically, since pipelining requires
+         * a single flattened loop body; it is unrolled explicitly below
+         * anyway so the intent does not depend on that default.
+         */
+        #pragma HLS PIPELINE II=1
         #endif
         /* --- Set current input ---------------------------------------- */
         if (k < NhorU)
@@ -175,7 +211,13 @@ void costFunctionArx(cost_type              cost[2],
         for (int l = 0; l < Nscen; l++)
         {
             #ifdef PRAGMAS
-            // #pragma HLS UNROLL
+            /* Scenarios are mutually independent within one prediction
+             * step k (each reads only its own yPastCurr[l] row): safe,
+             * and required by the outer PIPELINE, to unroll into Nscen
+             * parallel computeArxOutput + updateConstraintViolation
+             * instances (both are marked INLINE, so this is what
+             * actually gets replicated Nscen-fold, not a function call). */
+            #pragma HLS UNROLL
             #endif
             norm_output_type yNext = computeArxOutput(yPastCurr[l], uSamples,
                                                   thetaScenarios[l]);

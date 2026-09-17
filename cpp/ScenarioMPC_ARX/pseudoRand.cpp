@@ -26,6 +26,16 @@ inline unsigned int xorshift32Step()
 /* Return one random sample in [-1, 1] */
 rand_type pseudoRandArx()
 {
+	#ifdef PRAGMAS
+	/*
+	 * random_state is a single global register: every call reads and
+	 * rewrites it, so successive calls are a genuine data recurrence and
+	 * can never be parallelised regardless of pragmas at the call site
+	 * (see generatePollMatrixArx.cpp). INLINE just removes the call
+	 * overhead of this ~5-operation leaf function.
+	 */
+	#pragma HLS INLINE
+	#endif
 	rand_type res;
 	#ifdef PRNG_STDLIB
 	res = (rand_type)2 * ((rand_type)rand() / (rand_type)RAND_MAX) - (rand_type)1;
@@ -66,7 +76,11 @@ void pseudoRandArx(rand_type coeffs[nGens])
 	for(int i = 0; i < nGens; i++)
 	{
 		#ifdef PRAGMAS
-		#pragma HLS pipeline II=1
+		/* Same random_state recurrence as pseudoRandArx() above: the loop
+		 * cannot be unrolled, but each xorshift32Step fits comfortably in
+		 * one cycle, so pipelining still overlaps the (cheap) coefficient
+		 * bookkeeping around it at II=1. */
+		#pragma HLS PIPELINE II=1
 		#endif
 		unsigned int r = xorshift32Step();
 		u16_type u16 = (r >> 16) & 0xFFFFu;

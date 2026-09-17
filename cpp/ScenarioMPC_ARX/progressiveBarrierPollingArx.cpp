@@ -13,6 +13,13 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 								const theta_type thetaScenarios[Nscen][nTheta])
 {
 	#ifdef PRAGMAS
+	/*
+	 * Left OFF deliberately: costFunctionArx is already called from a
+	 * plain (non-unrolled) loop below, so HLS already builds exactly one
+	 * instance of it and reuses it sequentially across all 2*nOpt calls -
+	 * ALLOCATION limit=... only matters when unrolling/pipelining would
+	 * otherwise duplicate the callee, which is not the case here.
+	 */
 	// #pragma HLS ALLOCATION instances=costFunctionArx limit=6 function
 	#endif
 
@@ -47,15 +54,15 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 	// point under test
 	norm_input_type testPoint[nOpt];
 	#ifdef PRAGMAS
-	// #pragma HLS ARRAY_PARTITION variable = testPoint dim = 1 complete
+	#pragma HLS ARRAY_PARTITION variable=testPoint dim=1 complete
 	#endif
 
 	// cost function and constraints violation of the test point
 	cost_type costTestPoint[2];
 	const cost_type originalCost = bestCost[0];
-	
+
 	#ifdef PRAGMAS
-	// #pragma HLS ARRAY_PARTITION variable = costTestPoint dim = 1 complete
+	#pragma HLS ARRAY_PARTITION variable=costTestPoint dim=1 complete
 	#endif
 
 	#ifdef DEBUG_PRINT
@@ -67,14 +74,29 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 	for (int i = 0; i < 2 * nOpt; i++)
 	{
 		#ifdef PRAGMAS
-		// #pragma HLS UNROLL
+		/*
+		 * Deliberately NOT unrolled or pipelined. Unrolling would
+		 * instantiate 2*nOpt physical copies of costFunctionArx's whole
+		 * datapath (itself already Nscen-way parallel inside, see
+		 * costFunctionArx.cpp) - far too much for the XC7Z020's 220
+		 * DSP48E1 slices. This loop also carries a genuine recurrence
+		 * through bestCost/bestPoint (each candidate is compared against
+		 * the best found so far), so poll point i+1 cannot be evaluated
+		 * against a stale "best". Once the design is synthesizing
+		 * cleanly, PIPELINE can be tried here as a later optimisation -
+		 * it only needs costFunctionArx to accept a new call before the
+		 * previous one fully drains - but check the achieved II and DSP
+		 * utilisation in the synthesis report before keeping it, since
+		 * the callee's own pipeline depth sets a floor on how much
+		 * overlap is actually achievable.
+		 */
 		#endif
 
 		// extract one point from the polling matrix
 		for (int j = 0; j < nOpt; j++)
 		{
 			#ifdef PRAGMAS
-			// #pragma HLS UNROLL
+			#pragma HLS UNROLL
 			#endif
 			testPoint[j] = pollMatrix[j][i];
 
@@ -98,7 +120,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 			for (int i = 0; i < nOpt; i++)
 			{
 				#ifdef PRAGMAS
-				// #pragma HLS UNROLL
+				#pragma HLS UNROLL
 				#endif
 				bestPoint[i] = testPoint[i];
 				
@@ -120,7 +142,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 			for (int i = 0; i < nOpt; i++)
 			{
 				#ifdef PRAGMAS
-				// #pragma HLS UNROLL
+				#pragma HLS UNROLL
 				#endif
 				bestPoint[i] = testPoint[i];
 
@@ -146,7 +168,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 			for (int i = 0; i < nOpt; i++)
 			{
 				#ifdef PRAGMAS
-				// #pragma HLS UNROLL
+				#pragma HLS UNROLL
 				#endif
 				frameExp[i] = frameExp[i] + TAU;
 
@@ -161,7 +183,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 		for (int i = 0; i < nOpt; i++)
 		{
 			#ifdef PRAGMAS
-			// #pragma HLS UNROLL
+			#pragma HLS UNROLL
 			#endif
 			frameExp[i] = frameExp[i] - TAU;
 			

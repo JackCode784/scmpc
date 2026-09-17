@@ -25,6 +25,20 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 
 	mesh_exp_type frameMeshDiff[nOpt];
 
+	#ifdef PRAGMAS
+	/*
+	 * This function runs once per MADS iteration (MADS_ITER=7 times per
+	 * controller() call), far less often than costFunctionArx (called
+	 * MADS_ITER*2*nOpt times), so full unrolling below is affordable here.
+	 * nOpt <= a handful for any realistic control horizon, so every array
+	 * is small enough to become individual registers rather than BRAM.
+	 */
+	#pragma HLS ARRAY_PARTITION variable=H             complete dim=0
+	#pragma HLS ARRAY_PARTITION variable=B             complete dim=0
+	#pragma HLS ARRAY_PARTITION variable=directions    complete dim=0
+	#pragma HLS ARRAY_PARTITION variable=frameMeshDiff complete dim=1
+	#endif
+
 	// generate Householder matrix starting with a random vector
 	generateHouseholderMatrix(randomVector, H);
 
@@ -35,8 +49,12 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 	// fill B matrix with polling directions
 	for (int i = 0; i < nOpt; i++)
 	{
-		#ifdef PRAGMAS	
-		// #pragma HLS UNROLL
+		#ifdef PRAGMAS
+		/* nOpt iterations, each independent of the others (frameMeshDiff[i]
+		 * and directions[i][*] only ever depend on row i's own inputs):
+		 * fully unrolling turns this into nOpt parallel direction-vector
+		 * datapaths. */
+		#pragma HLS UNROLL
 		#endif
 
 		frameMeshDiff[i] = frameIdx[i] - meshIdx[i];

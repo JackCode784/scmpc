@@ -69,6 +69,27 @@ digital_input_type controller(const digital_output_type yCurrDig,
 	#pragma HLS INTERFACE ap_none port=yCurrDig
 	#pragma HLS INTERFACE ap_none port=yrefDig
 	#pragma HLS INTERFACE ap_ctrl_hs port=return
+
+	/*
+	 * thetaCenter/thetaGens/yHist/uHist are FILE-SCOPE globals (defined
+	 * above with external linkage) rather than local arrays, so their
+	 * memory partitioning must be declared here, inside the top-level
+	 * function, where HLS elaborates the design's static storage.
+	 * A pragma attached to the point of declaration outside a function
+	 * has no effect.
+	 *
+	 * All four are read/written elementwise by fully-unrolled loops in
+	 * computeArxOutput, generateScenarios, matDet/zonotopeVolume and
+	 * boundStripZonotopeIntersectionNew (PL/AL mode). Complete
+	 * partitioning turns each into individual registers instead of a
+	 * single-/dual-port BRAM, which is required for those unrolled
+	 * accesses to happen in parallel and is affordable here because
+	 * nTheta, nGens, na and nb+nk-1 are all <= 6 for every ACTIVE_SYSTEM.
+	 */
+	#pragma HLS ARRAY_PARTITION variable=thetaCenter complete dim=1
+	#pragma HLS ARRAY_PARTITION variable=thetaGens   complete dim=0
+	#pragma HLS ARRAY_PARTITION variable=yHist       complete dim=1
+	#pragma HLS ARRAY_PARTITION variable=uHist       complete dim=1
 	#endif
     /* ------------------------------------------------------------------ */
     /*  Step 1 - Convert digital inputs to algorithm types                */
@@ -210,6 +231,17 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * ones: updated by step 2 in PL mode, or fixed at init in SCMPC mode.
      */
     theta_type thetaScenarios[Nscen][nTheta];
+    #ifdef PRAGMAS
+    /*
+     * Declared here (its point of storage), not inside generateScenarios
+     * or computeArxOutput. costFunctionArx's Nhor loop is pipelined below
+     * with its inner Nscen loop unrolled (see costFunctionArx.cpp), so at
+     * every pipeline stage all Nscen rows of thetaScenarios are read in
+     * the same cycle: complete partitioning in both dimensions is what
+     * makes that possible without BRAM port contention.
+     */
+    #pragma HLS ARRAY_PARTITION variable=thetaScenarios complete dim=0
+    #endif
     #if defined(USE_SCENS_COST) || defined(USE_SCENS_CONSTR)
     generateScenarios(thetaScenarios, thetaCenter, thetaGens);
     #endif

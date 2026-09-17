@@ -43,7 +43,10 @@ input_type DAConvertU(const digital_input_type uDig)
 norm_output_type dig2ctrlY(const digital_output_type yDig)
 {
 	#ifdef PRAGMAS
-	#pragma hls inline
+	/* Single multiply-add, called once per controller() call: inlining
+	 * removes the function-call RTL boundary (and its own tiny FSM)
+	 * so the operation merges into whatever schedule surrounds the call. */
+	#pragma HLS INLINE
 	#endif
 	norm_output_type yCtrl = yConvCoeff*yDig + yConvOffset;
 
@@ -61,7 +64,7 @@ norm_output_type dig2ctrlY(const digital_output_type yDig)
 digital_input_type ctrlU2dig(const norm_input_type uCtrl)
 {
 	#ifdef PRAGMAS
-	#pragma hls inline
+	#pragma HLS INLINE
 	#endif
 	digital_input_type uDig = uConvCoeff*uCtrl + uConvOffset;
 	#ifndef FIXED

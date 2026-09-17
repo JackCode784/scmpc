@@ -9,9 +9,9 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na], const norm_i
 {
     #ifdef PRAGMAS
     #pragma HLS INLINE
-    #pragma HLS array_partition variable=theta dim=1 complete
-    #pragma HLS array_partition variable=yPast dim=1 complete
-    #pragma HLS array_partition variable=uSamples dim=1 complete
+    #pragma HLS ARRAY_PARTITION variable=theta dim=1 complete
+    #pragma HLS ARRAY_PARTITION variable=yPast dim=1 complete
+    #pragma HLS ARRAY_PARTITION variable=uSamples dim=1 complete
     #endif
 
     norm_output_type yRes = 0;

@@ -69,6 +69,18 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nTheta],
                        const theta_type center        [nTheta],
                        const theta_type gens          [nTheta][nGens])
 {
+    #ifdef PRAGMAS
+    /*
+     * gens and center are complete-partitioned so every entry can be read
+     * in the same cycle by the fully-unrolled j/k loops below (nTheta and
+     * nGens are both <= 6, so this costs a handful of extra read ports,
+     * not BRAMs). thetaScenarios itself is partitioned by the caller
+     * (controller.cpp), at its point of declaration.
+     */
+    #pragma HLS ARRAY_PARTITION variable=gens   complete dim=0
+    #pragma HLS ARRAY_PARTITION variable=center complete dim=1
+    #endif
+
     /*
      * coeffs[k] ∈ [−1, 1] — one random coefficient per generator column.
      * The array is sized to the compile-time maximum; only the first nGens
@@ -78,9 +90,23 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nTheta],
      * if PRNG_STDLIB is defined (software simulation only).
      */
     rand_type coeffs[nGens];
+    #ifdef PRAGMAS
+    #pragma HLS ARRAY_PARTITION variable=coeffs complete dim=1
+    #endif
 
     for (int i = 0; i < Nscen; i++)
     {
+        #ifdef PRAGMAS
+        /*
+         * NOT unrolled: pseudoRandArx(coeffs) advances the single shared
+         * xorshift32 state (see pseudoRand.cpp), so scenario i+1's random
+         * draw genuinely depends on scenario i's - the Nscen iterations
+         * cannot be computed in parallel. PIPELINE still overlaps the
+         * dot-product arithmetic of one scenario with the next draw.
+         */
+        #pragma HLS PIPELINE
+        #endif
+
         /* Draw nGens independent random coefficients ξ₀, …, ξ_{nGens−1}. */
         pseudoRandArx(coeffs);
 
@@ -97,10 +123,18 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nTheta],
          */
         for (int j = 0; j < nTheta; j++)
         {
+            #ifdef PRAGMAS
+            #pragma HLS UNROLL
+            #endif
             theta_type theta_j = center[j];
 
             for (int k = 0; k < nGens; k++)
+            {
+                #ifdef PRAGMAS
+                #pragma HLS UNROLL
+                #endif
                 theta_j += gens[j][k] * coeffs[k];
+            }
 
             thetaScenarios[i][j] = theta_j;
         }

@@ -25,9 +25,22 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 	// vector for directions generation
 	rand_type randomVector[nOpt];
 
+	#ifdef PRAGMAS
+	#pragma HLS ARRAY_PARTITION variable=directions   complete dim=0
+	#pragma HLS ARRAY_PARTITION variable=randomVector complete dim=1
+	#endif
+
 	// generate random vector in [-1, 1]
 	for(int i = 0; i < nOpt; i++)
+	{
+		#ifdef PRAGMAS
+		/* pseudoRandArx() advances the single shared xorshift32 state
+		 * (pseudoRand.cpp): draw i+1 depends on draw i, so this loop
+		 * cannot be unrolled. PIPELINE II=1 still issues one draw/cycle. */
+		#pragma HLS PIPELINE II=1
+		#endif
 		randomVector[i] = pseudoRandArx();
+	}
 
 	#ifdef DEBUG_PRINT
 	for(int i = 0; i < nOpt; i++) randVec_f[i] = randomVector[i].to_double();
@@ -44,7 +57,9 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 	for (int i = 0; i < nOpt; i++)
 	{
 		#ifdef PRAGMAS
-		// #pragma HLS UNROLL
+		/* Row i of pollMatrix only depends on row i of directions/currU:
+		 * independent across i, so fully unrolling (nOpt rows) is cheap. */
+		#pragma HLS UNROLL
 		#endif
 
 		#ifndef FIXED
@@ -75,8 +90,11 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 		/* Use multiplication */
 		/* BUG: expression directions[i][j] * (1 << meshIdx[i]) returns wrong
 		value because 1 is an integer. */
-		for(int j = 0; j < 2*nOpt; j++) 
+		for(int j = 0; j < 2*nOpt; j++)
 		{
+			#ifdef PRAGMAS
+			#pragma HLS UNROLL
+			#endif
 			pollMatrix[i][j] = currU[i] + (directions[i][j] << meshIdx[i]);
 
 			#ifdef DEBUG_PRINT
