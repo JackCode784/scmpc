@@ -200,7 +200,21 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
     for(int genId = 0; genId < nGens; genId++)
     {
         #ifdef PRAGMAS
-        #pragma HLS PIPELINE
+        /*
+         * Deliberately not pipelined - this is the third link in the same
+         * chain that produced the II Violation reported from CTRL_MODE_PL
+         * synthesis (see matDet's and zonotopeVolume's comments in
+         * volumeZonotope.cpp). This loop body computes a division
+         * (gprojinv below) and, when gproj[genId] != 0, calls
+         * zonotopeVolume() - itself now honestly multi-cycle - up to
+         * nGens times. A bare PIPELINE here (target II=1) cannot be met
+         * by a body containing a division and a many-cycle function
+         * call; the achieved II would be bounded below by
+         * zonotopeVolume's own latency regardless of what was requested,
+         * exactly the mismatch HLS was warning about. This function runs
+         * once per controller() call in PL/AL mode, not in a hot loop, so
+         * there is nothing to gain from insisting on it.
+         */
         #endif
 
         if(gproj[genId] != 0)

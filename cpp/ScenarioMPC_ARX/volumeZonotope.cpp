@@ -106,7 +106,25 @@ det_type matDet(const theta_type M[nTheta][nTheta])
     for (int k = 0; k < nTheta; k++)
     {
         #ifdef PRAGMAS
-        #pragma HLS PIPELINE
+        /*
+         * Deliberately NOT pipelined (reverted from a bare `PIPELINE`,
+         * which defaults to a target II=1). This is a genuine Gaussian-
+         * elimination recurrence - row k+1's pivot search and elimination
+         * read A as left by step k - AND its elimination step below
+         * (`factor = A[i][k] / A[k][k]`) is an ap_fixed DIVISION, unrolled
+         * across up to nTheta-1 rows. Division is not a single-cycle
+         * operation the way multiply/add are; Vitis HLS 2021.1 reported
+         * an II Violation here (target 1, unreachable) once this function
+         * was actually exercised from CTRL_MODE_PL, because neither the
+         * recurrence nor the divider's own latency can be squeezed into
+         * 1 cycle. Leaving the loop unpipelined lets HLS schedule the
+         * division and elimination across as many cycles as they
+         * genuinely need; there is no throughput requirement to justify
+         * forcing otherwise, since matDet is called at most once per
+         * zonotopeVolume() call for any nTheta==nGens system (see below)
+         * and zonotopeVolume itself runs only a handful of times per
+         * controller() call in PL/AL mode, not in a tight repeated loop.
+         */
         #endif
 
         /* --- Partial pivoting: find row with largest |A[i][k]|, i >= k -- */
@@ -258,8 +276,26 @@ vol_type zonotopeVolume(const theta_type G[nTheta][nGens])
     for (int mask = 0; mask < (1 << nGens); mask++)
     {
         #ifdef PRAGMAS
-        // #pragma HLS UNROLL   /* enable for minimum latency; high area cost */
-        #pragma HLS PIPELINE
+        /*
+         * Deliberately neither UNROLL nor PIPELINE.
+         *   UNROLL would instantiate 2^nGens (up to 64) parallel copies
+         *   of matDet - each one now an honestly-multi-cycle Gaussian
+         *   elimination with real dividers (see matDet's own comment
+         *   above) - which is a large amount of hardware for a function
+         *   that, in PL/AL mode, runs a handful of times per controller()
+         *   call, not in a throughput-critical loop.
+         *   PIPELINE (bare, target II=1) is what actually caused the II
+         *   Violation reported from CTRL_MODE_PL synthesis: most masks
+         *   here are cheap bit-counting, but any mask with exactly nTheta
+         *   set bits calls matDet, whose own latency (now multi-cycle by
+         *   design, not II=1) cannot be hidden inside a 1-cycle
+         *   initiation interval for this loop - the achieved II was
+         *   necessarily bounded below by matDet's latency regardless of
+         *   what was requested.
+         * Left unpipelined, HLS reuses one matDet instance sequentially
+         * across whichever masks actually qualify, which is the correct
+         * area/latency tradeoff here given how rarely this function runs.
+         */
         #endif
 
         /* Count set bits */

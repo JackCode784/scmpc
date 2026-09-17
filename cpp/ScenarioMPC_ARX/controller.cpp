@@ -156,6 +156,19 @@ digital_input_type controller(const digital_output_type yCurrDig,
         */
     theta_type newCenter[nTheta];
     theta_type newGens  [nTheta][nGens];
+    #ifdef PRAGMAS
+    /*
+     * Declared here (their point of storage) rather than inside
+     * boundStripZonotopeIntersectionNew: that function's own body
+     * assigns to newCenter[i] and newGens[i][j] from fully-unrolled
+     * loops (both the "changed" and "!changed" branches), so whichever
+     * concrete array is bound to those parameters needs to support
+     * concurrent, per-element writes. Complete partitioning is cheap
+     * here (nTheta*nGens <= 36 elements across every ACTIVE_SYSTEM).
+     */
+    #pragma HLS ARRAY_PARTITION variable=newCenter complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=newGens   complete dim=0
+    #endif
 
     /* In NRMLZ case, the inputs should be:
         * yCurr -> yCurr - yNormOffset - ([yHist, uHist] - offsets) * yNormGain * ((i < na) ? 1 : normGainsRatio) * Dg * c0
@@ -164,25 +177,85 @@ digital_input_type controller(const digital_output_type yCurrDig,
         In brief, phi should become (phi_norm-q)*my*Dm^-1*Dg
         */
     phi_type phi[nTheta];
+    #ifdef PRAGMAS
+    /*
+     * boundStripZonotopeIntersectionNew reads phi via fully-unrolled
+     * loops (the gproj computation), so - same reasoning as
+     * newCenter/newGens above - phi is partitioned here, at its point of
+     * declaration, rather than only on the callee's parameter.
+     */
+    #pragma HLS ARRAY_PARTITION variable=phi complete dim=1
+    #endif
     strip_center_type stripCenter = yCurrNorm;
     #ifdef NRMLZ
 
     /* Compute \tilde{phi} - offsets */
-    for(int i = 0; i < na; i++) phi[i] = (yHist[i] - yNormOffset);
-    for(int i = 0; i < nb; i++) phi[i+na] = (uHist[i+nk-1] - uNormOffset);
+    for(int i = 0; i < na; i++)
+    {
+        #ifdef PRAGMAS
+        /* na<=3 independent elements: cheap to unroll outright, and
+         * unrolling (unlike PIPELINE) makes no promise about how many
+         * cycles the result takes, so it carries none of the II-Violation
+         * risk documented in volumeZonotope.cpp / boundStripZonotope-
+         * IntersectionNew - the scheduler is simply left free to place
+         * this subtract in as many cycles as the target clock needs. */
+        #pragma HLS UNROLL
+        #endif
+        phi[i] = (yHist[i] - yNormOffset);
+    }
+    for(int i = 0; i < nb; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        phi[i+na] = (uHist[i+nk-1] - uNormOffset);
+    }
 
     /* Use (\tilde{phi} - offsets) to multiply by my*Dm^-1*c0 */
     stripCenter -= yNormOffset;
-    for(int i = 0; i < nTheta; i++) stripCenter -= phi[i] * myInvDmc0[i];
+    for(int i = 0; i < nTheta; i++)
+    {
+        #ifdef PRAGMAS
+        /*
+         * This IS a genuine reduction (stripCenter accumulates across i),
+         * unlike the elementwise loops above - but nTheta<=6 and the body
+         * is a plain multiply+subtract (no division, unlike the matDet/
+         * zonotopeVolume/boundStripZonotopeIntersectionNew loops fixed
+         * elsewhere in this pass), so unrolling it into a short static
+         * dependency chain is safe: there is no PIPELINE/II promise being
+         * made here for HLS to fail to keep.
+         */
+        #pragma HLS UNROLL
+        #endif
+        stripCenter -= phi[i] * myInvDmc0[i];
+    }
 
     /* Conclude phi computation */
-    for(int i = 0; i < nTheta; i++) phi[i] *= myInvDmDg[i];
-    
+    for(int i = 0; i < nTheta; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        phi[i] *= myInvDmDg[i];
+    }
+
     #else /* Unnormalized case */
     /* The strip uses original, unnormalized I/O samples */
-    for(int i = 0; i < na; i++) phi[i] = yHist[i];
-    for(int i = 0; i < nb; i++) phi[i+na] = uHist[i+nk-1];
-    
+    for(int i = 0; i < na; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        phi[i] = yHist[i];
+    }
+    for(int i = 0; i < nb; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        phi[i+na] = uHist[i+nk-1];
+    }
+
     #endif
     boundStripZonotopeIntersectionNew(stripCenter, phi, sigma,
                                     thetaCenter, thetaGens,
@@ -190,9 +263,17 @@ digital_input_type controller(const digital_output_type yCurrDig,
 
     /* Copy result back into the shared global zonotope state. */
     for (int i = 0; i < nTheta; i++) {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
         thetaCenter[i] = newCenter[i];
         for (int j = 0; j < nGens; j++)
+        {
+            #ifdef PRAGMAS
+            #pragma HLS UNROLL
+            #endif
             thetaGens[i][j] = newGens[i][j];
+        }
     }
 
     #ifdef DEBUG_PRINT
