@@ -62,31 +62,20 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 		// update mesh size
 		for (int i = 0; i < nOpt; i++)
 		{
+			#ifdef PRAGMAS
 			/*
-			 * NOTE: this "break" makes the trip count of this inner loop
-			 * data-dependent (it stops updating meshExp for all i once
-			 * ANY dimension's frameExp[i] drops below FRAME_EXP_MIN).
-			 * Every other loop in this codebase over an nOpt/nTheta-sized
-			 * range deliberately avoids break/continue for exactly this
-			 * reason (see the comments in volumeZonotope.cpp) so that it
-			 * stays eligible for #pragma HLS UNROLL. This one cannot be
-			 * unrolled or pipelined as written - Vitis HLS needs a
-			 * statically-bounded trip count for both. If the intent is
-			 * really "stop updating every dimension once the first one
-			 * bottoms out", that is worth double-checking against the
-			 * MADS reference algorithm: mesh/frame sizes are normally
-			 * per-dimension quantities updated independently, so a more
-			 * HLS-friendly (and UNROLL-able) rewrite would replace the
-			 * break with a per-dimension guard, e.g.
-			 *   if (frameExp[i] >= FRAME_EXP_MIN) meshExp[i] = ...;
-			 * which also happens to be closer to the reference behaviour.
+			 * Loop is now safe to fully unroll: the data-dependent break that
+			 * used to make its trip count variable has been replaced below
+			 * with a per-dimension guard, so every iteration is independent
+			 * and bounded by the compile-time constant nOpt.
 			 */
-			if (frameExp[i] < FRAME_EXP_MIN)
-			{
-				break;
-			}
-			// Mesh update
-			meshExp[i] = (frameExp[i] < 0) ? (frameExp[i] << 1) : frameExp[i];
+			#pragma HLS UNROLL
+			#endif
+			/* Old method: HLS unfriendly because of break */
+			// if (frameExp[i] < FRAME_EXP_MIN)
+			// {
+			// 	break;
+			// }
 			// else if (frameExp[i] < 0)
 			// {
 			// 	meshExp[i] = frameExp[i] + frameExp[i];
@@ -95,6 +84,9 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 			// {
 			// 	meshExp[i] = frameExp[i];
 			// }
+
+			/* Alternative to break statement */
+			if(frameExp[i] >= FRAME_EXP_MIN) meshExp[i] = (frameExp[i] < 0) ? (frameExp[i] << 1) : frameExp[i];
 
 			#ifdef DEBUG_PRINT
 			frameExp_f[i] = frameExp[i].to_double();
