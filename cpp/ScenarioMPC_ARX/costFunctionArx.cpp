@@ -38,44 +38,42 @@
  *
  * HLS NOTES
  * ----------
- * • The outer prediction loop (k = 0 ... Nhor-1) and inner scenario loop
- *   (l = 0 ... Nscen-1) are both UNROLLED (not pipelined). A PIPELINE
- *   II=1 + UNROLL combination was tried here once and reverted after
- *   synthesis reported a ~5x timing violation (Estimated 50.233 ns vs a
- *   10 ns target): a MANDATORY II=1 gave the scheduler almost no freedom
- *   to insert pipeline registers inside a loop that also carries a real
- *   recurrence (yPastCurr/uSamples feed from k into k+1). Both loops were
- *   then left fully rolled for a while, since at the time this design had
- *   no hard latency requirement and 42 sequential, ~375-cycle
- *   costFunctionArx calls (2*nOpt*MADS_ITER+1 per controller() call, see
- *   progressiveBarrierPollingArx.cpp/MADSARX.cpp) comfortably fit inside
- *   a loose budget.
- *
- *   A 20 kHz / 50 us hard real-time requirement changed that calculus:
- *   at the 10 ns target clock that is a 5000-cycle ceiling for the WHOLE
- *   controller() call, and the rolled version measured ~18700 cycles -
- *   this function's ~42-43 sequential calls are the dominant cost. UNROLL
- *   (unlike PIPELINE) makes no scheduling promise for HLS to fail to
- *   keep: it just removes the loop's own FSM-transition overhead and the
- *   forced one-scenario-at-a-time serialisation, and lets the ordinary
- *   list scheduler pack the resulting straight-line code into however
- *   many cycles the 10 ns target actually needs - which is exactly why
- *   it does not carry the same risk that made PIPELINE II=1 fail here.
- *   The Nscen=4 scenarios are mutually independent within one k (each
- *   reads only its own yPastCurr[l] row), so the scheduler is free to
+ * • Whether the outer prediction loop (k = 0 ... Nhor-1) and/or the inner
+ *   scenario loop (l = 0 ... Nscen-1) are UNROLLED is controlled by
+ *   PRAGMA_PROFILE in setup.h (PRAGMA_UNROLL_COSTFUNC_NHOR /
+ *   PRAGMA_UNROLL_COSTFUNC_NSCEN below) - see that macro's comment for
+ *   the measured area/latency numbers behind each profile. In short:
+ *   unrolling both loops meets a 20kHz/50us controller() deadline
+ *   (4151 cycles measured) but pushes LUT utilisation to ~100.8%
+ *   (53614/53200) with no margin left for CTRL_MODE_PL or system
+ *   integration; leaving both rolled uses ~37% LUT but is ~4.5x too slow
+ *   for that deadline (~18700 cycles measured). Neither loop is ever
+ *   PIPELINEd: a PIPELINE II=1 + UNROLL combination was tried here once
+ *   and reverted after synthesis reported a ~5x timing violation
+ *   (Estimated 50.233 ns vs a 10 ns target) - a MANDATORY II=1 gave the
+ *   scheduler almost no freedom to insert pipeline registers inside a
+ *   loop that also carries a real recurrence (yPastCurr/uSamples feed
+ *   from k into k+1). UNROLL does not carry that risk: it makes no
+ *   scheduling promise for HLS to fail to keep, it just removes the
+ *   loop's own FSM-transition overhead (and, for the l-loop, the forced
+ *   one-scenario-at-a-time serialisation) and lets the ordinary list
+ *   scheduler pack the resulting straight-line code into however many
+ *   cycles the target clock period actually needs. The Nscen=4 scenarios
+ *   are mutually independent within one k (each reads only its own
+ *   yPastCurr[l] row), so unrolling the l-loop lets the scheduler
  *   evaluate them concurrently; only the k-recurrence and the l-loop's
- *   own reduction into scenariosContrib remain genuine dependency chains.
- *   Utilisation headroom (18% DSP / 7% FF / 37% LUT before this change)
- *   comfortably covers the up-to-4x replication of computeArxOutput's
- *   arithmetic this unrolling can produce. Re-verify timing after
- *   synthesis regardless - unrolling removes the II promise but not the
- *   need to check the achieved combinational depth.
- * • yPastCurr and uSamples are completely partitioned (see their
- *   declaration below): with both loops unrolled, every element of both
- *   arrays can be read/written in the same logical step, which a
- *   BRAM-backed array cannot support - complete partitioning turns them
- *   into individual registers instead ((Nscen+1)*na = 10 and nb+nk-1 = 2
- *   elements for this design, cheap either way).
+ *   own reduction into scenariosContrib remain genuine dependency chains
+ *   regardless of which loops are unrolled. Re-verify timing after
+ *   synthesis whenever PRAGMA_PROFILE changes - unrolling removes the II
+ *   promise but not the need to check the achieved combinational depth.
+ * • yPastCurr and uSamples are unconditionally completely partitioned
+ *   (see their declaration below), independent of PRAGMA_PROFILE: with
+ *   either loop unrolled, every element of both arrays may need to be
+ *   read/written in the same logical step, which a BRAM-backed array
+ *   cannot support, so complete partitioning is required whenever
+ *   PRAGMA_UNROLL_COSTFUNC_NHOR or _NSCEN is defined - and it costs
+ *   essentially nothing ((Nscen+1)*na = 10 and nb+nk-1 = 2 elements for
+ *   this design) when neither is, so there is no reason to also gate it.
  */
 
 #include "setup.h"
@@ -204,7 +202,7 @@ void costFunctionArx(cost_type              cost[2],
      */
     for (int k = 0; k < Nhor; k++)
     {
-        #ifdef PRAGMAS
+        #ifdef PRAGMA_UNROLL_COSTFUNC_NHOR
         /*
          * UNROLL, not PIPELINE (see this file's HLS NOTES docstring for
          * why PIPELINE II=1 previously failed here and why UNROLL does
@@ -214,7 +212,9 @@ void costFunctionArx(cost_type              cost[2],
          * turns the loop into Nhor sequential blocks of straight-line
          * code that the scheduler is free to pack as tightly as the
          * clock period allows, and to overlap with neighbouring blocks
-         * wherever the true data dependencies permit.
+         * wherever the true data dependencies permit. Only defined for
+         * PRAGMA_PROFILE_LATENCY (setup.h) - the profile that measured
+         * ~100.8% LUT utilisation for this trade.
          */
         #pragma HLS UNROLL
         #endif
@@ -247,7 +247,7 @@ void costFunctionArx(cost_type              cost[2],
         #if defined(USE_SCENS_COST) || defined(USE_SCENS_CONSTR)
         for (int l = 0; l < Nscen; l++)
         {
-            #ifdef PRAGMAS
+            #ifdef PRAGMA_UNROLL_COSTFUNC_NSCEN
             /*
              * UNROLL: scenarios are mutually independent within one k
              * (each reads only its own yPastCurr[l] row and writes only
@@ -256,12 +256,11 @@ void costFunctionArx(cost_type              cost[2],
              * scheduler can evaluate all Nscen copies of
              * computeArxOutput + updateConstraintViolation concurrently
              * subject only to that reduction and to the target clock
-             * period. This is the change that previously caused a
-             * timing violation when paired with a MANDATORY PIPELINE
-             * II=1 on the k-loop above; on its own, with the k-loop only
-             * unrolled (no II promise), the scheduler retains the
-             * freedom to spread this replicated arithmetic across
-             * however many cycles the 10 ns target actually needs.
+             * period. Defined for both PRAGMA_PROFILE_LATENCY and
+             * PRAGMA_PROFILE_BALANCED (setup.h): this loop's Nscen-way
+             * parallelism is expected to capture most of the latency win
+             * on its own, since (unlike the k-loop above) there is no
+             * true recurrence forcing serialisation across l.
              */
             #pragma HLS UNROLL
             #endif

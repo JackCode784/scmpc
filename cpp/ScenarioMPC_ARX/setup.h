@@ -71,6 +71,47 @@
 #define CTRL_MODE_AL     2
 #define CTRL_MODE        CTRL_MODE_SCMPC
 
+/**
+ * HLS pragma profile - selects between measured area/latency trade-offs
+ * at the few spots in this codebase where synthesis has shown them to be
+ * in genuine tension (currently just costFunctionArx's Nhor/Nscen
+ * loops). Everything else this design's pragmas do (ARRAY_PARTITION,
+ * INLINE on small leaf functions, UNROLL on other na/nb/nTheta/nOpt-
+ * sized loops, PIPELINE on the PRNG draws) is unconditionally
+ * beneficial - "free" wins with no real trade-off - and is NOT gated by
+ * this switch. Numbers below are for CTRL_MODE_SCMPC on xc7z020-clg484-1
+ * at a 10 ns target clock; re-measure for other configurations.
+ *
+ * Choose one of:
+ *   PRAGMA_PROFILE_LATENCY  : unroll BOTH costFunctionArx loops.
+ *                             Measured: 4151 cycles (41.51 us, >=20kHz
+ *                             margin) but LUT utilisation at ~100.8%
+ *                             (53614/53200) - no room left for
+ *                             CTRL_MODE_PL's extra logic or for the
+ *                             AXI/clock/reset infrastructure needed to
+ *                             integrate this IP into a real system.
+ *   PRAGMA_PROFILE_BALANCED : unroll only the Nscen (scenario) loop,
+ *                             leave Nhor (the genuine k-recurrence)
+ *                             rolled. HYPOTHESIS, not yet measured: since
+ *                             Nscen's 4 scenarios are mutually
+ *                             independent (embarrassingly parallel) while
+ *                             Nhor is a true sequential dependency,
+ *                             unrolling Nscen alone should capture most
+ *                             of the latency win with less of the area
+ *                             cost. Try this and re-synthesize if
+ *                             PRAGMA_PROFILE_LATENCY's LUT usage is too
+ *                             tight for your target build.
+ *   PRAGMA_PROFILE_AREA     : leave both loops rolled (time-multiplexed).
+ *                             Measured: ~18700 cycles (187 us, ~5.3 kHz)
+ *                             but LUT utilisation back down to ~37%. Use
+ *                             this whenever the >=20kHz requirement does
+ *                             not apply.
+ */
+#define PRAGMA_PROFILE_LATENCY   0
+#define PRAGMA_PROFILE_BALANCED  1
+#define PRAGMA_PROFILE_AREA      2
+#define PRAGMA_PROFILE           PRAGMA_PROFILE_LATENCY
+
 /* ======================================================================
    Derived feature flags (do NOT edit)
    ====================================================================== */
@@ -79,6 +120,26 @@
     #include <ap_fixed.h>   /* include fixed point data types */
     #undef PRNG_STDLIB      /* can't use rand() in fixed point */
     // #define DEBUG_PRINT      /* debug printfs */
+
+    /*
+     * Translate the PRAGMA_PROFILE selector above into small,
+     * descriptively-named flags that the algorithm files check
+     * individually. Keeping the translation here, in one place, means
+     * costFunctionArx.cpp never needs to know the numeric profile
+     * values or list every profile that wants a given loop unrolled -
+     * it just checks whether ITS flag is defined.
+     */
+    #if PRAGMA_PROFILE == PRAGMA_PROFILE_LATENCY
+        #define PRAGMA_UNROLL_COSTFUNC_NHOR
+        #define PRAGMA_UNROLL_COSTFUNC_NSCEN
+    #elif PRAGMA_PROFILE == PRAGMA_PROFILE_BALANCED
+        #define PRAGMA_UNROLL_COSTFUNC_NSCEN
+        /* NHOR intentionally left rolled - see PRAGMA_PROFILE comment above. */
+    #elif PRAGMA_PROFILE == PRAGMA_PROFILE_AREA
+        /* Both intentionally left rolled - see PRAGMA_PROFILE comment above. */
+    #else
+        #error "Unrecognized PRAGMA_PROFILE!"
+    #endif
 #else
     #undef DEBUG_PRINT /* use only in fixed point mode */
 #endif
