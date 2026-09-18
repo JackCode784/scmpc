@@ -39,16 +39,25 @@
  * HLS NOTES
  * ----------
  * • Whether the outer prediction loop (k = 0 ... Nhor-1) and/or the inner
- *   scenario loop (l = 0 ... Nscen-1) are UNROLLED is controlled by
- *   PRAGMA_PROFILE in setup.h (PRAGMA_UNROLL_COSTFUNC_NHOR /
- *   PRAGMA_UNROLL_COSTFUNC_NSCEN below) - see that macro's comment for
- *   the measured area/latency numbers behind each profile. In short:
- *   unrolling both loops meets a 20kHz/50us controller() deadline
+ *   scenario loop (l = 0 ... Nscen-1) are UNROLLED - fully, partially, or
+ *   not at all - is controlled by PRAGMA_PROFILE in setup.h
+ *   (PRAGMA_UNROLL_COSTFUNC_NHOR / _NSCEN and
+ *   PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR below) - see that macro's comment
+ *   for the measured area/latency numbers behind each profile. In short:
+ *   fully unrolling both loops meets a 20kHz/50us controller() deadline
  *   (4151 cycles measured) but pushes LUT utilisation to ~100.8%
  *   (53614/53200) with no margin left for CTRL_MODE_PL or system
- *   integration; leaving both rolled uses ~37% LUT but is ~4.5x too slow
- *   for that deadline (~18700 cycles measured). Neither loop is ever
- *   PIPELINEd: a PIPELINE II=1 + UNROLL combination was tried here once
+ *   integration; leaving both fully rolled uses ~37% LUT but is ~4.5x too
+ *   slow for that deadline (~18700 cycles measured). Fully unrolling
+ *   Nscen alone lands at 6603 cycles / 50% LUT - short of the deadline
+ *   (~15.1kHz) but with a far better LUT-per-cycle-saved ratio than also
+ *   fully unrolling Nhor, since Nhor is a genuine recurrence (unrolling
+ *   it removes loop-FSM overhead more than it creates real parallel
+ *   work) while Nscen's 4 scenarios are truly independent. Nhor's PARTIAL
+ *   unroll factor exists to search the middle ground between fully
+ *   rolled and fully unrolled at a finer grain than the three PRAGMA_PROFILE
+ *   options alone provide. Neither loop is ever PIPELINEd: a PIPELINE
+ *   II=1 + UNROLL combination was tried here once
  *   and reverted after synthesis reported a ~5x timing violation
  *   (Estimated 50.233 ns vs a 10 ns target) - a MANDATORY II=1 gave the
  *   scheduler almost no freedom to insert pipeline registers inside a
@@ -202,11 +211,24 @@ void costFunctionArx(cost_type              cost[2],
      */
     for (int k = 0; k < Nhor; k++)
     {
+        /*
+         * Outer #ifdef PRAGMAS is load-bearing here, unlike the plain
+         * #ifdef PRAGMA_UNROLL_COSTFUNC_NHOR used elsewhere in this file:
+         * PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR (setup.h) is defined
+         * unconditionally (even for floating-point/software-simulation
+         * builds where FIXED is undefined), so without this wrapper the
+         * #elif below would still evaluate true in that mode and emit an
+         * HLS pragma into a PC build - harmless per the C++ standard
+         * (unrecognized pragmas are ignored), but inconsistent with
+         * every other pragma in this codebase never appearing outside a
+         * FIXED+PRAGMAS build.
+         */
+        #ifdef PRAGMAS
         #ifdef PRAGMA_UNROLL_COSTFUNC_NHOR
         /*
-         * UNROLL, not PIPELINE (see this file's HLS NOTES docstring for
-         * why PIPELINE II=1 previously failed here and why UNROLL does
-         * not carry the same risk). This IS a genuine recurrence
+         * FULL UNROLL, not PIPELINE (see this file's HLS NOTES docstring
+         * for why PIPELINE II=1 previously failed here and why UNROLL
+         * does not carry the same risk). This IS a genuine recurrence
          * (yPastCurr/uSamples feed from k into k+1), so unrolling does
          * not create Nhor independent parallel copies of the work - it
          * turns the loop into Nhor sequential blocks of straight-line
@@ -217,7 +239,29 @@ void costFunctionArx(cost_type              cost[2],
          * ~100.8% LUT utilisation for this trade.
          */
         #pragma HLS UNROLL
+        #elif PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR > 1
+        /*
+         * PARTIAL unroll (PRAGMA_PROFILE_BALANCED only - see setup.h).
+         * factor=N groups N consecutive k-iterations into one
+         * straight-line block (the true k-to-k+1 dependency is preserved
+         * WITHIN each group, since partial unroll never reorders a real
+         * recurrence, only removes the per-group loop-control overhead
+         * between Nhor/N groups instead of between all Nhor individual
+         * iterations). This is the finer-grained middle ground between
+         * PRAGMA_PROFILE_AREA's fully-rolled Nhor and
+         * PRAGMA_PROFILE_LATENCY's fully-unrolled Nhor: sized to buy back
+         * some of the FSM-transition cost of rolling without paying for
+         * (factor-fold-independent-copies') worth of extra hardware -
+         * this loop is a recurrence, not independent work, so a plain
+         * UNROLL of the whole thing was measured to have a poor
+         * LUT-per-cycle-saved return (see setup.h's PRAGMA_PROFILE
+         * comment for the numbers that motivated adding this factor).
+         */
+        #pragma HLS UNROLL factor=PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR
         #endif
+        #endif
+        /* If neither branch applies (PRAGMA_PROFILE_AREA, or BALANCED
+         * with the factor left at 1), the loop is left fully rolled. */
         /* --- Set current input ---------------------------------------- */
         if (k < NhorU)
             uSamples[0] = currU[k];

@@ -90,17 +90,32 @@
  *                             CTRL_MODE_PL's extra logic or for the
  *                             AXI/clock/reset infrastructure needed to
  *                             integrate this IP into a real system.
- *   PRAGMA_PROFILE_BALANCED : unroll only the Nscen (scenario) loop,
- *                             leave Nhor (the genuine k-recurrence)
- *                             rolled. HYPOTHESIS, not yet measured: since
- *                             Nscen's 4 scenarios are mutually
- *                             independent (embarrassingly parallel) while
- *                             Nhor is a true sequential dependency,
- *                             unrolling Nscen alone should capture most
- *                             of the latency win with less of the area
- *                             cost. Try this and re-synthesize if
- *                             PRAGMA_PROFILE_LATENCY's LUT usage is too
- *                             tight for your target build.
+ *   PRAGMA_PROFILE_BALANCED : unroll the Nscen (scenario) loop fully,
+ *                             and PARTIALLY unroll Nhor (the genuine
+ *                             k-recurrence) by
+ *                             PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR below
+ *                             (see costFunctionArx.cpp). Measured with
+ *                             factor left at 1 (Nhor fully rolled): 6603
+ *                             cycles (66.03 us, ~15.1 kHz - short of a
+ *                             20kHz/5000-cycle target) at 39% DSP / 13%
+ *                             FF / 50% LUT.
+ *                             Confirmed by comparing all three profiles:
+ *                             unrolling Nscen (AREA->BALANCED) bought a
+ *                             2.83x speedup for +13 LUT points; ADDITIONALLY
+ *                             fully unrolling Nhor (BALANCED->LATENCY)
+ *                             only bought a further 1.59x speedup for
+ *                             +50 LUT points - ~18x worse LUT-per-cycle-
+ *                             saved, because Nhor's cross-iteration
+ *                             dependency means unrolling it mostly
+ *                             removes loop-FSM overhead rather than
+ *                             creating genuine parallel work. A partial
+ *                             UNROLL factor on Nhor is the finer-grained
+ *                             dial between the fully-rolled (measured)
+ *                             and fully-unrolled (measured, in
+ *                             PRAGMA_PROFILE_LATENCY) extremes - sweep
+ *                             PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR (2, 3,
+ *                             ...) and re-synthesize to find the largest
+ *                             factor that still meets your LUT budget.
  *   PRAGMA_PROFILE_AREA     : leave both loops rolled (time-multiplexed).
  *                             Measured: ~18700 cycles (187 us, ~5.3 kHz)
  *                             but LUT utilisation back down to ~37%. Use
@@ -110,7 +125,18 @@
 #define PRAGMA_PROFILE_LATENCY   0
 #define PRAGMA_PROFILE_BALANCED  1
 #define PRAGMA_PROFILE_AREA      2
-#define PRAGMA_PROFILE           PRAGMA_PROFILE_LATENCY
+#define PRAGMA_PROFILE           PRAGMA_PROFILE_BALANCED
+
+/**
+ * Partial-unroll factor for costFunctionArx's Nhor loop, used only under
+ * PRAGMA_PROFILE_BALANCED (see above and costFunctionArx.cpp). 1 = fully
+ * rolled (no UNROLL pragma emitted at all - this was what "BALANCED"
+ * meant before this factor existed, and is exactly what was measured at
+ * 6603 cycles / 50% LUT above). Nhor's trip count is 5, so any factor
+ * >= 5 is equivalent to PRAGMA_PROFILE_LATENCY's full unroll. Not yet
+ * measured for any value > 1 - sweep this and re-synthesize.
+ */
+#define PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR  2
 
 /* ======================================================================
    Derived feature flags (do NOT edit)
@@ -134,7 +160,9 @@
         #define PRAGMA_UNROLL_COSTFUNC_NSCEN
     #elif PRAGMA_PROFILE == PRAGMA_PROFILE_BALANCED
         #define PRAGMA_UNROLL_COSTFUNC_NSCEN
-        /* NHOR intentionally left rolled - see PRAGMA_PROFILE comment above. */
+        /* NHOR: PARTIAL unroll by PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR,
+         * not left bare - see costFunctionArx.cpp for how factor=1
+         * (the default until this is swept) reduces to no pragma. */
     #elif PRAGMA_PROFILE == PRAGMA_PROFILE_AREA
         /* Both intentionally left rolled - see PRAGMA_PROFILE comment above. */
     #else
