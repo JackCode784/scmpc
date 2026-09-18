@@ -100,6 +100,24 @@ det_type matDet(const theta_type M[nTheta][nTheta])
 
     det_type sign = 1;
 
+    /*
+     * Sticky "singular" flag, replacing an early `return 0` that used to
+     * sit inside the k-loop below. A `return` (or break/continue) inside
+     * a loop makes the function's completion time depend on runtime data
+     * - the loop can finish in fewer iterations than its static trip
+     * count - which is exactly the kind of construct that made Vitis HLS
+     * report matDet's (and, once compounded through zonotopeVolume and
+     * boundStripZonotopeIntersectionNew, controller()'s) latency as
+     * unbounded ("?") once this loop was no longer forced into a fixed
+     * schedule by #pragma HLS PIPELINE (see that pragma's own comment
+     * below). Tracking "was any pivot exactly zero" in a flag instead,
+     * and gating the final result on it, keeps every loop's trip count a
+     * compile-time constant - same principle already used deliberately
+     * elsewhere in this file (see zonotopeVolume's docstring on avoiding
+     * break/continue) and in MADSARX.cpp's mesh-update loop.
+     */
+    bool singular = false;
+
     /* ------------------------------------------------------------------ */
     /*  Elimination steps k = 0 ... nTheta - 1                     */
     /* ------------------------------------------------------------------ */
@@ -175,11 +193,15 @@ det_type matDet(const theta_type M[nTheta][nTheta])
 
         /* --- Check for singularity ------------------------------------- */
         /*
-         * If the pivot is zero the matrix is singular.
-         * Return 0.
+         * If the pivot is zero the matrix is singular: the determinant
+         * is 0 regardless of what any later elimination step computes.
+         * `singular` is never cleared once set (a plain assignment, not
+         * an OR-into-itself, but since it only ever gets set to true this
+         * has the same sticky effect), matching the original code's
+         * early return firing on the FIRST zero pivot encountered.
          */
         if (A[k][k] == 0)
-            return 0;
+            singular = true;
 
         /* --- Eliminate rows below pivot -------------------------------- */
         // Alternative
@@ -189,7 +211,22 @@ det_type matDet(const theta_type M[nTheta][nTheta])
             #ifdef PRAGMAS
             #pragma HLS UNROLL
             #endif
-            theta_type factor = A[i][k] / A[k][k];
+            /*
+             * Note this ternary does not stop the divider hardware from
+             * being fed a zero divisor when singular - Vitis HLS
+             * synthesizes A[i][k]/A[k][k] combinationally regardless (a
+             * mux selects between its result and 0 afterwards, it does
+             * not gate the division itself), and a fixed-point divider
+             * given a zero divisor produces some implementation-defined
+             * saturated value, not a runtime fault - hardware always
+             * produces *some* output for *any* input. The guard exists
+             * to stop that meaningless value from propagating into A: it
+             * is not load-bearing for the RETURNED determinant, which is
+             * already forced to 0 by `det`'s initial value below once
+             * singular is set (0 times anything stays 0), but it keeps
+             * A's contents well-defined for the DEBUG_PRINT dump.
+             */
+            theta_type factor = singular ? theta_type(0) : theta_type(A[i][k] / A[k][k]);
 
             #ifdef DEBUG_PRINT
             double factor_f = factor.to_double();
@@ -216,8 +253,9 @@ det_type matDet(const theta_type M[nTheta][nTheta])
 
     /* ------------------------------------------------------------------ */
     /*  Determinant = sign * product of diagonal entries                  */
+    /*  (0 instead, unconditionally, if any pivot was exactly zero)       */
     /* ------------------------------------------------------------------ */
-    det_type det = sign;
+    det_type det = singular ? det_type(0) : det_type(sign);
 
     for (int i = 0; i < nTheta; i++)
     {
@@ -225,7 +263,7 @@ det_type matDet(const theta_type M[nTheta][nTheta])
         #pragma HLS UNROLL
         #endif
         det *= A[i][i];
-        
+
         #ifdef DEBUG_PRINT
         double det_f = det.to_double();
         #endif
