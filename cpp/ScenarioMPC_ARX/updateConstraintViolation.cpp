@@ -17,7 +17,7 @@ void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr, 
         cost[1] += (YNORMMIN - yCurr);
 
     if(yCurr - yPast > DELTAYNORM)
-        cost[1] += yCurr - yPast;
+        cost[1] += yCurr - yPast - DELTAYNORM;
     else if(yCurr - yPast < -DELTAYNORM)
-        cost[1] += yPast - yCurr;
+        cost[1] += yPast - yCurr - DELTAYNORM;
 }
