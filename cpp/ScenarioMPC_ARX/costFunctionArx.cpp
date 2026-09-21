@@ -40,10 +40,12 @@
  * ----------
  * • Whether the outer prediction loop (k = 0 ... Nhor-1) and/or the inner
  *   scenario loop (l = 0 ... Nscen-1) are UNROLLED - fully, partially, or
- *   not at all - is controlled by PRAGMA_PROFILE in setup.h
- *   (PRAGMA_UNROLL_COSTFUNC_NHOR / _NSCEN and
- *   PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR below) - see that macro's comment
- *   for the measured area/latency numbers behind each profile. In short:
+ *   not at all - and whether an ALLOCATION limit constrains how many
+ *   multiplier instances the unrolled arithmetic may use, is controlled
+ *   by PRAGMA_PROFILE in setup.h (PRAGMA_UNROLL_COSTFUNC_NHOR / _NSCEN,
+ *   PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR, PRAGMA_LIMIT_COSTFUNC_MUL /
+ *   PRAGMA_LATENCY_MUL_LIMIT below) - see that macro's comment for the
+ *   measured area/latency numbers behind each profile. In short:
  *   fully unrolling both loops meets a 20kHz/50us controller() deadline
  *   (4151 cycles measured) but pushes LUT utilisation to ~100.8%
  *   (53614/53200) with no margin left for CTRL_MODE_PL or system
@@ -104,6 +106,27 @@ void costFunctionArx(cost_type              cost[2],
      * site instead (42x the LUTs/DSPs for identical arithmetic).
      */
     // #pragma HLS INLINE
+
+    #ifdef PRAGMA_LIMIT_COSTFUNC_MUL
+    /*
+     * PRAGMA_PROFILE_LATENCY_SHARED only (setup.h). With both the Nhor
+     * and Nscen loops below fully unrolled, Vitis has full freedom to
+     * duplicate multiplier hardware for every unrolled copy of
+     * computeArxOutput's arithmetic - which is exactly what pushed LUT
+     * utilisation to ~100.8% under PRAGMA_PROFILE_LATENCY. This caps the
+     * number of physical multiplier instances Vitis may build for THIS
+     * function to PRAGMA_LATENCY_MUL_LIMIT, forcing excess multiply
+     * operations to time-share the same limited pool instead of each
+     * getting dedicated hardware - the loop structure (and the
+     * scheduler's freedom to pack it tightly) is unchanged from
+     * PRAGMA_PROFILE_LATENCY; only the resource budget it schedules
+     * against shrinks. Same idiom already used in
+     * cpp/MADS_ISCAS23/admm.cpp. HLS_PRAGMA (setup.h) is required, not a
+     * plain #pragma, for the same macro-expansion reason documented on
+     * the UNROLL factor= pragma below.
+     */
+    HLS_PRAGMA(HLS ALLOCATION operation instances=mul limit=PRAGMA_LATENCY_MUL_LIMIT)
+    #endif
     #endif
 
     #ifdef DEBUG_PRINT

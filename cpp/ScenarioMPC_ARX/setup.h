@@ -177,11 +177,61 @@
  *                             but LUT utilisation back down to ~37%. Use
  *                             this whenever the >=20kHz requirement does
  *                             not apply.
+ *   PRAGMA_PROFILE_LATENCY_SHARED : same loop structure as
+ *                             PRAGMA_PROFILE_LATENCY (both loops fully
+ *                             unrolled - the scheduler keeps the same
+ *                             freedom to find a fast schedule), but adds
+ *                             #pragma HLS ALLOCATION operation
+ *                             instances=mul limit=PRAGMA_LATENCY_MUL_LIMIT
+ *                             (below) inside costFunctionArx, capping how
+ *                             many physical multiplier instances Vitis
+ *                             may build for that function's arithmetic
+ *                             instead of letting it duplicate hardware
+ *                             for every unrolled copy. This is a
+ *                             different KIND of lever than the Nhor
+ *                             partial-unroll experiment above: ALLOCATION
+ *                             directly caps a specific operator's
+ *                             instance count within an unchanged loop
+ *                             structure, rather than changing the loop
+ *                             structure itself and hoping the scheduler
+ *                             copes - Vitis documents it as literally
+ *                             time-sharing excess operations onto the
+ *                             same limited instances, a predictable,
+ *                             roughly monotonic area/latency trade,
+ *                             unlike partial-unroll's scheduler-heuristic-
+ *                             dependent (and here, counterproductive)
+ *                             behaviour. Same idiom already proven
+ *                             elsewhere in this codebase - see
+ *                             cpp/MADS_ISCAS23/admm.cpp's
+ *                             `#pragma HLS allocation operation
+ *                             instances=mul limit=DIM_TO_REPLACE`.
+ *                             NOT YET MEASURED - PRAGMA_LATENCY_MUL_LIMIT
+ *                             is a first, unverified guess. Sweep it and
+ *                             re-synthesize: lower the limit while LUT
+ *                             stays over budget, raise it back if latency
+ *                             degrades further than acceptable once LUT
+ *                             is safely under 100%.
  */
-#define PRAGMA_PROFILE_LATENCY   0
-#define PRAGMA_PROFILE_BALANCED  1
-#define PRAGMA_PROFILE_AREA      2
+#define PRAGMA_PROFILE_LATENCY         0
+#define PRAGMA_PROFILE_BALANCED        1
+#define PRAGMA_PROFILE_AREA            2
+#define PRAGMA_PROFILE_LATENCY_SHARED  3
 #define PRAGMA_PROFILE           PRAGMA_PROFILE_BALANCED
+
+/**
+ * Multiplier instance limit for costFunctionArx under
+ * PRAGMA_PROFILE_LATENCY_SHARED only (see above and costFunctionArx.cpp).
+ * Unverified first guess: PRAGMA_PROFILE_LATENCY (no limit at all) used
+ * 151 DSP total across controller() (68% of the xc7z020's 220); this
+ * caps costFunctionArx's OWN multiplier count well below whatever Vitis
+ * chose unconstrained, trading some of that back for LUT headroom. Sweep
+ * this value and re-synthesize - there is no way to predict the right
+ * number without measuring, only that (unlike
+ * PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR above) lowering it should behave
+ * predictably: less area, more serialization, in roughly that direction
+ * only.
+ */
+#define PRAGMA_LATENCY_MUL_LIMIT  48
 
 /**
  * Partial-unroll factor for costFunctionArx's Nhor loop, used only under
@@ -223,6 +273,10 @@
          * (the default until this is swept) reduces to no pragma. */
     #elif PRAGMA_PROFILE == PRAGMA_PROFILE_AREA
         /* Both intentionally left rolled - see PRAGMA_PROFILE comment above. */
+    #elif PRAGMA_PROFILE == PRAGMA_PROFILE_LATENCY_SHARED
+        #define PRAGMA_UNROLL_COSTFUNC_NHOR
+        #define PRAGMA_UNROLL_COSTFUNC_NSCEN
+        #define PRAGMA_LIMIT_COSTFUNC_MUL
     #else
         #error "Unrecognized PRAGMA_PROFILE!"
     #endif
