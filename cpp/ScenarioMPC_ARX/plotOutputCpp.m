@@ -15,20 +15,28 @@ end
 
 % Save data as table instead of matrix
 data = readtable(append(d, "output.txt"), VariableNamingRule="preserve");
+
+% Tracking error
 err = data.yref - data.ySim;
 errMean = mean(err);
 errRMSE = sqrt(mean(err.^2));
 
-figure(Name=titleStr); subplot(3,1,1);
-hold on;
-plot(data.ySim, 'LineWidth', 1.5); grid on;xlabel('Sample');ylabel('Simulated output');
-plot(data.yref, 'r--', 'LineWidth', 1.5);
-plot(data.yMin, 'k--', 'LineWidth',1.5);
-plot(data.yMax, 'k--', 'LineWidth',1.5);
-hold off;
-legend('y(k)', 'yref');
+% Output "derivative" computation
+yDer = diff(data.ySim);
+data.("deltaY") = 0.1 * ones(height(data),1);
 
-subplot(3,1,2);
+% Plots
+figure(Name=titleStr); subplot(4,1,1);
+hold on;
+plot(data.ySim, 'LineWidth', 1.5); grid on;xlabel('Sample');
+plot(data.yref, 'r--', 'LineWidth', 1.5);
+yline(data.yMin(1), 'k--', num2str(data.yMin(1)), 'LineWidth',1.5);
+yline(data.yMax(1), 'k--', num2str(data.yMax(1)), 'LineWidth',1.5);
+hold off;
+title('Simulated output');
+legend('y_k', 'yref');
+
+subplot(4,1,2);
 hold on;
 % boxplot(err, Orientation="horizontal");
 % xline(errMean, 'r--', LineWidth=1.5);
@@ -38,15 +46,27 @@ yline(errMean, 'r--', num2str(errMean), LineWidth=1.5);
 yline(errRMSE, 'k:', num2str(errRMSE), LineWidth=1.5);
 hold off;
 grid on;
+title('Tracking error');
 xlabel('Sample');
 legend('e_k', 'Mean', 'RMSE');
 
-subplot(3,1,3);
+subplot(4,1,3);
 hold on;
-stairs(data.uSim, 'LineWidth', 1.5); grid on;xlabel('Sample');ylabel('Optimized input');
+plot(yDer, LineWidth=1.5);
+yline(data.deltaY(1)*[-1, 1], 'k--', {num2str(data.deltaY(1)),num2str(-data.deltaY(1))}, LineWidth=1.5);
+hold off;
+grid on;
+title('y_k - y_{k-1}');
+xlabel('Sample');
+
+subplot(4,1,4);
+hold on;
+stairs(data.uSim, 'LineWidth', 1.5); grid on;xlabel('Sample');
 plot(data.uMax,'k--', 'LineWidth',1.5);
 plot(data.uMin,'k--', 'LineWidth',1.5);
 hold off;
+title('Optimal input');
+ylabel('u^*_k');
 
 if ismember('ySimDig', data.Properties.VariableNames)
     % uSimDig = output(:,8);
