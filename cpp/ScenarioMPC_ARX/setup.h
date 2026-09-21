@@ -179,38 +179,52 @@
  *                             not apply.
  *   PRAGMA_PROFILE_LATENCY_SHARED : same loop structure as
  *                             PRAGMA_PROFILE_LATENCY (both loops fully
- *                             unrolled - the scheduler keeps the same
- *                             freedom to find a fast schedule), but adds
+ *                             unrolled), originally intended to add
  *                             #pragma HLS ALLOCATION operation
  *                             instances=mul limit=PRAGMA_LATENCY_MUL_LIMIT
- *                             (below) inside costFunctionArx, capping how
- *                             many physical multiplier instances Vitis
- *                             may build for that function's arithmetic
- *                             instead of letting it duplicate hardware
- *                             for every unrolled copy. This is a
- *                             different KIND of lever than the Nhor
- *                             partial-unroll experiment above: ALLOCATION
- *                             directly caps a specific operator's
- *                             instance count within an unchanged loop
- *                             structure, rather than changing the loop
- *                             structure itself and hoping the scheduler
- *                             copes - Vitis documents it as literally
- *                             time-sharing excess operations onto the
- *                             same limited instances, a predictable,
- *                             roughly monotonic area/latency trade,
- *                             unlike partial-unroll's scheduler-heuristic-
- *                             dependent (and here, counterproductive)
- *                             behaviour. Same idiom already proven
- *                             elsewhere in this codebase - see
- *                             cpp/MADS_ISCAS23/admm.cpp's
- *                             `#pragma HLS allocation operation
- *                             instances=mul limit=DIM_TO_REPLACE`.
- *                             NOT YET MEASURED - PRAGMA_LATENCY_MUL_LIMIT
- *                             is a first, unverified guess. Sweep it and
- *                             re-synthesize: lower the limit while LUT
- *                             stays over budget, raise it back if latency
- *                             degrades further than acceptable once LUT
- *                             is safely under 100%.
+ *                             (below) inside costFunctionArx to cap
+ *                             multiplier instances and recover LUT
+ *                             margin. MEASURED COUNTERPRODUCTIVE for that
+ *                             purpose and left DISABLED by default
+ *                             (PRAGMA_LATENCY_MUL_LIMIT's value is
+ *                             ignored unless PRAGMA_ENABLE_LATENCY_MUL_LIMIT
+ *                             is also defined below, which it is not) -
+ *                             at limit=48: 4022 cycles (an improvement -
+ *                             latency was never the problem with this
+ *                             lever), DSP down to 41% (91, from
+ *                             PRAGMA_PROFILE_LATENCY's 151) exactly as
+ *                             intended, but LUT went UP to 103%
+ *                             (54821/53200), not down.
+ *                             Reason (a real architectural point, not
+ *                             just an unlucky measurement): a DSP48E1
+ *                             slice on this chip is a dedicated hard
+ *                             macro that consumes ZERO general-fabric
+ *                             LUTs when instantiated - so letting Vitis
+ *                             freely build 151 of them (PRAGMA_PROFILE_
+ *                             LATENCY) is essentially LUT-free for that
+ *                             arithmetic. Forcing those down to a shared
+ *                             pool of 48 via ALLOCATION does not make the
+ *                             multiply work disappear: it forces excess
+ *                             multiplies to time-share far fewer physical
+ *                             instances, which needs LUT-built steering
+ *                             multiplexers (selecting which operand pair
+ *                             feeds each shared multiplier this cycle,
+ *                             and where the result goes) - and here that
+ *                             routing overhead cost MORE LUTs than the
+ *                             saved DSP48 instances were ever costing.
+ *                             ALLOCATION-based sharing trades a
+ *                             LUT-free resource for a LUT-cost one: the
+ *                             wrong direction when LUT specifically is
+ *                             the scarce resource and DSP has headroom.
+ *                             The corrected direction, not yet
+ *                             implemented pending a detailed per-multiply
+ *                             report to target it precisely rather than
+ *                             guessing: #pragma HLS BIND_OP ... impl=dsp
+ *                             on specific multiplies Vitis is currently
+ *                             implementing in fabric, to move THAT LUT
+ *                             cost onto the spare DSP48 slots instead -
+ *                             pushing load onto the free, LUT-free
+ *                             resource rather than restricting it.
  */
 #define PRAGMA_PROFILE_LATENCY         0
 #define PRAGMA_PROFILE_BALANCED        1
@@ -219,17 +233,26 @@
 #define PRAGMA_PROFILE           PRAGMA_PROFILE_BALANCED
 
 /**
+ * Kill switch for the ALLOCATION-based multiplier limit under
+ * PRAGMA_PROFILE_LATENCY_SHARED (costFunctionArx.cpp), left UNDEFINED
+ * (disabled) because that limit measured counterproductive - see
+ * PRAGMA_PROFILE_LATENCY_SHARED's comment above for the numbers and the
+ * architectural reason (DSP48 is LUT-free hard silicon; ALLOCATION-forced
+ * sharing trades it for LUT-cost steering logic). Left as an explicit
+ * opt-in rather than deleting the mechanism, in case a future, different
+ * bottleneck makes DSP-sharing the right call again.
+ */
+// #define PRAGMA_ENABLE_LATENCY_MUL_LIMIT
+
+/**
  * Multiplier instance limit for costFunctionArx under
- * PRAGMA_PROFILE_LATENCY_SHARED only (see above and costFunctionArx.cpp).
- * Unverified first guess: PRAGMA_PROFILE_LATENCY (no limit at all) used
- * 151 DSP total across controller() (68% of the xc7z020's 220); this
- * caps costFunctionArx's OWN multiplier count well below whatever Vitis
- * chose unconstrained, trading some of that back for LUT headroom. Sweep
- * this value and re-synthesize - there is no way to predict the right
- * number without measuring, only that (unlike
- * PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR above) lowering it should behave
- * predictably: less area, more serialization, in roughly that direction
- * only.
+ * PRAGMA_PROFILE_LATENCY_SHARED, only applied if
+ * PRAGMA_ENABLE_LATENCY_MUL_LIMIT above is also defined (currently is
+ * not - see that macro's comment). At 48: 91 DSP (41%, down from
+ * PRAGMA_PROFILE_LATENCY's 151/68%) but 54821 LUT (103%, UP from
+ * PRAGMA_PROFILE_LATENCY's 53614/100.8%) and 4022 cycles (down from
+ * 4151). Kept for reference/comparison, not because raising or lowering
+ * it further is expected to help the LUT problem.
  */
 #define PRAGMA_LATENCY_MUL_LIMIT  48
 
@@ -276,7 +299,13 @@
     #elif PRAGMA_PROFILE == PRAGMA_PROFILE_LATENCY_SHARED
         #define PRAGMA_UNROLL_COSTFUNC_NHOR
         #define PRAGMA_UNROLL_COSTFUNC_NSCEN
-        #define PRAGMA_LIMIT_COSTFUNC_MUL
+        #ifdef PRAGMA_ENABLE_LATENCY_MUL_LIMIT
+            #define PRAGMA_LIMIT_COSTFUNC_MUL
+        #endif
+        /* PRAGMA_ENABLE_LATENCY_MUL_LIMIT is NOT defined above by default -
+         * the ALLOCATION limit it would gate measured counterproductive
+         * (see PRAGMA_PROFILE_LATENCY_SHARED's comment). Without it, this
+         * profile is currently identical to PRAGMA_PROFILE_LATENCY. */
     #else
         #error "Unrecognized PRAGMA_PROFILE!"
     #endif

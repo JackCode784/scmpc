@@ -109,19 +109,22 @@ void costFunctionArx(cost_type              cost[2],
 
     #ifdef PRAGMA_LIMIT_COSTFUNC_MUL
     /*
-     * PRAGMA_PROFILE_LATENCY_SHARED only (setup.h). With both the Nhor
-     * and Nscen loops below fully unrolled, Vitis has full freedom to
-     * duplicate multiplier hardware for every unrolled copy of
-     * computeArxOutput's arithmetic - which is exactly what pushed LUT
-     * utilisation to ~100.8% under PRAGMA_PROFILE_LATENCY. This caps the
-     * number of physical multiplier instances Vitis may build for THIS
-     * function to PRAGMA_LATENCY_MUL_LIMIT, forcing excess multiply
-     * operations to time-share the same limited pool instead of each
-     * getting dedicated hardware - the loop structure (and the
-     * scheduler's freedom to pack it tightly) is unchanged from
-     * PRAGMA_PROFILE_LATENCY; only the resource budget it schedules
-     * against shrinks. Same idiom already used in
-     * cpp/MADS_ISCAS23/admm.cpp. HLS_PRAGMA (setup.h) is required, not a
+     * PRAGMA_PROFILE_LATENCY_SHARED only, and only when
+     * PRAGMA_ENABLE_LATENCY_MUL_LIMIT (setup.h) is explicitly defined,
+     * which it is NOT by default: capping costFunctionArx's multiplier
+     * instances this way measured COUNTERPRODUCTIVE for the LUT problem
+     * it was meant to fix - DSP dropped as intended (151 -> 91) but LUT
+     * went UP (53614 -> 54821, 100.8% -> 103%), not down, because a
+     * DSP48E1 slice is LUT-free dedicated silicon and forcing several
+     * multiplies to time-share fewer of them costs LUT-built steering
+     * multiplexers that here outweighed the saved DSP instances. See
+     * setup.h's PRAGMA_PROFILE_LATENCY_SHARED and
+     * PRAGMA_ENABLE_LATENCY_MUL_LIMIT comments for the full numbers and
+     * reasoning, and for the corrected (opposite-direction) approach:
+     * push fabric-mapped multiplies onto spare DSP48 slots via BIND_OP,
+     * rather than restricting DSP-mapped ones via ALLOCATION.
+     * Same ALLOCATION idiom already used in cpp/MADS_ISCAS23/admm.cpp,
+     * for reference. HLS_PRAGMA (setup.h) is required, not a
      * plain #pragma, for the same macro-expansion reason documented on
      * the UNROLL factor= pragma below.
      */
