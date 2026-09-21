@@ -41,6 +41,41 @@
 #pragma once
 
 /* ======================================================================
+   HLS pragma helper - macro-argument pragmas
+   ======================================================================
+   #if/#elif/#define are handled by the ORDINARY C preprocessor, which
+   unconditionally macro-expands every identifier in them - this is why
+   e.g. `#if PRAGMA_PROFILE == PRAGMA_PROFILE_LATENCY` below works exactly
+   as expected. `#pragma HLS ...` lines are different: Vitis HLS 2021.1
+   reads their argument text with its OWN, separate pragma-argument
+   parser, which does NOT perform the same macro substitution for at
+   least numeric fields like ARRAY_PARTITION's `factor=` or UNROLL's
+   `factor=` - it expects a literal integer or a real C++ identifier
+   there, not a preprocessor macro, and fails with something like
+   "use of undeclared identifier <MACRO_NAME>" if given one directly.
+   (Confirmed the hard way: `#pragma HLS UNROLL factor=SOME_MACRO` failed
+   this way in costFunctionArx.cpp, one line after an #elif that checked
+   the very same macro and worked fine - two different parsers.)
+
+   HLS_PRAGMA(...) below is the standard, portable fix, not a Vitis-
+   specific workaround: it uses the C99/C++11 _Pragma() OPERATOR (as
+   opposed to the #pragma DIRECTIVE) together with the classic two-level
+   stringize trick (STR/XSTR). Because the argument to HLS_PRAGMA_XSTR
+   is used through an intermediate macro rather than stringized directly,
+   the ordinary preprocessor fully macro-expands it BEFORE stringizing,
+   so Vitis's pragma-argument parser only ever sees the already-resolved
+   literal text (e.g. "HLS UNROLL factor=2"), never the macro name.
+   Usage:  HLS_PRAGMA(HLS UNROLL factor=SOME_INT_MACRO)
+   in place of:  #pragma HLS UNROLL factor=SOME_INT_MACRO   (broken)
+   Only needed when a pragma argument is itself a #define'd macro; a
+   pragma written entirely with literal tokens (as almost all of them are
+   in this codebase) needs no help and should stay a plain #pragma line.
+   ====================================================================== */
+#define HLS_PRAGMA_XSTR(x) #x
+#define HLS_PRAGMA_STR(x)  HLS_PRAGMA_XSTR(x)
+#define HLS_PRAGMA(x)      _Pragma(HLS_PRAGMA_STR(x))
+
+/* ======================================================================
    TARGET SELECTION - edit only these three lines between experiments
    ====================================================================== */
 
@@ -108,14 +143,35 @@
  *                             saved, because Nhor's cross-iteration
  *                             dependency means unrolling it mostly
  *                             removes loop-FSM overhead rather than
- *                             creating genuine parallel work. A partial
- *                             UNROLL factor on Nhor is the finer-grained
- *                             dial between the fully-rolled (measured)
- *                             and fully-unrolled (measured, in
- *                             PRAGMA_PROFILE_LATENCY) extremes - sweep
- *                             PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR (2, 3,
- *                             ...) and re-synthesize to find the largest
- *                             factor that still meets your LUT budget.
+ *                             creating genuine parallel work.
+ *
+ *                             A partial UNROLL factor on Nhor
+ *                             (PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR below)
+ *                             was tried as a finer-grained dial between
+ *                             fully-rolled and fully-unrolled, and
+ *                             MEASURED WORSE ON BOTH AXES: factor=2 gave
+ *                             18943-19459 cycles at 65% LUT (worse than
+ *                             fully-ROLLED Nhor's 6603 cycles / 50% LUT),
+ *                             and factor=3 gave 25780-26124 cycles at 80%
+ *                             LUT (worse than even PRAGMA_PROFILE_AREA's
+ *                             ~18700-cycle fully-rolled baseline). Do NOT
+ *                             raise the factor above 1 for this loop.
+ *                             Likely cause: Nhor's body already contains
+ *                             Nscen fully unrolled (4 parallel
+ *                             computeArxOutput chains); partially
+ *                             unrolling Nhor by N fuses N copies of that
+ *                             already-4-way-parallel body into one larger
+ *                             combinational block (N*4 concurrent
+ *                             computeArxOutput instances instead of 4),
+ *                             and Vitis's list-scheduler evidently finds
+ *                             a WORSE schedule for that bigger, more
+ *                             tangled resource-allocation problem, not a
+ *                             better one - HLS unrolling is a heuristic,
+ *                             not an exact optimizer, and is not always
+ *                             monotonically beneficial. The factor is
+ *                             left in place (at 1, i.e. disabled) for
+ *                             documentation/future reference rather than
+ *                             removed outright.
  *   PRAGMA_PROFILE_AREA     : leave both loops rolled (time-multiplexed).
  *                             Measured: ~18700 cycles (187 us, ~5.3 kHz)
  *                             but LUT utilisation back down to ~37%. Use
@@ -130,13 +186,15 @@
 /**
  * Partial-unroll factor for costFunctionArx's Nhor loop, used only under
  * PRAGMA_PROFILE_BALANCED (see above and costFunctionArx.cpp). 1 = fully
- * rolled (no UNROLL pragma emitted at all - this was what "BALANCED"
- * meant before this factor existed, and is exactly what was measured at
- * 6603 cycles / 50% LUT above). Nhor's trip count is 5, so any factor
- * >= 5 is equivalent to PRAGMA_PROFILE_LATENCY's full unroll. Not yet
- * measured for any value > 1 - sweep this and re-synthesize.
+ * rolled (no UNROLL pragma emitted at all). MEASURED WORSE than 1 for
+ * every value tried (2, 3) - see the PRAGMA_PROFILE comment above for
+ * the numbers and the likely reason. Left at 1; do not raise it for this
+ * particular loop unless costFunctionArx's structure changes enough to
+ * revisit the reasoning (e.g. if Nscen's unroll is ever reduced or
+ * removed, which would shrink each round back down and might change
+ * this conclusion).
  */
-#define PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR  2
+#define PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR  1
 
 /* ======================================================================
    Derived feature flags (do NOT edit)

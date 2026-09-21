@@ -241,27 +241,31 @@ void costFunctionArx(cost_type              cost[2],
         #pragma HLS UNROLL
         #elif PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR > 1
         /*
-         * PARTIAL unroll (PRAGMA_PROFILE_BALANCED only - see setup.h).
-         * factor=N groups N consecutive k-iterations into one
-         * straight-line block (the true k-to-k+1 dependency is preserved
-         * WITHIN each group, since partial unroll never reorders a real
-         * recurrence, only removes the per-group loop-control overhead
-         * between Nhor/N groups instead of between all Nhor individual
-         * iterations). This is the finer-grained middle ground between
-         * PRAGMA_PROFILE_AREA's fully-rolled Nhor and
-         * PRAGMA_PROFILE_LATENCY's fully-unrolled Nhor: sized to buy back
-         * some of the FSM-transition cost of rolling without paying for
-         * (factor-fold-independent-copies') worth of extra hardware -
-         * this loop is a recurrence, not independent work, so a plain
-         * UNROLL of the whole thing was measured to have a poor
-         * LUT-per-cycle-saved return (see setup.h's PRAGMA_PROFILE
-         * comment for the numbers that motivated adding this factor).
+         * PARTIAL unroll (PRAGMA_PROFILE_BALANCED only, factor > 1 - see
+         * setup.h). MEASURED WORSE than leaving this loop fully rolled
+         * for every factor tried (2, 3): more cycles AND more LUT than
+         * factor=1, and the factor is left defined at 1 (i.e. this
+         * branch is dead in practice) for exactly that reason - see
+         * setup.h's PRAGMA_PROFILE and PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR
+         * comments for the numbers and the likely cause (fusing N copies
+         * of a body that already contains Nscen fully unrolled creates a
+         * larger resource-allocation problem that Vitis's list-scheduler
+         * handles worse, not better). Kept, rather than deleted, in case
+         * costFunctionArx's structure changes enough later to revisit it.
+         *
+         * HLS_PRAGMA (setup.h) is required here, not a plain #pragma:
+         * Vitis's pragma-argument parser does not macro-expand the
+         * factor= field the way the #elif condition above (checked by
+         * the ordinary C preprocessor) does - see setup.h's "HLS pragma
+         * helper" comment for the full explanation and the exact error
+         * this produced when this was a plain #pragma line.
          */
-        #pragma HLS UNROLL factor=PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR
+        HLS_PRAGMA(HLS UNROLL factor=PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR)
         #endif
         #endif
         /* If neither branch applies (PRAGMA_PROFILE_AREA, or BALANCED
-         * with the factor left at 1), the loop is left fully rolled. */
+         * with the factor left at 1, which is its current and only
+         * sensible value - see above), the loop is left fully rolled. */
         /* --- Set current input ---------------------------------------- */
         if (k < NhorU)
             uSamples[0] = currU[k];
