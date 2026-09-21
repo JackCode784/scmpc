@@ -38,25 +38,26 @@
 /*  Vitis HLS fixed-point types                                           */
 /* ---------------------------------------------------------------------- */
 #include <ap_fixed.h>
+constexpr int WORD_LENGTH = 18;
 
 /** System-dependent data type (based on I/O dynamic range)
  * Taken care of by MATLAB?
  */
 #if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-typedef ap_fixed<18,5,AP_RND_CONV,AP_SAT> output_type; // [YMIN-SIGMA_UNNORM, YMAX+SIGMA_UNNORM] = [-0.02, 10.02]
-typedef ap_ufixed<18,1,AP_RND_CONV,AP_SAT> input_type; // [UMIN, UMAX] = [0, 1]
-typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
+typedef ap_fixed<WORD_LENGTH,5,AP_RND_CONV,AP_SAT> output_type; // [YMIN-SIGMA_UNNORM, YMAX+SIGMA_UNNORM] = [-0.02, 10.02]
+typedef ap_ufixed<WORD_LENGTH,1,AP_RND_CONV,AP_SAT> input_type; // [UMIN, UMAX] = [0, 1]
+typedef ap_fixed<WORD_LENGTH,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    #ifndef NRMLZ
    /* No normalization */
-   typedef ap_fixed<18,5,AP_RND_CONV,AP_SAT> theta_type; // System-dependent theta dynamic range
-   typedef ap_fixed<18,5> output_strip_offset_type; // System-dependent output strip offset [SIGMA_UNNORM - YMAX, SIGMA_UNNORM+YMAX]=[-9.98, 10.02]
-   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> proj_type; // |cproj| <= nTheta*..., same for |gproj|
-   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
-   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
-   typedef ap_fixed<18,9> tight_strip_center_type; // difference of tight strip offset
-   typedef ap_ufixed<18,9> vol_type; // could be anything without normalization
-   typedef ap_fixed<18,10> det_type; // could be anything without normalization
-   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> elim_type; // possibly almost-singular matrix, factor variable, pivotAbs in matDet
+   typedef ap_fixed<WORD_LENGTH,5,AP_RND_CONV,AP_SAT> theta_type; // System-dependent theta dynamic range
+   typedef ap_fixed<WORD_LENGTH,5> output_strip_offset_type; // System-dependent output strip offset [SIGMA_UNNORM - YMAX, SIGMA_UNNORM+YMAX]=[-9.98, 10.02]
+   typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> proj_type; // |cproj| <= nTheta*..., same for |gproj|
+   typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
+   typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
+   typedef ap_fixed<WORD_LENGTH,9> tight_strip_center_type; // difference of tight strip offset
+   typedef ap_ufixed<WORD_LENGTH,9> vol_type; // could be anything without normalization
+   typedef ap_fixed<WORD_LENGTH,10> det_type; // could be anything without normalization
+   typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> elim_type; // possibly almost-singular matrix, factor variable, pivotAbs in matDet
       /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
       /* No normalization, yes ADC/DAC conversions */
@@ -68,22 +69,22 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
       typedef ap_ufixed<1,1> ctrl2dig_type; // 0
       #endif
    #else
-   typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> theta_type;
+   typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> theta_type;
    /* MATLAB-computed offline normalization constants */
    typedef ap_ufixed<23,3> strip_coeff_type;       // myInvDmDg
    typedef ap_ufixed<23,3> strip_q_coeff_type;     // qmyInvDmDg
    typedef ap_fixed<22,3> strip_coeff_c0_type;     // myInvDmc0
    typedef ap_ufixed<21,0> strip_q_coeff_c0_type;  // qmyInvDmc0
 
-   typedef ap_fixed<18,-2> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
-   typedef ap_fixed<18,4,AP_RND_CONV,AP_SAT> output_strip_offset_type; // [-my*SIGMA_UNNORM-YNORMMAX,my*SIGMA_UNNORM+YNORMMAX]
-   typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> proj_type; // |cproj| <= nTheta*0.44, |gproj| <=  
-   typedef ap_fixed<18,11,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
-   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
+   typedef ap_fixed<WORD_LENGTH,-2> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
+   typedef ap_fixed<WORD_LENGTH,4,AP_RND_CONV,AP_SAT> output_strip_offset_type; // [-my*SIGMA_UNNORM-YNORMMAX,my*SIGMA_UNNORM+YNORMMAX]
+   typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> proj_type; // |cproj| <= nTheta*0.44, |gproj| <=  
+   typedef ap_fixed<WORD_LENGTH,11,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
+   typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
    typedef ap_fixed<19,10,AP_RND_CONV,AP_SAT> tight_strip_center_type; // difference of tight strip offset
-   typedef ap_ufixed<18,3+1,AP_RND_CONV,AP_SAT> vol_type; // with normalization, it surely is smaller than 2^nTheta (max possible initial zonotope volume)
-   typedef ap_fixed<18,3+2,AP_RND_CONV,AP_SAT> det_type; // with normalization, it can be proven that det is in [-2^(nTheta-1),2^(nTheta-1)]
-   typedef ap_fixed<18,9,AP_RND_CONV,AP_SAT> elim_type; // possibly almost-singular matrix, factor variable, pivotAbs in matDet
+   typedef ap_ufixed<WORD_LENGTH,3+1,AP_RND_CONV,AP_SAT> vol_type; // with normalization, it surely is smaller than 2^nTheta (max possible initial zonotope volume)
+   typedef ap_fixed<WORD_LENGTH,3+2,AP_RND_CONV,AP_SAT> det_type; // with normalization, it can be proven that det is in [-2^(nTheta-1),2^(nTheta-1)]
+   typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> elim_type; // possibly almost-singular matrix, factor variable, pivotAbs in matDet
    /* y/u_norm_coeff_type depend on system's constraints i.e. on the specific system */
    typedef ap_ufixed<16,0> y_norm_coeff_type; // 0.2 = 0.00110011...
    typedef ap_ufixed<2,2> u_norm_coeff_type;  // 2 = 10.0...
@@ -106,7 +107,7 @@ typedef ap_fixed<18,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
 typedef ap_ufixed<32,  9, AP_RND_CONV, AP_SAT>  cost_type;
 
 /** Random numbers and direction-vector coefficients for the MADS poll step. */
-typedef ap_fixed<18,2,AP_TRN,AP_SAT>  rand_type;
+typedef ap_fixed<WORD_LENGTH,2,AP_TRN,AP_SAT>  rand_type;
 
 /** Mesh-point coordinates (same range as input_type, unsigned). */
 // typedef ap_fixed<36, 12, AP_TRN,      AP_WRAP>  mesh_type;
@@ -118,7 +119,7 @@ typedef ap_int<6>                                 mesh_exp_type;
 typedef ap_fixed<24,13+1,AP_RND_CONV,AP_SAT> direction_type;
 
 /* Householder matrix entries data types in [-4,3] */
-typedef ap_fixed<18,3,AP_TRN,AP_SAT> householder_type;
+typedef ap_fixed<WORD_LENGTH,3,AP_TRN,AP_SAT> householder_type;
 
 /*
  * Primary algorithmic type.
@@ -205,10 +206,10 @@ typedef output_type  digital_output_type;
 #ifdef NRMLZ
 #ifdef FIXED
 /** Normalized quantities types */
-typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_output_type;
-typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_input_type;
-typedef ap_fixed<18,1,AP_TRN,AP_SAT> phi_type;
-typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> strip_center_type;
+typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_output_type;
+typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_input_type;
+typedef ap_fixed<WORD_LENGTH,1,AP_TRN,AP_SAT> phi_type;
+typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> strip_center_type;
 typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
 
 /**
