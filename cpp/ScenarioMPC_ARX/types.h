@@ -210,10 +210,41 @@ typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> norm_input_type;
 typedef ap_fixed<18,1,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<18,2,AP_RND_CONV,AP_SAT> strip_center_type;
 typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
+
+/**
+ * computeArxOutput.cpp's NRMLZ branch chains two multiplies:
+ * ((sample) * theta[i]) * myInvDmDg[i]. With no intermediate type, C++/
+ * ap_fixed give (sample * theta[i]) - a product of two ap_fixed<18,2> -
+ * its lossless result width: 18+18=36 total bits, 2+2=4 integer bits.
+ * A 36-bit operand does not fit a single DSP48E1's native 25x18 signed
+ * multiplier, so Vitis cascades two DSP48s plus LUT-built glue to
+ * combine their partial products - confirmed in costFunctionArx's own
+ * synthesis report as 24 instances of a "mul_36s_..." pattern, each
+ * costing 2 DSP + 85 LUT (48 DSP / 2040 LUT total), the dominant single
+ * contributor to CTRL_MODE_SCMPC's PRAGMA_PROFILE_LATENCY exceeding
+ * 100% LUT utilisation by 414 LUT (see costFunctionArx.cpp).
+ *
+ * arx_partial_type is that intermediate's EXPLICIT type, sized to break
+ * the chain into two single-DSP multiplies instead of one 2-DSP one:
+ *   - 4 integer bits, matching the lossless requirement above, so the
+ *     first multiply cannot silently overflow before AP_SAT can act.
+ *   - 20 fractional bits: 4 more than norm_output_type's 16, enough
+ *     guard precision that rounding here should not be distinguishable
+ *     from rounding at the FINAL cast this expression already performs
+ *     (see below) - not a precision concession, since the 36-bit
+ *     intermediate's "extra" bits beyond what norm_output_type can hold
+ *     are already discarded by that existing final cast; this only
+ *     moves WHERE they get discarded, from after the second multiply to
+ *     before it.
+ * AP_RND_CONV+AP_SAT match every other rounding-sensitive type in this
+ * file, rather than introducing a different convention here.
+ */
+typedef ap_fixed<24,4,AP_RND_CONV,AP_SAT> arx_partial_type;
 #else
 typedef double norm_noise_type;
 typedef double norm_output_type;
 typedef double norm_input_type;
+typedef double arx_partial_type;
 #endif
 #else
 typedef output_type norm_output_type;
