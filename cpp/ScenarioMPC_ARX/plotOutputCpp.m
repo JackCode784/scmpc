@@ -15,8 +15,11 @@ end
 
 % Save data as table instead of matrix
 data = readtable(append(d, "output.txt"), VariableNamingRule="preserve");
+err = data.yref - data.ySim;
+errMean = mean(err);
+errRMSE = sqrt(mean(err.^2));
 
-figure(Name=titleStr); subplot(2,1,1);
+figure(Name=titleStr); subplot(3,1,1);
 hold on;
 plot(data.ySim, 'LineWidth', 1.5); grid on;xlabel('Sample');ylabel('Simulated output');
 plot(data.yref, 'r--', 'LineWidth', 1.5);
@@ -24,11 +27,26 @@ plot(data.yMin, 'k--', 'LineWidth',1.5);
 plot(data.yMax, 'k--', 'LineWidth',1.5);
 hold off;
 legend('y(k)', 'yref');
-subplot(2,1,2);
+
+subplot(3,1,2);
+hold on;
+% boxplot(err, Orientation="horizontal");
+% xline(errMean, 'r--', LineWidth=1.5);
+% xline(errRMSE, 'k:', LineWidth=1.5);
+plot(err, LineWidth=1.5);
+yline(errMean, 'r--', num2str(errMean), LineWidth=1.5);
+yline(errRMSE, 'k:', num2str(errRMSE), LineWidth=1.5);
+hold off;
+grid on;
+xlabel('Sample');
+legend('e_k', 'Mean', 'RMSE');
+
+subplot(3,1,3);
 hold on;
 stairs(data.uSim, 'LineWidth', 1.5); grid on;xlabel('Sample');ylabel('Optimized input');
 plot(data.uMax,'k--', 'LineWidth',1.5);
 plot(data.uMin,'k--', 'LineWidth',1.5);
+hold off;
 
 if ismember('ySimDig', data.Properties.VariableNames)
     % uSimDig = output(:,8);
