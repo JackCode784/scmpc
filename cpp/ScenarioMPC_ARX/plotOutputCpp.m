@@ -17,77 +17,88 @@ end
 data = readtable(append(d, "output.txt"), VariableNamingRule="preserve");
 
 % Tracking error
-err = data.yref - data.ySim;
-errMean = mean(err);
-errRMSE = sqrt(mean(err.^2));
+data.err = data.yref - data.ySim;
+errMean = mean(data.err);
+errRMSE = sqrt(mean(data.err.^2));
 
 % Output "derivative" computation
 yDer = diff(data.ySim);
 data.("deltaY") = 0.1 * ones(height(data),1);
 
 % Plots
-figure(Name=titleStr); subplot(4,1,1);
+% Output simulations
+figure(Name=titleStr); subplot(3,1,1);
 hold on;
-plot(data.ySim, 'LineWidth', 1.5); grid on;xlabel('Sample');
+yyaxis left;
+plot(data.ySim, 'LineWidth', 1.5); grid on;xlabel('k');
 plot(data.yref, 'r--', 'LineWidth', 1.5);
 yline(data.yMin(1), 'k--', num2str(data.yMin(1)), 'LineWidth',1.5);
 yline(data.yMax(1), 'k--', num2str(data.yMax(1)), 'LineWidth',1.5);
 hold off;
-title('Simulated output');
+ylabel('Simulated analog output');
 legend('y_k', 'yref');
+if ismember('ySimDig', data.Properties.VariableNames)
+    % uSimDig = output(:,8);
+    % ySimDig = output(:,9);
 
-subplot(4,1,2);
+    % figure;
+    % subplot(2,1,1);
+    yyaxis right;
+    hold on;
+    stairs(data.ySimDig, 'LineWidth', 1.5); grid on; ylabel('Simulated digital output');
+    hold off;
+    legend('off');
+end
+title('Output simulation');
+
+% y_k - y_{k-1} plot
+subplot(3,1,2);
+hold on;
+plot(yDer, LineWidth=1.5);
+yline(data.deltaY(1)*[-1, 1], 'k--', {num2str(-data.deltaY(1)),num2str(-data.deltaY(1))}, LineWidth=1.5);
+hold off;
+grid on;
+xlabel('k');
+ylabel('y_k - y_{k-1}');
+title('\Deltay');
+
+% Optimal input
+subplot(3,1,3);
+hold on;
+plot(data.uSim, 'LineWidth', 1.5); grid on;xlabel('k');
+plot(data.uMax,'k--', 'LineWidth',1.5);
+plot(data.uMin,'k--', 'LineWidth',1.5);
+hold off;
+ylabel('u^*_k');
+if ismember('uSimDig', data.Properties.VariableNames)
+    yyaxis right;
+    hold on;
+    stairs(data.uSimDig, 'LineWidth', 1.5); grid on;xlabel('k');ylabel('Optimized digital input');title('Optimal input');
+end
+
+% Tracking error plot
+figure;
+subplot(2,1,1);
 hold on;
 % boxplot(err, Orientation="horizontal");
 % xline(errMean, 'r--', LineWidth=1.5);
 % xline(errRMSE, 'k:', LineWidth=1.5);
-plot(err, LineWidth=1.5);
+plot(data.err, LineWidth=1.5);
 yline(errMean, 'r--', num2str(errMean), LineWidth=1.5);
 yline(errRMSE, 'k:', num2str(errRMSE), LineWidth=1.5);
 hold off;
 grid on;
 title('Tracking error');
-xlabel('Sample');
-legend('e_k', 'Mean', 'RMSE');
-
-subplot(4,1,3);
-hold on;
-plot(yDer, LineWidth=1.5);
-yline(data.deltaY(1)*[-1, 1], 'k--', {num2str(data.deltaY(1)),num2str(-data.deltaY(1))}, LineWidth=1.5);
-hold off;
-grid on;
-title('y_k - y_{k-1}');
-xlabel('Sample');
-
-subplot(4,1,4);
-hold on;
-stairs(data.uSim, 'LineWidth', 1.5); grid on;xlabel('Sample');
-plot(data.uMax,'k--', 'LineWidth',1.5);
-plot(data.uMin,'k--', 'LineWidth',1.5);
-hold off;
-title('Optimal input');
-ylabel('u^*_k');
-
-if ismember('ySimDig', data.Properties.VariableNames)
-    % uSimDig = output(:,8);
-    % ySimDig = output(:,9);
-
-    figure;
-    subplot(2,1,1);
-    hold on;
-    plot(data.ySimDig, 'LineWidth', 1.5); grid on;xlabel('Sample');ylabel('Simulated digital output');
-    hold off;
-    subplot(2,1,2);
-    hold on;
-    stairs(data.uSimDig, 'LineWidth', 1.5); grid on;xlabel('Sample');ylabel('Optimized digital input');
-end
+xlabel('k');
+legend('e_k = y^*_k - y_k', 'Mean', 'RMSE');
 
 % Zonotope volume
-figure;
+% figure;
+subplot(2,1,2);
 plot(data.vol, 'LineWidth',1.5);
 grid on;
-xlabel('Time instant');
-ylabel('Volume (normalized)');
+xlabel('k');
+ylabel('Vol(Z_k)');
 title('Normalized zonotope volume');
 
 % Latency/area occupation dependency on number of scenarios
