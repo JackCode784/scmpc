@@ -87,12 +87,15 @@
 #define USE_SCENS_CONSTR    /* Enable scenarios constraints contribution */
 // #define PRNG_STDLIB         /* use rand() as prng */
 
-/** Active plant - choose one of: 
- * SYSTEM_SIMPLE, 
- * SYSTEM_BENCHMARK, 
- * SYSTEM_MILANO, 
+/** Active plant - choose one of:
+ * SYSTEM_SIMPLE,
+ * SYSTEM_BENCHMARK,
+ * SYSTEM_MILANO,
  * SYSTEM_BUCK,
- * SYSTEM_BUCK_LOSS */
+ * SYSTEM_BUCK_LOSS,
+ * SYSTEM_GAIN_DEMO  - "is scenario MPC worth it" demo; also comment out
+ *                     NRMLZ and CONVERSIONS_MODE for this one specifically
+ *                     (see system_configs.h's SYSTEM_GAIN_DEMO comment) */
 #define ACTIVE_SYSTEM   SYSTEM_BUCK_LOSS
 
 /**
@@ -362,7 +365,8 @@
     (ACTIVE_SYSTEM != SYSTEM_BENCHMARK) && \
     (ACTIVE_SYSTEM != SYSTEM_MILANO) && \
     (ACTIVE_SYSTEM != SYSTEM_BUCK) && \
-    (ACTIVE_SYSTEM != SYSTEM_BUCK_LOSS)
+    (ACTIVE_SYSTEM != SYSTEM_BUCK_LOSS) && \
+    (ACTIVE_SYSTEM != SYSTEM_GAIN_DEMO)
   #error "Unrecognized ACTIVE_SYSTEM!"
 #endif
 

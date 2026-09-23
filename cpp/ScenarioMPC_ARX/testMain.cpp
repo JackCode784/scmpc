@@ -266,5 +266,16 @@ inline void generateReference(output_type yref[], int nSim)
                                             (i < 150) ? 4 :
                                             (i < 225) ? 5 : 7;
     // for(int i = 0; i < nSim; i++) yref[i] = (sin(2 * M_PI / 3 * i * 1e-2) > 0 ? 10 * sin(2 * M_PI / 3 * i * 1e-2) : -10 * sin(2 * M_PI / 3 * i * 1e-2));
+#elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
+    /*
+     * Safe/low reference for the first third (both certainty-equivalent
+     * and scenario MPC behave identically here - no risk near YMAX),
+     * then a step up to 4.9 (just under YMAX=5) for the rest of the run
+     * - the regime where the nominal model's underestimated gain (4 vs.
+     * the true 6) matters. See system_configs.h's SYSTEM_GAIN_DEMO
+     * comment for the full derivation and the measured closed-loop
+     * numbers this reference profile produces.
+     */
+    for(int i = 0; i < nSim; i++) yref[i] = (i < 100) ? 1.0 : 4.9;
 #endif  /* ACTIVE_SYSTEM */
 }
