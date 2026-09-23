@@ -65,10 +65,19 @@ theta_type  thetaCenter[nTheta]              = {    THETA_NOMINAL_INIT  };
 theta_type  thetaGens  [nTheta][nGens]       = {    GENERATORS_INIT     };
 norm_output_type yHist[na]                   = { Y_HIST_INIT };
 norm_input_type  uHist[nb + nk - 1]          = { U_HIST_INIT };
-/* Zero-initialised rather than tied to U_HIST_INIT: this only affects the
- * very first controller() call (every call after that overwrites it in
- * Step 7b below), and zero is a size-independent, always-valid default
- * regardless of how NhorU is configured. */
+/*
+ * MUST be tied to U_HIST_INIT's operating point, not zero: a first
+ * MADS call warm-started from a value inconsistent with the assumed
+ * equilibrium encoded in Y_HIST_INIT/U_HIST_INIT can return a poor
+ * first solution, and - unlike the old flat "uOptNorm[i] = uHist[0]"
+ * warm start, which re-anchored to the REAL applied input every single
+ * call - the shifted warm start below carries that solution's quality
+ * forward via uOptPrev with no automatic reset to reality in between.
+ * A bad cold start can therefore seed a persistent closed-loop problem
+ * rather than a one-step transient (confirmed empirically: an earlier
+ * all-zero default here caused floating-point simulation to oscillate
+ * and never settle for the whole run, not just its first few samples).
+ */
 norm_input_type  uOptPrev[NhorU]             = { U_PREV_INIT };
 
 /* ======================================================================

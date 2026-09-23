@@ -166,6 +166,7 @@ static const noise_type SIGMA_UNNORM = 0.02;
 #ifndef NRMLZ
 #define Y_HIST_INIT 0, 0
 #define U_HIST_INIT 0, 0 // nb+nk-1=2
+#define U_PREV_INIT 0, 0, 0  // NhorU
 #define THETA_NOMINAL_INIT THETA_NOMINAL_UNNORM
 #define GENERATORS_INIT GENERATORS_UNNORM
 #else

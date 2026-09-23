@@ -404,6 +404,12 @@
      gives MADS a much better starting point once the plant is tracking
      a moving reference, which reduces (without eliminating) transient
      DELTAYNORM violations right after a reference step.
+
+     Its initial value (U_PREV_INIT, system_configs.h) MUST encode the
+     same cold-start operating point as Y_HIST_INIT/U_HIST_INIT - unlike
+     the old flat warm start, this one is never re-anchored to the real
+     applied input, so an inconsistent cold start can seed a persistent
+     closed-loop problem rather than a one-call transient.
    ====================================================================== */
 extern theta_type  thetaCenter[nTheta];
 extern theta_type  thetaGens  [nTheta][nGens];
