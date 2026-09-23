@@ -67,10 +67,15 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl)
 	#pragma HLS INLINE
 	#endif
 	digital_input_type uDig = uConvCoeff*uCtrl + uConvOffset;
-	#ifndef FIXED
-	/* Emulate ADC saturation when using floating point */
-	uDig = (uDig < ADC_MIN) ? ADC_MIN : 
-			(uDig > ADC_MAX) ? ADC_MAX : 
+	#if !defined(FIXED) && defined(CONVERSIONS_MODE)
+	/* Emulate ADC saturation when using floating point. ADC_MIN/ADC_MAX
+	 * only exist under CONVERSIONS_MODE (setup.h); without it,
+	 * digital_input_type == input_type (types.h) and there is no ADC
+	 * code to saturate - the old #ifndef FIXED alone made "FIXED off +
+	 * CONVERSIONS_MODE off" (pure floating-point, no ADC/DAC modelling)
+	 * fail to compile with "ADC_MIN was not declared in this scope". */
+	uDig = (uDig < ADC_MIN) ? ADC_MIN :
+			(uDig > ADC_MAX) ? ADC_MAX :
 			uDig;
 	#endif
 

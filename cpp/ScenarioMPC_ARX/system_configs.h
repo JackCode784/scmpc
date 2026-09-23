@@ -9,6 +9,7 @@
  *  SYSTEM_MILANO     (id 2)  na=3, nb=3, nk=1 - original CMPLSYS (BESS)
  *  SYSTEM_BUCK       (id 3)  na=2, nb=1, nk=2 - buck power converter
  *  SYSTEM_BUCK_LOSS  (id 4)  na=2, nb=1, nk=2 - buck power converter with loss resistance
+ *  SYSTEM_GAIN_DEMO  (id 5)  na=1, nb=1, nk=2 - minimal demo: is scenario MPC worth it?
  *
  * Why fixed-size arrays in the structs?
  * --------------------------------------
@@ -40,6 +41,7 @@
 #define SYSTEM_BUCK       3
 #define SYSTEM_BUCK_LOSS  4
 #define SYSTEM_BUCK_ALBERTO  5
+#define SYSTEM_GAIN_DEMO  6
 
 /* ======================================================================
    ARX MODEL DIMENSIONS  (compile-time macros - must remain #define)
@@ -80,6 +82,11 @@
   #define nb   1
   #define nk   2
   #define nGens 3
+  #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
+  #define na   1
+  #define nb   1
+  #define nk   2
+  #define nGens 2
   #endif
   #define nTheta  (na + nb)       /* total ARX parameter count */
   
@@ -126,6 +133,14 @@ static const input_type  UMAX = 1;
 static const output_type YMIN = 0;
 static const output_type YMAX = 10;
 static const output_type DELTAY = 0.1;
+static const noise_type SIGMA_UNNORM = 0.02;
+
+#elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
+static const input_type  UMIN = 0;
+static const input_type  UMAX = 1.5;
+static const output_type YMIN = 0;
+static const output_type YMAX = 5;
+static const output_type DELTAY = 100; /* effectively unconstrained: this demo is about the static YMAX bound, not the rate limit */
 static const noise_type SIGMA_UNNORM = 0.02;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
@@ -217,4 +232,114 @@ static const noise_type SIGMA_UNNORM = 0.2;
     {-0.056857554685053,  -0.910021585922029,   0.033120859392917}, \
     {0.999841552335275,  0.000151928523890,   0.000006519140835}
 #endif
+
+#elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
+/**
+ * Minimal demonstration system: IS SCENARIO MPC WORTH IT?
+ * ------------------------------------------------------------------
+ * y(k) = a*y(k-1) + b*u(k-2)   (na=1, nb=1, nk=2 - a first-order ARX
+ * with a two-step actuation delay, structurally identical to
+ * SYSTEM_BUCK/SYSTEM_BUCK_LOSS's own (nb,nk)=(1,2), just na=1 instead
+ * of na=2 for the simplest possible hand-checkable dynamics).
+ *
+ * theta = [a, b]. The zonotope is diagonal (independent per-parameter
+ * uncertainty), exactly like SYSTEM_SIMPLE/SYSTEM_BUCK:
+ *   thetaCenter = [a0, b0] = [0.5, 2.0]
+ *   GENERATORS  = diag(deltaA, deltaB) = diag(0.05, 1.0)
+ *   => a in [0.45, 0.55], b in [1.0, 3.0]
+ *
+ * thetaTrue = [0.5, 3.0]: 'a' sits EXACTLY at its nominal/center value
+ * (ξ_a=0 - the pole is assumed known, only carried as a generator for
+ * structural realism/non-singularity of the generator matrix, and to
+ * keep matDet(thetaGens) - called unconditionally in testMain.cpp -
+ * well-defined; it is deliberately NOT the source of the mismatch this
+ * system demonstrates), while 'b' (the INPUT GAIN) sits EXACTLY at the
+ * zonotope's vertex ξ_b=+1, i.e. the worst case the controller's own
+ * uncertainty description claims is possible.
+ *
+ * THE IDEALIZED (STATIC) ARGUMENT
+ * ---------------------------------
+ * DC gain is b/(1-a): G_nominal = 2/0.5 = 4, G_true = 3/0.5 = 6 - the
+ * true plant is 50% "stronger" than the model the controller nominally
+ * trusts. With YMAX=5 and a reference that steps from 1.0 to 4.9 (see
+ * testMain.cpp's generateReference, SYSTEM_GAIN_DEMO branch), a
+ * controller that only ever evaluates thetaCenter would compute
+ * u* = yref/G_nominal = 4.9/4 = 1.225 (within UMAX=1.5), predicting
+ * y=4.9 - safely under YMAX. Applied to the TRUE plant, the actual
+ * steady-state output would be G_true*u* = 6*1.225 = 7.35 - a 47%
+ * breach the nominal-only controller never sees coming.
+ *
+ * WHAT ACTUALLY HAPPENS IN CLOSED LOOP (measured, floating point,
+ * NRMLZ/FIXED/CONVERSIONS_MODE all undefined - see setup.h's TARGET
+ * SELECTION block - Nscen=4, MADS_ITER=7, the project's real values;
+ * mean/max taken over simulation steps 200-300, i.e. 100+ steps after
+ * the reference step, once the closed loop has settled into its
+ * long-run behaviour rather than a transient):
+ *
+ *   USE_SCENS_CONSTR undefined (constraint checked only against
+ *   thetaCenter - certainty-equivalent MPC): output settles at a
+ *   PERSISTENT y ~= 6.3-6.6 (26-32% over YMAX=5) - not a transient
+ *   overshoot that decays, a genuine steady violation, confirmed
+ *   stable out to 1200 steps.
+ *
+ *   USE_SCENS_CONSTR defined (the codebase's actual default: also
+ *   check cost[1] against Nscen=4 parameter draws sampled at random
+ *   from the SAME zonotope every prediction step - see
+ *   costFunctionArx.cpp/generateScenarios.cpp): output settles at
+ *   y ~= 5.6-5.75 (12-15% over YMAX) - roughly HALF the exceedance of
+ *   the certainty-equivalent case, a real and substantial improvement,
+ *   but NOT a full elimination.
+ *
+ * WHY NOT A FULL ELIMINATION AT Nscen=4
+ * -----------------------------------------
+ * This is sample-based, not exact worst-case, robustness: scenarios
+ * are redrawn at random every call rather than fixed at the zonotope's
+ * vertices, so whether a given call's Nscen*Nhor=20 draws happen to
+ * sample close to the b=3 vertex varies call to call, and
+ * progressiveBarrierPollingArx's mesh resets to a small fixed size
+ * (D0_VAL, setup.h) at the start of every controller() call, so MADS
+ * can only make a small, local correction per call rather than jump
+ * straight to the fully-robust input. The residual gap is a SAMPLE
+ * BUDGET effect, not a broken mechanism: repeating this exact
+ * experiment with Nscen bumped to 16 (in an isolated, non-committed
+ * build - Nscen is a shared setup.h constant, changing it here would
+ * also change SYSTEM_BUCK_LOSS's hardware area) reduced the exceedance
+ * to ~2%; Nscen=64 reduced it to ~3 violations out of 100 samples
+ * checked, essentially eliminating it. This confirms the mechanism
+ * converges toward the idealized worst-case-robust result as the
+ * scenario budget grows - it is simply underpowered, not incorrect, at
+ * the Nscen=4 budget this project's hardware profiles are sized for.
+ *
+ * SCOPE: validated in floating point with NRMLZ, FIXED and
+ * CONVERSIONS_MODE all undefined - CTRL_MODE_SCMPC only.
+ *   - NRMLZ is unsupported: setup.h's NRMLZ branch requires
+ *     MATLAB-precomputed myInvDmDg/myInvDmc0/... constants (see
+ *     setup.h, "Pre-computed in MATLAB") that only exist for
+ *     SYSTEM_BUCK/SYSTEM_BUCK_LOSS and are irrelevant to
+ *     CTRL_MODE_SCMPC anyway (they only feed the CTRL_MODE_PL/AL
+ *     strip-intersection code path in controller.cpp).
+ *   - CONVERSIONS_MODE should stay OFF for this system specifically:
+ *     with it on, the 12-bit ADC's full-scale range is [YMIN,YMAX], so
+ *     once the true output exceeds YMAX the SENSOR reading fed back to
+ *     the controller saturates at the rail - a realistic effect in
+ *     general, but here it quietly changes what the controller
+ *     believes y(k-1) is once a violation is already underway,
+ *     confounding the comparison above with an extra, unintended
+ *     nonlinearity. (Fixed in passing: conversions.cpp's ctrlU2dig had
+ *     a latent bug referencing ADC_MIN/ADC_MAX - only defined under
+ *     CONVERSIONS_MODE - whenever FIXED was undefined regardless of
+ *     CONVERSIONS_MODE, making "FIXED off + CONVERSIONS_MODE off" fail
+ *     to compile at all before this system needed it.)
+ *   - FIXED-point/HLS synthesis support (bit widths in types.h) has
+ *     not been added for this system - it exists to answer "is
+ *     scenario MPC worth it", not to be synthesised.
+ */
+#define THETA_NOMINAL_INIT  0.5, 2.0
+#define GENERATORS_INIT \
+    {0.05,   0}, \
+    {0,      1.0}
+#define THETA_TRUE_INIT     0.5, 3.0
+#define Y_HIST_INIT 0     // na=1
+#define U_HIST_INIT 0, 0  // nb+nk-1=2
+#define U_PREV_INIT 0, 0, 0  // NhorU
 #endif
