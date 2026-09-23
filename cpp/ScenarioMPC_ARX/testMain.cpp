@@ -204,35 +204,38 @@ int main(void)
     }
 
     #if defined(FIXED) || defined(CONVERSIONS_MODE)
-        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax uSimDig ySimDig vol\n");
+        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY uSimDig ySimDig vol\n");
     #else
-        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax vol\n");
+        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY vol\n");
     #endif
 
     for (int k = 0; k < nSim; k++)
     {
 #ifdef FIXED
-        fprintf(fp, "%f %f %f %f %f %f %f %f %f %e\n",
+        fprintf(fp, "%f %f %f %f %f %f %f %f %f %f %e\n",
                 uSim[k].to_float(), ySim[k].to_float(),
                 yref[k].to_float(),
                 UMIN.to_float(), UMAX.to_float(),
                 YMIN.to_float(), YMAX.to_float(),
+                DELTAY.to_float(),
                 uSimDig[k].to_float(), ySimDig[k].to_float(),
                 volumes[k].to_float()/volumes[0].to_float());
 #elif defined(CONVERSIONS_MODE)
-        fprintf(fp, "%f %f %f %f %f %f %f %d %d %e\n",
+        fprintf(fp, "%f %f %f %f %f %f %f %f %d %d %e\n",
                 (double)uSim[k], (double)ySim[k],
                 (double)yref[k],
                 (double)UMIN, (double)UMAX,
                 (double)YMIN, (double)YMAX,
+                (double)DELTAY,
                 (int)uSimDig[k], (int)ySimDig[k],
                 (double)volumes[k]/(double)volumes[0]);
 #else
-        fprintf(fp, "%f %f %f %f %f %f %f %e\n", 
+        fprintf(fp, "%f %f %f %f %f %f %f %f %e\n", 
                 (double)uSim[k], (double)ySim[k],
                 (double)yref[k],
                 (double)UMIN, (double)UMAX,
                 (double)YMIN, (double)YMAX,
+                (double)DELTAY,
                 (double)volumes[k]/(double)volumes[0]);
 #endif
     }
@@ -266,5 +269,9 @@ inline void generateReference(output_type yref[], int nSim)
                                             (i < 150) ? 4 :
                                             (i < 225) ? 5 : 7;
     // for(int i = 0; i < nSim; i++) yref[i] = (sin(2 * M_PI / 3 * i * 1e-2) > 0 ? 10 * sin(2 * M_PI / 3 * i * 1e-2) : -10 * sin(2 * M_PI / 3 * i * 1e-2));
+#elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
+    for(int i = 0; i < nSim; i++) yref[i] = (i < 75) ? 80 :
+                                            (i < 150) ? 60 :
+                                            (i < 225) ? 40 : 80;
 #endif  /* ACTIVE_SYSTEM */
 }

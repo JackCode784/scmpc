@@ -23,7 +23,6 @@ errRMSE = sqrt(mean(data.err.^2));
 
 % Output "derivative" computation
 yDer = diff(data.ySim);
-data.("deltaY") = 0.1 * ones(height(data),1);
 
 % Plots
 % Output simulations
@@ -55,7 +54,7 @@ title('Output simulation');
 subplot(3,1,2);
 hold on;
 plot(yDer, LineWidth=1.5);
-yline(data.deltaY(1)*[-1, 1], 'k--', {num2str(-data.deltaY(1)),num2str(-data.deltaY(1))}, LineWidth=1.5);
+yline(data.deltaY(1)*[-1, 1], 'k--', {num2str(-data.deltaY(1)),num2str(data.deltaY(1))}, LineWidth=1.5);
 hold off;
 grid on;
 xlabel('k');
