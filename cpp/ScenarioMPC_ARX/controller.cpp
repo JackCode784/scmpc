@@ -69,7 +69,7 @@ norm_input_type  uHist[nb + nk - 1]          = { U_HIST_INIT };
  * very first controller() call (every call after that overwrites it in
  * Step 7b below), and zero is a size-independent, always-valid default
  * regardless of how NhorU is configured. */
-norm_input_type  uOptPrev[NhorU]             = {};
+norm_input_type  uOptPrev[NhorU]             = { U_PREV_INIT };
 
 /* ======================================================================
    controller()

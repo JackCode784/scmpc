@@ -171,6 +171,7 @@ static const noise_type SIGMA_UNNORM = 0.02;
 #else
 #define Y_HIST_INIT -1, -1
 #define U_HIST_INIT -1, -1  // nb+nk-1=2
+#define U_PREV_INIT -1, -1, -1  // NhorU
 #define THETA_NOMINAL_INIT 0, 0, 0
 /* For now, computed offline in MATLAB and pasted here */
 #define GENERATORS_INIT \
