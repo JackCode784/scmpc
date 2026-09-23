@@ -39,6 +39,7 @@
 #define SYSTEM_MILANO     2
 #define SYSTEM_BUCK       3
 #define SYSTEM_BUCK_LOSS  4
+#define SYSTEM_BUCK_ALBERTO  5
 
 /* ======================================================================
    ARX MODEL DIMENSIONS  (compile-time macros - must remain #define)
@@ -70,6 +71,11 @@
   #define nk   2
   #define nGens 3
   #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
+  #define na  2
+  #define nb   1
+  #define nk   2
+  #define nGens 3
+  #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
   #define na  2
   #define nb   1
   #define nk   2
@@ -121,6 +127,14 @@ static const output_type YMIN = 0;
 static const output_type YMAX = 10;
 static const output_type DELTAY = 0.1;
 static const noise_type SIGMA_UNNORM = 0.02;
+
+#elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
+static const input_type  UMIN = 0;
+static const input_type  UMAX = 1;
+static const output_type YMIN = 0;
+static const output_type YMAX = 85;
+static const output_type DELTAY = 5;
+static const noise_type SIGMA_UNNORM = 0.2;
 
 #endif
 
@@ -179,5 +193,28 @@ static const noise_type SIGMA_UNNORM = 0.02;
     {-0.422095251119916,   0.562742968468448,   0.015161780411636}, \
     {0.321379044059322,  -0.657582479919780,   0.021038476020897}, \
     {0.798273306559841,   0.200665453469169,   0.001061239970989}
+#endif
+#elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
+#define THETA_NOMINAL_UNNORM 1.733749265658302,  -0.881912845894497,  14.298236163643255
+#define GENERATORS_UNNORM \
+    {-0.068444143534821,   0.137725841350229,   0.004638817609457}, \
+    {-0.008278303729254,  -0.132496642357720,   0.004822306118286}, \
+    {7.403892173947610,   0.001125040669095,   0.000048274664814}
+#define THETA_TRUE_INIT 1.753571428571429,  -0.894444444444444,  13.888888888888886
+#ifndef NRMLZ
+#define Y_HIST_INIT 0, 0
+#define U_HIST_INIT 0, 0
+#define U_PREV_INIT 0, 0, 0
+#define THETA_NOMINAL_INIT THETA_NOMINAL_UNNORM
+#define GENERATORS_INIT GENERATORS_UNNORM
+#else
+#define Y_HIST_INIT -1, -1
+#define U_HIST_INIT -1, -1
+#define U_PREV_INIT -1, -1, -1
+#define THETA_NOMINAL_INIT 0, 0, 0
+#define GENERATORS_INIT \
+    {-0.324674030329471,   0.653321112403822,   0.022004857266707}, \
+    {-0.056857554685053,  -0.910021585922029,   0.033120859392917}, \
+    {0.999841552335275,  0.000151928523890,   0.000006519140835}
 #endif
 #endif

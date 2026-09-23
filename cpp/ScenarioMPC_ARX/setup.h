@@ -80,7 +80,7 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-  #define FIXED            /* fixed point representation */
+//   #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 #define USE_SCENS_COST      /* Enable scenarios cost contribution */
@@ -92,8 +92,9 @@
  * SYSTEM_BENCHMARK, 
  * SYSTEM_MILANO, 
  * SYSTEM_BUCK,
- * SYSTEM_BUCK_LOSS */
-#define ACTIVE_SYSTEM   SYSTEM_BUCK_LOSS
+ * SYSTEM_BUCK_LOSS,
+ * SYSTEM_BUCK_ALBERTO */
+#define ACTIVE_SYSTEM   SYSTEM_BUCK_ALBERTO
 
 /**
  * Controller algorithm mode - choose one of:
@@ -362,7 +363,8 @@
     (ACTIVE_SYSTEM != SYSTEM_BENCHMARK) && \
     (ACTIVE_SYSTEM != SYSTEM_MILANO) && \
     (ACTIVE_SYSTEM != SYSTEM_BUCK) && \
-    (ACTIVE_SYSTEM != SYSTEM_BUCK_LOSS)
+    (ACTIVE_SYSTEM != SYSTEM_BUCK_LOSS) && \
+    (ACTIVE_SYSTEM != SYSTEM_BUCK_ALBERTO)
   #error "Unrecognized ACTIVE_SYSTEM!"
 #endif
 
@@ -568,6 +570,11 @@ static const strip_coeff_type myInvDmDg[nTheta] = {0.221790861648681, 0.17920010
 static const strip_q_coeff_type qmyInvDmDg[nTheta] = {0.221790861648681,   0.179200105412089,   0.033957216705635}; // includes '-' sign for output sample prediction
 static const strip_coeff_c0_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
 static const strip_q_coeff_c0_type qmyInvDmc0 = 0.992262713557689; // includes '-' sign for output sample prediction
+#elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
+static const strip_coeff_type myInvDmDg[nTheta] = {0.210808802494506, 0.145597252205259, 0.087118417520959};
+static const strip_q_coeff_type qmyInvDmDg[nTheta] = {0.210808802494506,   0.145597252205259,   0.087118417520959}; // includes '-' sign for output sample prediction
+static const strip_coeff_c0_type myInvDmc0[nTheta] = {1.733749265658301,  -0.881912845894497,   0.168214543101685};
+static const strip_q_coeff_c0_type qmyInvDmc0 = 1.020050962865490; // includes '-' sign for output sample prediction
 #else
 #error "Conversion variables for unknwon system could not be defined!"
 #endif
