@@ -18,6 +18,10 @@
  *   nGens                       - number of active generator columns
  *   yHist      [na]                  - output history y(k−1), ..., y(k−na)
  *   uHist      [nb+nk−1]             - input  history u(k−1), ..., u(k−nb−nk+1)
+ *   uOptPrev   [NhorU]               - last step's MADS solution u*(k−1), ...,
+ *                                      u*(k−1+NhorU−1), kept ONLY to seed the
+ *                                      next warm start (see Step 1b/7b below) -
+ *                                      not part of the ARX regressor, unlike uHist.
  *
  * ZONOTOPE LIFECYCLE
  * ------------------
@@ -33,6 +37,8 @@
  * about which data belongs to time k vs k−1.
  *
  *  1. Convert digital inputs -> algorithm types.
+ *  1b. Warm-start uOptNorm by shifting uOptPrev (last call's MADS
+ *          solution) by one step, repeating its last entry.
  *  2. [PL] Update zonotope using y(k), OLD yHist, OLD uHist.
  *          The strip S(k) = {theta : |y(k)−phi(k)^T*theta|<=epsilon} uses the regressor
  *          phi(k) = [y(k−1),..., u(k−1),...] - the OLD histories.
@@ -40,7 +46,8 @@
  *  4. Generate scenarios from the (now updated) thetaCenter / thetaGens.
  *  5. Shift yHist <- [y(k), y(k−1), ...].
  *  6. Snapshot uHist into uPast (before it is updated in step 9).
- *  7. Run MADS -> uOpt.
+ *  7. Run MADS -> uOpt, warm-started from step 1b.
+ *  7b. Save uOpt into uOptPrev, to seed step 1b on the NEXT call.
  *  8. Convert uOpt -> digital.
  *  9. Shift uHist <- [uOpt[0], u(k−1), ...].
  */
@@ -58,6 +65,11 @@ theta_type  thetaCenter[nTheta]              = {    THETA_NOMINAL_INIT  };
 theta_type  thetaGens  [nTheta][nGens]       = {    GENERATORS_INIT     };
 norm_output_type yHist[na]                   = { Y_HIST_INIT };
 norm_input_type  uHist[nb + nk - 1]          = { U_HIST_INIT };
+/* Zero-initialised rather than tied to U_HIST_INIT: this only affects the
+ * very first controller() call (every call after that overwrites it in
+ * Step 7b below), and zero is a size-independent, always-valid default
+ * regardless of how NhorU is configured. */
+norm_input_type  uOptPrev[NhorU]             = {};
 
 /* ======================================================================
    controller()
@@ -71,25 +83,28 @@ digital_input_type controller(const digital_output_type yCurrDig,
 	#pragma HLS INTERFACE ap_ctrl_hs port=return
 
 	/*
-	 * thetaCenter/thetaGens/yHist/uHist are FILE-SCOPE globals (defined
-	 * above with external linkage) rather than local arrays, so their
-	 * memory partitioning must be declared here, inside the top-level
-	 * function, where HLS elaborates the design's static storage.
-	 * A pragma attached to the point of declaration outside a function
-	 * has no effect.
+	 * thetaCenter/thetaGens/yHist/uHist/uOptPrev are FILE-SCOPE globals
+	 * (defined above with external linkage) rather than local arrays, so
+	 * their memory partitioning must be declared here, inside the
+	 * top-level function, where HLS elaborates the design's static
+	 * storage. A pragma attached to the point of declaration outside a
+	 * function has no effect.
 	 *
-	 * All four are read/written elementwise by fully-unrolled loops in
-	 * computeArxOutput, generateScenarios, matDet/zonotopeVolume and
-	 * boundStripZonotopeIntersectionNew (PL/AL mode). Complete
+	 * All five are read/written elementwise by fully-unrolled loops in
+	 * computeArxOutput, generateScenarios, matDet/zonotopeVolume,
+	 * boundStripZonotopeIntersectionNew (PL/AL mode), and - for uOptPrev -
+	 * the warm-start shift/save-back loops below (Step 1b/7b). Complete
 	 * partitioning turns each into individual registers instead of a
 	 * single-/dual-port BRAM, which is required for those unrolled
 	 * accesses to happen in parallel and is affordable here because
-	 * nTheta, nGens, na and nb+nk-1 are all <= 6 for every ACTIVE_SYSTEM.
+	 * nTheta, nGens, na, nb+nk-1 and NhorU are all <= 6 for every
+	 * ACTIVE_SYSTEM.
 	 */
 	#pragma HLS ARRAY_PARTITION variable=thetaCenter complete dim=1
 	#pragma HLS ARRAY_PARTITION variable=thetaGens   complete dim=0
 	#pragma HLS ARRAY_PARTITION variable=yHist       complete dim=1
 	#pragma HLS ARRAY_PARTITION variable=uHist       complete dim=1
+	#pragma HLS ARRAY_PARTITION variable=uOptPrev    complete dim=1
 	#endif
     /* ------------------------------------------------------------------ */
     /*  Step 1 - Convert digital inputs to algorithm types                */
@@ -134,8 +149,39 @@ digital_input_type controller(const digital_output_type yCurrDig,
     // yrefNorm = yref;
     // #endif
     
+    /* ------------------------------------------------------------------ */
+    /*  Step 1b - Warm-start uOptNorm by shifting the previous solution   */
+    /* ------------------------------------------------------------------ */
+    /*
+     * Previously this held uHist[0] constant across the whole horizon
+     * ("freeze current input"), which is a poor guess whenever yref is
+     * moving: MADS then spends its limited MADS_ITER budget fighting its
+     * way away from a flat start instead of refining an already-good
+     * trajectory, which is one of the reasons DELTAYNORM (the output-rate
+     * constraint) gets violated on transients - see updateConstraintViolation.cpp.
+     *
+     * Instead, shift uOptPrev = u*(k-1), ..., u*(k-1+NhorU-1) - the full
+     * sequence MADS returned on the previous call - by one step: entry i
+     * becomes the previous call's entry i+1 (it was one step further into
+     * the future, now it is one step closer), and the last entry is
+     * repeated (zero-order hold past the end of the previous horizon,
+     * the standard choice when no better prediction is available there).
+     *
+     * Edge case NhorU == 1 (nOpt == 1): the shift loop below has trip
+     * count NhorU-1 == 0, so it never executes (no out-of-bounds access
+     * to uOptPrev[i+1]), and the line after it degenerates to
+     * uOptNorm[0] = uOptPrev[0], i.e. "reuse last step's only value" -
+     * correct and in-bounds.
+     */
     norm_input_type uOptNorm[NhorU];
-    for (int i = 0; i < NhorU; i++) uOptNorm[i] = uHist[0]; // warm start
+    for (int i = 0; i < NhorU - 1; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        uOptNorm[i] = uOptPrev[i + 1];
+    }
+    uOptNorm[NhorU - 1] = uOptPrev[NhorU - 1]; // repeat last entry
 
     /* ------------------------------------------------------------------ */
     /*  Step 2 - [PL mode] Zonotope update                                */
@@ -350,6 +396,17 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /*  Step 7 - Run MADS optimisation                                    */
     /* ------------------------------------------------------------------ */
     MADSARX(uOptNorm, uPast, yHist, yrefNorm, thetaScenarios);
+
+    /* ------------------------------------------------------------------ */
+    /*  Step 7b - Save this solution as next call's warm-start seed       */
+    /* ------------------------------------------------------------------ */
+    for (int i = 0; i < NhorU; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        uOptPrev[i] = uOptNorm[i];
+    }
 
     /* ------------------------------------------------------------------ */
     /*  Step 8 - Update input history: push uOpt[0] into uHist           */

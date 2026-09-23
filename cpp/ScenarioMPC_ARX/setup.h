@@ -394,11 +394,23 @@
      yHist[0] = y(k-1), yHist[1] = y(k-2), ..., yHist[na-1]  = y(k-na)
      uHist[0] = u(k-1), uHist[1] = u(k-2), ..., uHist[nb+nk-2] = u(k-nb-nk+1)
      Updated each step inside controller().
+
+   uOptPrev - MADS warm-start seed, NOT part of the ARX regressor
+     uOptPrev[0..NhorU-1] = u*(k-1), ..., u*(k-1+NhorU-1), i.e. the full
+     control sequence MADS returned on the PREVIOUS call. controller()
+     shifts this by one step (dropping the already-applied first entry
+     and repeating the last one) to seed uOptNorm for the current call,
+     instead of holding uHist[0] constant across the whole horizon. This
+     gives MADS a much better starting point once the plant is tracking
+     a moving reference, which reduces (without eliminating) transient
+     DELTAYNORM violations right after a reference step.
    ====================================================================== */
 extern theta_type  thetaCenter[nTheta];
 extern theta_type  thetaGens  [nTheta][nGens];
 extern norm_output_type yHist[na];
 extern norm_input_type  uHist[nb + nk - 1];
+/* uOptPrev[NhorU] is declared extern further below, once NhorU itself
+ * has been defined (see "MPC PARAMETERS" section). */
 
 
 /* ======================================================================
@@ -433,6 +445,11 @@ static_assert(Nhor - nk >= NhorU - 1,
 
 /** Number of scalar optimisation variables (= Nu for a SISO system). */
 #define nOpt NhorU
+
+/** MADS warm-start seed - see "CONTROLLER STATE" comment above.
+ *  Declared here, rather than alongside thetaCenter/yHist/uHist, because
+ *  its size depends on NhorU, which is only just defined above. */
+extern norm_input_type uOptPrev[NhorU];
 
 /* ======================================================================
    MPC COST-FUNCTION WEIGHTS
