@@ -100,53 +100,81 @@
   deriving them from the config struct at compile time via constexpr.
   ====================================================================== */
 #if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-static const input_type  UMIN = -0.3;
-static const input_type  UMAX =  0.3;
-static const output_type YMIN =  0.0;
-static const output_type YMAX =  8.0;
+static const input_type UMINPHYS = -0.3;
+static const input_type UMAXPHYS =  0.3;
+static const output_type YMINPHYS =  0.0;
+static const output_type YMAXPHYS =  8.0;
+static const input_type  UMIN = UMINPHYS;
+static const input_type  UMAX = UMAXPHYS;
+static const output_type YMIN = YMINPHYS;
+static const output_type YMAX = YMAXPHYS;
 static const noise_type SIGMA_UNNORM` = 0.0;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-static const input_type  UMIN = -1.9;
-static const input_type  UMAX =  1.9;
-static const output_type YMIN = -10.0;
-static const output_type YMAX =  8.0;
+static const input_type UMINPHYS = -1.9;
+static const input_type UMAXPHYS =  1.9;
+static const output_type YMINPHYS = -10.0;
+static const output_type YMAXPHYS =  8.0;
+static const input_type  UMIN = UMINPHYS;
+static const input_type  UMAX = UMAXPHYS;
+static const output_type YMIN = YMINPHYS;
+static const output_type YMAX = YMAXPHYS;
 static const noise_type SIGMA_UNNORM = 0.20;
 
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
-static const input_type  UMIN = -200.0;
-static const input_type  UMAX =  200.0;
-static const output_type YMIN = -110.0;
-static const output_type YMAX =  110.0;
+static const input_type  UMINPHYS = -200.0;
+static const input_type  UMAXPHYS =  200.0;
+static const output_type YMINPHYS = -110.0;
+static const output_type YMAXPHYS =  110.0;
+static const input_type  UMIN = UMINPHYS;
+static const input_type  UMAX = UMAXPHYS;
+static const output_type YMIN = YMINPHYS;
+static const output_type YMAX = YMAXPHYS;
 static const noise_type SIGMA_UNNORM = 4.4655;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
-static const input_type  UMIN = 0;
-static const input_type  UMAX = 1;
-static const output_type YMIN = 0;
-static const output_type YMAX = 10;
+static const input_type  UMINPHYS = 0;
+static const input_type  UMAXPHYS = 1;
+static const output_type YMINPHYS = 0;
+static const output_type YMAXPHYS = 10;
+static const input_type  UMIN = UMINPHYS;
+static const input_type  UMAX = UMAXPHYS;
+static const output_type YMIN = YMINPHYS;
+static const output_type YMAX = YMAXPHYS;
 static const noise_type SIGMA_UNNORM = 0.2;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-static const input_type  UMIN = 0;
-static const input_type  UMAX = 1;
-static const output_type YMIN = 0;
-static const output_type YMAX = 10;
+static const input_type  UMINPHYS = 0;
+static const input_type  UMAXPHYS = 1;
+static const output_type YMINPHYS = 0;
+static const output_type YMAXPHYS = 10;
+static const input_type  UMIN = UMINPHYS;
+static const input_type  UMAX = UMAXPHYS;
+static const output_type YMIN = YMINPHYS;
+static const output_type YMAX = YMAXPHYS;
 static const output_type DELTAY = 0.1;
 static const noise_type SIGMA_UNNORM = 0.02;
 
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
-static const input_type  UMIN = 0;
-static const input_type  UMAX = 1.5;
-static const output_type YMIN = 0;
+static const input_type  UMINPHYS = 0;
+static const input_type  UMAXPHYS = 1.5;
+static const output_type YMINPHYS = 0;
+static const output_type YMAXPHYS = 7;
+static const input_type  UMIN = UMINPHYS;
+static const input_type  UMAX = UMAXPHYS;
+static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = 5;
 static const output_type DELTAY = 100; /* effectively unconstrained: this demo is about the static YMAX bound, not the rate limit */
 static const noise_type SIGMA_UNNORM = 0.02;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-static const input_type  UMIN = 0;
-static const input_type  UMAX = 1;
-static const output_type YMIN = 0;
+static const input_type  UMINPHYS = 0;
+static const input_type  UMAXPHYS = 1;
+static const output_type YMINPHYS = 0;
+static const output_type YMAXPHYS = 100;
+static const input_type  UMIN = UMINPHYS;
+static const input_type  UMAX = UMAXPHYS;
+static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = 85;
 static const output_type DELTAY = 5;
 static const noise_type SIGMA_UNNORM = 0.2;
