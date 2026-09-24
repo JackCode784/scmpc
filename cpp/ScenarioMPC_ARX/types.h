@@ -38,13 +38,84 @@
 /*  Vitis HLS fixed-point types                                           */
 /* ---------------------------------------------------------------------- */
 #include <ap_fixed.h>
+/*
+ * WORD_LENGTH=18 matches the FPGA's native DSP48E1 hard-multiplier
+ * operand width: an ap_fixed<18,...> value fits in ONE multiplier input
+ * port, so multiplying two such values maps to a single DSP48E1. A
+ * wider operand (>18 bits) forces Vitis to cascade two DSP48E1s plus
+ * LUT-built glue logic to combine their partial products instead - see
+ * arx_partial_type's comment further down for a concrete, measured
+ * example of exactly this penalty. This is a hardware fact, not a
+ * per-system choice, so it stays a single project-wide constant.
+ */
 constexpr int WORD_LENGTH = 18;
 
-/** System-dependent data type (based on I/O dynamic range)
- * Taken care of by MATLAB?
+/*
+ * Automatic integer-bit-count derivation for FIXED-mode types whose
+ * safe range is a closed-form function of quantities already known at
+ * compile time (system I/O bounds, noise amplitude, ...) - as opposed
+ * to types whose range depends on what an iterative, data-dependent
+ * algorithm (e.g. the PL/AL-mode zonotope/strip-intersection math, or
+ * matDet's Gaussian elimination) can produce, which would need a real
+ * interval-arithmetic proof or empirical range-profiling to size
+ * correctly, not a formula - those are intentionally NOT covered here
+ * and remain hand-set.
+ *
+ * GUARD_BITS is the margin knob: raise it to add headroom (in whole
+ * bits, i.e. each +1 doubles the safety margin) to every type sized via
+ * neededIntBits() below, in one place.
  */
-#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-typedef ap_fixed<WORD_LENGTH,5,AP_RND_CONV,AP_SAT> output_type; // [YMIN-SIGMA_UNNORM, YMAX+SIGMA_UNNORM] = [-0.02, 10.02]
+constexpr int GUARD_BITS = 0;
+
+/**
+ * Smallest integer-bit count I such that a signed ap_fixed<_,I> can
+ * represent maxMagnitude (with guardBits of extra headroom) without
+ * overflowing, i.e. the smallest I with 2^(I-1) > maxMagnitude.
+ *
+ * Deliberately NOT using std::log2/std::ceil (<cmath>): those aren't
+ * reliably constexpr across compilers, and I is being computed for use
+ * as an ap_fixed<> TEMPLATE PARAMETER, which must be a genuine integral
+ * constant expression at the point of the typedef - a plain doubling
+ * loop needs nothing but +, *, comparisons and a loop, all of which
+ * have been valid in a C++14 constexpr function (this file's own
+ * documented C++ standard - see setup.h's header comment) since C++14
+ * relaxed the constexpr-function rules, and none of it touches
+ * ap_fixed<> at all, so it evaluates identically under plain C++
+ * (host/software builds) and Vitis HLS's C++ front end.
+ *
+ * A caller should static_assert(neededIntBits(...) < WORD_LENGTH, ...)
+ * at the point of use: if the needed range ever eats the ENTIRE word,
+ * that should be a loud, named compile error (a system whose dynamic
+ * range doesn't fit in WORD_LENGTH bits at all), not a silently
+ * zero/negative-fractional-bit type.
+ */
+constexpr int neededIntBits(double maxMagnitude, int guardBits = GUARD_BITS)
+{
+    int i = 1;
+    double bound = 1.0; // 2^(i-1) for i=1
+    while (bound <= maxMagnitude) { bound *= 2.0; i++; }
+    return i + guardBits;
+}
+
+/** System-dependent data type (based on I/O dynamic range) */
+#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK || ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
+/*
+ * output_type must represent [YMINPHYS-SIGMA_UNNORM, YMAXPHYS+SIGMA_UNNORM]
+ * - the actual physical signal, which can genuinely approach the
+ * sensor's physical limit during a real constraint excursion, not just
+ * the (possibly tighter) YMIN/YMAX control constraint. Both tails are
+ * checked explicitly since YMINPHYS need not be >= 0 for every system.
+ */
+constexpr double outputMaxMag =
+    (YMINPHYS_NUM - SIGMA_UNNORM_NUM < 0.0 ? -(YMINPHYS_NUM - SIGMA_UNNORM_NUM) : (YMINPHYS_NUM - SIGMA_UNNORM_NUM)) >
+    (YMAXPHYS_NUM + SIGMA_UNNORM_NUM < 0.0 ? -(YMAXPHYS_NUM + SIGMA_UNNORM_NUM) : (YMAXPHYS_NUM + SIGMA_UNNORM_NUM))
+    ? (YMINPHYS_NUM - SIGMA_UNNORM_NUM < 0.0 ? -(YMINPHYS_NUM - SIGMA_UNNORM_NUM) : (YMINPHYS_NUM - SIGMA_UNNORM_NUM))
+    : (YMAXPHYS_NUM + SIGMA_UNNORM_NUM < 0.0 ? -(YMAXPHYS_NUM + SIGMA_UNNORM_NUM) : (YMAXPHYS_NUM + SIGMA_UNNORM_NUM));
+constexpr int outputIntBits = neededIntBits(outputMaxMag);
+static_assert(outputIntBits < WORD_LENGTH,
+    "output_type's required dynamic range leaves no fractional bits within WORD_LENGTH - "
+    "this system's I/O range genuinely does not fit an 18-bit fixed-point word at any useful precision.");
+typedef ap_fixed<WORD_LENGTH,outputIntBits,AP_RND_CONV,AP_SAT> output_type; // [YMINPHYS-SIGMA_UNNORM, YMAXPHYS+SIGMA_UNNORM], integer bits derived automatically
 typedef ap_ufixed<WORD_LENGTH,1,AP_RND_CONV,AP_SAT> input_type; // [UMIN, UMAX] = [0, 1]
 typedef ap_fixed<WORD_LENGTH,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    #ifndef NRMLZ

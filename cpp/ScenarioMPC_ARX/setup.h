@@ -356,7 +356,16 @@
 /* ======================================================================
    Core headers
    ====================================================================== */
-#include "types.h"
+/*
+ * Only system_configs.h is included directly here, NOT types.h: types.h
+ * must be included FROM WITHIN system_configs.h (which it already is,
+ * at that file's own #include "types.h" line), AFTER system_configs.h's
+ * own SYSTEM_* id and RAW PHYSICAL BOUNDS preamble has run - see that
+ * preamble's comment for why. A separate, earlier "#include "types.h""
+ * here (there used to be one) would pull types.h in via ITS OWN
+ * #pragma once BEFORE that preamble runs, silently reintroducing the
+ * exact bug that preamble exists to fix.
+ */
 #include "system_configs.h"
 
 /* ======================================================================

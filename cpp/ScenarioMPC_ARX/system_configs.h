@@ -9,7 +9,8 @@
  *  SYSTEM_MILANO     (id 2)  na=3, nb=3, nk=1 - original CMPLSYS (BESS)
  *  SYSTEM_BUCK       (id 3)  na=2, nb=1, nk=2 - buck power converter
  *  SYSTEM_BUCK_LOSS  (id 4)  na=2, nb=1, nk=2 - buck power converter with loss resistance
- *  SYSTEM_GAIN_DEMO  (id 5)  na=1, nb=1, nk=2 - minimal demo: is scenario MPC worth it?
+ *  SYSTEM_BUCK_ALBERTO (id 5) na=2, nb=1, nk=2 - buck power converter (Alberto's system)
+ *  SYSTEM_GAIN_DEMO  (id 6)  na=1, nb=1, nk=2 - minimal demo: is scenario MPC worth it?
  *
  * Why fixed-size arrays in the structs?
  * --------------------------------------
@@ -30,10 +31,14 @@
  */
 
 #pragma once
-#include "types.h"
 
 /* ======================================================================
    System identifiers - plain integers so they work in #if expressions.
+   ======================================================================
+   Deliberately declared BEFORE #include "types.h" below (and, as a
+   result, before any ACTIVE_SYSTEM-conditional code in types.h can see
+   them) - see the "RAW PHYSICAL BOUNDS" block further down for why this
+   ordering matters and what silently depended on it being wrong before.
    ====================================================================== */
 #define SYSTEM_SIMPLE     0
 #define SYSTEM_BENCHMARK  1
@@ -42,6 +47,59 @@
 #define SYSTEM_BUCK_LOSS  4
 #define SYSTEM_BUCK_ALBERTO  5
 #define SYSTEM_GAIN_DEMO  6
+
+/* ======================================================================
+   RAW PHYSICAL BOUNDS (plain #define numbers, NOT typed constants)
+   ======================================================================
+   types.h needs YMAXPHYS/YMINPHYS/SIGMA_UNNORM's NUMERIC VALUES to size
+   output_type's integer-bit count automatically (see types.h's
+   neededIntBits()) - but it can't use the TYPED "static const output_type
+   YMAXPHYS = ...;" constants further down in this file, because those
+   need output_type to already exist (the type being sized can't also
+   supply the number used to size it - a genuine circular dependency,
+   not just an ordering inconvenience). These plain macros break that
+   cycle: they carry no type, so they're usable before types.h defines
+   any type at all. The typed YMAXPHYS/YMINPHYS/SIGMA_UNNORM constants
+   below (in the existing "INPUT / OUTPUT HARD CONSTRAINTS" block) are
+   defined FROM these macros (single source of truth), not independently
+   restated.
+
+   THIS ALSO FIXES A PRE-EXISTING BUG: types.h's own
+   "#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK"
+   used to be evaluated while THIS file's "#include <types.h>" happened
+   BEFORE the SYSTEM_* ids above were defined - meaning every one of
+   those identifiers, and ACTIVE_SYSTEM's own expansion, evaluated to 0
+   in that #if, making it "0 == 0" - ALWAYS true, regardless of which
+   system was actually active. This was invisible only because
+   SYSTEM_BUCK_LOSS and SYSTEM_BUCK happened to want identical types.
+   Moving the SYSTEM_* id block (above) and this one before
+   "#include types.h" (below) fixes that dispatch for real.
+
+   Only defined for the systems that reach types.h's FIXED-mode
+   output_type branch today (BUCK/BUCK_LOSS/BUCK_ALBERTO) - add a system
+   here if/when it needs FIXED-mode support too.
+   ====================================================================== */
+#if ACTIVE_SYSTEM == SYSTEM_BUCK
+  #define UMINPHYS_NUM 0
+  #define UMAXPHYS_NUM 1
+  #define YMINPHYS_NUM 0
+  #define YMAXPHYS_NUM 10
+  #define SIGMA_UNNORM_NUM 0.2
+#elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
+  #define UMINPHYS_NUM 0
+  #define UMAXPHYS_NUM 1
+  #define YMINPHYS_NUM 0
+  #define YMAXPHYS_NUM 10
+  #define SIGMA_UNNORM_NUM 0.02
+#elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
+  #define UMINPHYS_NUM 0
+  #define UMAXPHYS_NUM 1
+  #define YMINPHYS_NUM 0
+  #define YMAXPHYS_NUM 100
+  #define SIGMA_UNNORM_NUM 0.2
+#endif
+
+#include "types.h"
 
 /* ======================================================================
    ARX MODEL DIMENSIONS  (compile-time macros - must remain #define)
@@ -133,27 +191,27 @@ static const output_type YMAX = YMAXPHYS;
 static const noise_type SIGMA_UNNORM = 4.4655;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 10;
+static const input_type  UMINPHYS = UMINPHYS_NUM;
+static const input_type  UMAXPHYS = UMAXPHYS_NUM;
+static const output_type YMINPHYS = YMINPHYS_NUM;
+static const output_type YMAXPHYS = YMAXPHYS_NUM;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 0.2;
+static const noise_type SIGMA_UNNORM = SIGMA_UNNORM_NUM;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 10;
+static const input_type  UMINPHYS = UMINPHYS_NUM;
+static const input_type  UMAXPHYS = UMAXPHYS_NUM;
+static const output_type YMINPHYS = YMINPHYS_NUM;
+static const output_type YMAXPHYS = YMAXPHYS_NUM;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
 static const output_type DELTAY = 0.1;
-static const noise_type SIGMA_UNNORM = 0.02;
+static const noise_type SIGMA_UNNORM = SIGMA_UNNORM_NUM;
 
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
 static const input_type  UMINPHYS = 0;
@@ -168,16 +226,16 @@ static const output_type DELTAY = 100; /* effectively unconstrained: this demo i
 static const noise_type SIGMA_UNNORM = 0.02;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 100;
+static const input_type  UMINPHYS = UMINPHYS_NUM;
+static const input_type  UMAXPHYS = UMAXPHYS_NUM;
+static const output_type YMINPHYS = YMINPHYS_NUM;
+static const output_type YMAXPHYS = YMAXPHYS_NUM;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = 85;
 static const output_type DELTAY = 5;
-static const noise_type SIGMA_UNNORM = 0.2;
+static const noise_type SIGMA_UNNORM = SIGMA_UNNORM_NUM;
 
 #endif
 
