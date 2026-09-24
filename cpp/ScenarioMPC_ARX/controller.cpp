@@ -282,7 +282,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
          */
         #pragma HLS UNROLL
         #endif
-        stripCenter -= phi[i] * myInvDmc0[i];
+        stripCenter -= phi[i] * stripCoeffs.myInvDmc0[i];
     }
 
     /* Conclude phi computation */
@@ -291,7 +291,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        phi[i] *= myInvDmDg[i];
+        phi[i] *= stripCoeffs.myInvDmDg[i];
     }
 
     #else /* Unnormalized case */

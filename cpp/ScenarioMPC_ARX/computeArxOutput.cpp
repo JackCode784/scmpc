@@ -37,13 +37,13 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na], const norm_i
          * PRAGMA_PROFILE_LATENCY exceeding 100% LUT utilisation).
          */
         arx_partial_type sampleTheta = (arx_partial_type)(((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * theta[i]);
-        yRes += (norm_output_type)(sampleTheta * myInvDmDg[i] +
-                qmyInvDmDg[i] * theta[i] +
-                ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * myInvDmc0[i]);
+        yRes += (norm_output_type)(sampleTheta * stripCoeffs.myInvDmDg[i] +
+                stripCoeffs.qmyInvDmDg[i] * theta[i] +
+                ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * stripCoeffs.myInvDmc0[i]);
         #endif
     }
     #ifdef NRMLZ
-    yRes += (norm_output_type)(qmyInvDmc0 + yNormOffset);
+    yRes += (norm_output_type)(stripCoeffs.qmyInvDmc0 + yNormOffset);
     #endif
 
     return yRes;

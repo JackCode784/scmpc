@@ -566,22 +566,141 @@ constexpr int log2R = -3;
 const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
 static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
 
-/* Pre-computed in MATLAB 
- * A better way to compute these offline is needed.
-*/
-#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-static const strip_coeff_type myInvDmDg[nTheta] = {0.221790861648681, 0.179200105412089, 0.033957216705635};
-static const strip_q_coeff_type qmyInvDmDg[nTheta] = {0.221790861648681,   0.179200105412089,   0.033957216705635}; // includes '-' sign for output sample prediction
-static const strip_coeff_c0_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
-static const strip_q_coeff_c0_type qmyInvDmc0 = 0.992262713557689; // includes '-' sign for output sample prediction
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-static const strip_coeff_type myInvDmDg[nTheta] = {0.210808802494506, 0.145597252205259, 0.087118417520959};
-static const strip_q_coeff_type qmyInvDmDg[nTheta] = {0.210808802494506,   0.145597252205259,   0.087118417520959}; // includes '-' sign for output sample prediction
-static const strip_coeff_c0_type myInvDmc0[nTheta] = {1.733749265658301,  -0.881912845894497,   0.168214543101685};
-static const strip_q_coeff_c0_type qmyInvDmc0 = 1.020050962865490; // includes '-' sign for output sample prediction
-#else
-#error "Conversion variables for unknwon system could not be defined!"
-#endif
+/*
+ * Strip-intersection normalization constants (Bravo et al. zonotope
+ * update - only actually READ by controller.cpp's CTRL_MODE_PL/AL
+ * branch, but declared unconditionally here like everything else in
+ * this file's NRMLZ block).
+ *
+ * DERIVATION (see matlab/testNormalizationEquivalence.m for the
+ * reference MATLAB version this reproduces - verified against
+ * SYSTEM_BUCK_LOSS's previously hand-pasted MATLAB output to 12+
+ * significant digits):
+ *
+ *   Z0 = (THETA_NOMINAL_UNNORM, GENERATORS_UNNORM), the INITIAL zonotope
+ *        in UNNORMALIZED (physical parameter) space - deliberately NOT
+ *        thetaCenter/thetaGens, AND NOT the NRMLZ-conditional
+ *        THETA_NOMINAL_INIT/GENERATORS_INIT (see the two notes below
+ *        for why each of those would be wrong).
+ *   Dg[i] = sum_j |GENERATORS_UNNORM[i][j]| - Z0's interval-hull
+ *           half-width in parameter i (row-sum of |generators|).
+ *   Dm[i] = yNormGain for i<na, uNormGain for i>=na - per-parameter
+ *           I/O normalization gain (block-diagonal in the MATLAB).
+ *   q[i]  = yNormOffset for i<na, uNormOffset for i>=na.
+ *
+ *   myInvDmDg[i]  = (yNormGain/Dm[i]) * Dg[i]
+ *   myInvDmc0[i]  = (yNormGain/Dm[i]) * THETA_NOMINAL_UNNORM[i]
+ *   qmyInvDmDg[i] = -q[i] * myInvDmDg[i]
+ *   qmyInvDmc0    = -sum_i q[i] * myInvDmc0[i]
+ *
+ * For i<na, yNormGain/Dm[i] = yNormGain/yNormGain = 1, so those entries
+ * collapse to exactly Dg[i] / THETA_NOMINAL_UNNORM[i] with no gain
+ * factor at all - which is why SYSTEM_BUCK_LOSS's first two (na=2)
+ * hardcoded myInvDmDg/myInvDmc0 entries above used to just BE the
+ * row-sum and the center component, unscaled.
+ *
+ * WHY THETA_NOMINAL_UNNORM/GENERATORS_UNNORM, NOT
+ * THETA_NOMINAL_INIT/GENERATORS_INIT: under NRMLZ (system_configs.h),
+ * THETA_NOMINAL_INIT/GENERATORS_INIT resolve to the ALREADY-NORMALIZED
+ * zonotope (THETA_NOMINAL_INIT expands to "0, 0, 0" and GENERATORS_INIT
+ * to the pre-normalized matrix) - i.e. the OUTPUT of exactly the
+ * transform being computed here, not its input. THETA_NOMINAL_UNNORM/
+ * GENERATORS_UNNORM are the physical-space values this transform
+ * actually needs, and are defined unconditionally (regardless of
+ * NRMLZ) for any system that wants strip-intersection support.
+ *
+ * WHY NOT thetaCenter/thetaGens: Z0 above is the INITIAL zonotope, not
+ * whatever PL/AL mode has since updated thetaCenter/thetaGens to -
+ * reading the mutable extern globals here would silently give the
+ * wrong answer after the first update.
+ * It also sidesteps a real hazard: theta_type's ap_fixed constructor is
+ * not constexpr (see this file's own header comment), so
+ * thetaCenter/thetaGens's initialization in controller.cpp is DYNAMIC
+ * initialization, and C++ gives NO ordering guarantee between dynamic
+ * initializers in different translation units - reading them from HERE
+ * (a different .cpp file, via the extern declaration) could observe
+ * them still zero, depending on link order. The function below instead
+ * builds its own FUNCTION-LOCAL c0/G straight from the macros, so the
+ * only things it depends on (yNormGain, uNormGain, yNormOffset,
+ * uNormOffset, na) are ordinary same-translation-unit globals declared
+ * earlier in THIS file - C++ guarantees in-order initialization within
+ * one translation unit, so that dependency is always safe.
+ *
+ * CONSTRUCT: an ordinary (non-constexpr - ap_fixed<> still has no
+ * constexpr constructor) function, called exactly once, its result
+ * assigned into "static const" variables - the same "compute via a
+ * double expression at static-initialization time" idiom yNormGain/
+ * uNormGain above already use, just generalised from one scalar to a
+ * small aggregate of arrays by bundling them in a plain struct (structs
+ * with array members ARE returnable/copyable by value in C++, unlike
+ * bare arrays, so no std::array or other container is needed - keeping
+ * this to the same plain-C-array style as everywhere else in the
+ * codebase). All arithmetic is done in double via explicit casts,
+ * exactly like yNormGain/uNormGain, so no ap_fixed rounding mode acts
+ * on any INTERMEDIATE step, only on the final assignment into each
+ * struct member. The '<0.0 ? - : ' absolute value (rather than
+ * std::abs, which would need a new #include) matches the same by-hand
+ * pattern testMain.cpp/volumeZonotope.cpp already use for an
+ * ap_fixed-typed sign flip (matDet's result).
+ *
+ * computeArxOutput.cpp/controller.cpp read these as
+ * stripCoeffs.myInvDmDg[i] etc. directly (touched at their five call
+ * sites) rather than through a "static const auto&" reference alias to
+ * each member: a reference-to-array-of-ap_fixed is no different, in
+ * principle, from a reference-to-array-of-double (reference binding
+ * doesn't depend on the element type - it resolves to the underlying
+ * storage before any element-type arithmetic comes into play), but
+ * that claim was only checked numerically here in double/host-
+ * simulation mode (no Vitis HLS/ap_fixed.h available in this
+ * environment) - accessing the struct directly removes the need to
+ * rely on that reasoning at all, leaving only the same "static const
+ * computed via a non-constexpr function" mechanism this file's
+ * existing scalar constants (yNormGain, uNormGain, R, DELTAYNORM, ...)
+ * already depend on successfully.
+ */
+struct StripCoeffs
+{
+    strip_coeff_type      myInvDmDg[nTheta];
+    strip_q_coeff_type    qmyInvDmDg[nTheta];
+    strip_coeff_c0_type   myInvDmc0[nTheta];
+    strip_q_coeff_c0_type qmyInvDmc0;
+};
+
+static StripCoeffs computeStripCoeffs()
+{
+    theta_type c0[nTheta]        = { THETA_NOMINAL_UNNORM };  // Z0.c
+    theta_type G [nTheta][nGens] = { GENERATORS_UNNORM };      // Z0.G
+
+    StripCoeffs out{};
+    double qmyInvDmc0Acc = 0.0;
+
+    for (int i = 0; i < nTheta; i++)
+    {
+        double Dg_i = 0.0;
+        for (int j = 0; j < nGens; j++)
+        {
+            double g = double(G[i][j]);
+            Dg_i += (g < 0.0) ? -g : g;
+        }
+
+        const bool   isY        = (i < na);
+        const double gainRatio  = isY ? 1.0 : double(yNormGain) / double(uNormGain);
+        const double qi         = isY ? double(yNormOffset)    : double(uNormOffset);
+
+        const double myInvDmDg_i = gainRatio * Dg_i;
+        const double myInvDmc0_i = gainRatio * double(c0[i]);
+
+        out.myInvDmDg[i]  = myInvDmDg_i;
+        out.qmyInvDmDg[i] = -qi * myInvDmDg_i;
+        out.myInvDmc0[i]  = myInvDmc0_i;
+        qmyInvDmc0Acc    += qi * myInvDmc0_i;
+    }
+
+    out.qmyInvDmc0 = -qmyInvDmc0Acc;
+    return out;
+}
+
+static const StripCoeffs stripCoeffs = computeStripCoeffs();
 #else
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
 static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
