@@ -529,7 +529,7 @@ static const mesh_exp_type D0_VAL = -8; // used in MADSARX, frameIdx init
      u_dig = UADCGain * (u_an - UBias_an)       (UBias maps midscale -> 0)
      u_an  = UDACGain *  u_dig + UBias_an
 
-   In software mode the gains are derived from UMIN/UMAX/YMIN/YMAX.
+   In software mode the gains are derived from UMINPHYS/UMAXPHYS/YMINPHYS/YMAXPHYS.
    In fixed-point mode they are explicit literals (ap_fixed<> prevents
    compile-time arithmetic on non-constexpr types).
    ====================================================================== */
@@ -538,12 +538,12 @@ constexpr int ADC_MAX   = 4095;
 constexpr int ADC_MIN   = 0;
 constexpr int ADC_RANGE = ADC_MAX - ADC_MIN;
 
-static const output_adc_coeff_type YADCGain = double(ADC_RANGE) / double(YMAX - YMIN);
-static const output_dac_coeff_type YDACGain = double(YMAX - YMIN) / double(ADC_RANGE);
-static const digital_output_type  YBias    = (double(ADC_MIN)*double(YMAX) - double(ADC_MAX)*double(YMIN)) / double(YMAX - YMIN);
-static const input_adc_coeff_type UADCGain = double(ADC_RANGE) / double(UMAX - UMIN);
-static const input_dac_coeff_type UDACGain = double(UMAX - UMIN) / double(ADC_RANGE);
-static const digital_input_type   UBias    = (double(ADC_MIN)*double(UMAX) - double(ADC_MAX)*double(UMIN)) / double(UMAX - UMIN);
+static const output_adc_coeff_type YADCGain = double(ADC_RANGE) / double(YMAXPHYS - YMINPHYS);
+static const output_dac_coeff_type YDACGain = double(YMAXPHYS - YMINPHYS) / double(ADC_RANGE);
+static const digital_output_type  YBias    = (double(ADC_MIN)*double(YMAXPHYS) - double(ADC_MAX)*double(YMINPHYS)) / double(YMAXPHYS - YMINPHYS);
+static const input_adc_coeff_type UADCGain = double(ADC_RANGE) / double(UMAXPHYS - UMINPHYS);
+static const input_dac_coeff_type UDACGain = double(UMAXPHYS - UMINPHYS) / double(ADC_RANGE);
+static const digital_input_type   UBias    = (double(ADC_MIN)*double(UMAXPHYS) - double(ADC_MAX)*double(UMINPHYS)) / double(UMAXPHYS - UMINPHYS);
 #endif
 
 #ifdef NRMLZ
@@ -553,11 +553,11 @@ static const norm_output_type YNORMMIN = -1;
 static const norm_input_type UNORMMAX = 1;
 static const norm_input_type UNORMMIN = -1;
 
-static const y_norm_coeff_type yNormGain = double(YNORMMAX - YNORMMIN) / double(YMAX - YMIN);
-static const u_norm_coeff_type uNormGain = double(UNORMMAX - UNORMMIN) / double(UMAX - UMIN);
-static const u_norm_inv_coeff_type uNormGainInverse = double(UMAX - UMIN) / double(UNORMMAX - UNORMMIN);
-static const norm_output_type yNormOffset = double(YNORMMIN*YMAX - YNORMMAX*YMIN) / double(YMAX - YMIN);
-static const norm_input_type uNormOffset = double(UNORMMIN*UMAX - UNORMMAX*UMIN) / double(UMAX - UMIN);
+static const y_norm_coeff_type yNormGain = double(YNORMMAX - YNORMMIN) / double(YMAXPHYS - YMINPHYS);
+static const u_norm_coeff_type uNormGain = double(UNORMMAX - UNORMMIN) / double(UMAXPHYS - UMINPHYS);
+static const u_norm_inv_coeff_type uNormGainInverse = double(UMAXPHYS - UMINPHYS) / double(UNORMMAX - UNORMMIN);
+static const norm_output_type yNormOffset = double(YNORMMIN*YMAXPHYS - YNORMMAX*YMINPHYS) / double(YMAXPHYS - YMINPHYS);
+static const norm_input_type uNormOffset = double(UNORMMIN*UMAXPHYS - UNORMMAX*UMINPHYS) / double(UMAXPHYS - UMINPHYS);
 
 static const input_weight_type R = double(RBaseLine) * double(yNormGain) * double(yNormGain) / (double(uNormGain) * double(uNormGain)); // 2^(-3)
 constexpr int log2R = -3;
@@ -575,10 +575,10 @@ static const strip_q_coeff_type qmyInvDmDg[nTheta] = {0.221790861648681,   0.179
 static const strip_coeff_c0_type myInvDmc0[nTheta] = {1.817972144631566,  -0.871463786797535,   0.045754355723659};
 static const strip_q_coeff_c0_type qmyInvDmc0 = 0.992262713557689; // includes '-' sign for output sample prediction
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-static const strip_coeff_type myInvDmDg[nTheta] = {0.210808802494506, 0.145597252205259, 0.087118417520959};
-static const strip_q_coeff_type qmyInvDmDg[nTheta] = {0.210808802494506,   0.145597252205259,   0.087118417520959}; // includes '-' sign for output sample prediction
-static const strip_coeff_c0_type myInvDmc0[nTheta] = {1.733749265658301,  -0.881912845894497,   0.168214543101685};
-static const strip_q_coeff_c0_type qmyInvDmc0 = 1.020050962865490; // includes '-' sign for output sample prediction
+static const strip_coeff_type myInvDmDg[nTheta] = {0.210808802494506, 0.145597252205259, 0.074050654892815};
+static const strip_q_coeff_type qmyInvDmDg[nTheta] = {0.210808802494506,   0.145597252205259,   0.074050654892815}; // includes '-' sign for output sample prediction
+static const strip_coeff_c0_type myInvDmc0[nTheta] = {1.733749265658302,  -0.881912845894496,   0.142982361636433};
+static const strip_q_coeff_c0_type qmyInvDmc0 = .994818781400238; // includes '-' sign for output sample prediction
 #else
 #error "Conversion variables for unknwon system could not be defined!"
 #endif
@@ -586,10 +586,10 @@ static const strip_q_coeff_c0_type qmyInvDmc0 = 1.020050962865490; // includes '
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
 static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
 constexpr int log2R = 4;
-static const norm_output_type YNORMMAX = YMAX;
-static const norm_output_type YNORMMIN = YMIN;
-static const norm_input_type UNORMMAX = UMAX;
-static const norm_input_type UNORMMIN = UMIN;
+static const norm_output_type YNORMMAX = YMAXPHYS;
+static const norm_output_type YNORMMIN = YMINPHYS;
+static const norm_input_type UNORMMAX = UMAXPHYS;
+static const norm_input_type UNORMMIN = UMINPHYS;
 static const norm_output_type DELTAYNORM = DELTAY;
 #endif
 
@@ -723,14 +723,12 @@ void pseudoRandArx(rand_type coeffs[nGens]);
 /* --- Constraint violation --------------------------------------------- */
 
 /** Update cost[1] (the progressive-barrier violation term) given the
- *  current predicted output currY and the bounds YMIN/YMAX. */
+ *  current predicted output currY and the bounds YMINPHYS/YMAXPHYS. */
 void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr, const norm_output_type yPast);
 
 /* --- ADC / DAC conversions -------------------------------------------- */
 #ifdef CONVERSIONS_MODE
 digital_output_type ADConvertY(const output_type       yAn);
-output_type         DAConvertY(const digital_output_type yDig);
-digital_input_type  ADConvertU(const input_type         uAn);
 input_type          DAConvertU(const digital_input_type  uDig);
 #endif
 
