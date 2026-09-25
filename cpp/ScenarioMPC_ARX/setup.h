@@ -12,8 +12,10 @@
  *
  * FILE RELATIONSHIPS
  * ------------------
- *   types.h         - data-type aliases (included first)
- *   system_configs.h- system definitions
+ *   types.h         - data-type aliases; included FROM WITHIN
+ *                     system_configs.h (see this file's "Core headers"
+ *                     section for why the order matters)
+ *   system_configs.h- system definitions; includes types.h itself
  *   setup.h         - this file; algorithm-level constants and prototypes
  *
  * VITIS HLS 2021.1 COMPATIBILITY NOTES
@@ -543,10 +545,12 @@ static const mesh_exp_type D0_VAL = -8; // used in MADSARX, frameIdx init
    compile-time arithmetic on non-constexpr types).
    ====================================================================== */
 #ifdef CONVERSIONS_MODE
-constexpr int ADC_MAX   = 4095;
-constexpr int ADC_MIN   = 0;
-constexpr int ADC_RANGE = ADC_MAX - ADC_MIN;
-
+/*
+ * ADC_MAX/ADC_MIN/ADC_RANGE moved to types.h: they are needed there too,
+ * to automatically size output_adc_coeff_type/input_adc_coeff_type/
+ * output_dac_coeff_type/input_dac_coeff_type (see that file), and a
+ * value needed by both files belongs in the one both already include.
+ */
 static const output_adc_coeff_type YADCGain = double(ADC_RANGE) / double(YMAXPHYS - YMINPHYS);
 static const output_dac_coeff_type YDACGain = double(YMAXPHYS - YMINPHYS) / double(ADC_RANGE);
 static const digital_output_type  YBias    = (double(ADC_MIN)*double(YMAXPHYS) - double(ADC_MAX)*double(YMINPHYS)) / double(YMAXPHYS - YMINPHYS);
