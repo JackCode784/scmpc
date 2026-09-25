@@ -107,10 +107,10 @@ constexpr int neededIntBits(double maxMagnitude, int guardBits = GUARD_BITS)
  * checked explicitly since YMINPHYS need not be >= 0 for every system.
  */
 constexpr double outputMaxMag =
-    (YMINPHYS_NUM - SIGMA_UNNORM_NUM < 0.0 ? -(YMINPHYS_NUM - SIGMA_UNNORM_NUM) : (YMINPHYS_NUM - SIGMA_UNNORM_NUM)) >
-    (YMAXPHYS_NUM + SIGMA_UNNORM_NUM < 0.0 ? -(YMAXPHYS_NUM + SIGMA_UNNORM_NUM) : (YMAXPHYS_NUM + SIGMA_UNNORM_NUM))
-    ? (YMINPHYS_NUM - SIGMA_UNNORM_NUM < 0.0 ? -(YMINPHYS_NUM - SIGMA_UNNORM_NUM) : (YMINPHYS_NUM - SIGMA_UNNORM_NUM))
-    : (YMAXPHYS_NUM + SIGMA_UNNORM_NUM < 0.0 ? -(YMAXPHYS_NUM + SIGMA_UNNORM_NUM) : (YMAXPHYS_NUM + SIGMA_UNNORM_NUM));
+    (YMINPHYS - SIGMA_UNNORM < 0.0 ? -(YMINPHYS - SIGMA_UNNORM) : (YMINPHYS - SIGMA_UNNORM)) >
+    (YMAXPHYS + SIGMA_UNNORM < 0.0 ? -(YMAXPHYS + SIGMA_UNNORM) : (YMAXPHYS + SIGMA_UNNORM))
+    ? (YMINPHYS - SIGMA_UNNORM < 0.0 ? -(YMINPHYS - SIGMA_UNNORM) : (YMINPHYS - SIGMA_UNNORM))
+    : (YMAXPHYS + SIGMA_UNNORM < 0.0 ? -(YMAXPHYS + SIGMA_UNNORM) : (YMAXPHYS + SIGMA_UNNORM));
 constexpr int outputIntBits = neededIntBits(outputMaxMag);
 static_assert(outputIntBits < WORD_LENGTH,
     "output_type's required dynamic range leaves no fractional bits within WORD_LENGTH - "

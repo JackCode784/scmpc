@@ -49,20 +49,35 @@
 #define SYSTEM_GAIN_DEMO  6
 
 /* ======================================================================
-   RAW PHYSICAL BOUNDS (plain #define numbers, NOT typed constants)
+   PHYSICAL I/O BOUNDS (plain #define numbers, NOT typed constants)
    ======================================================================
-   types.h needs YMAXPHYS/YMINPHYS/SIGMA_UNNORM's NUMERIC VALUES to size
-   output_type's integer-bit count automatically (see types.h's
-   neededIntBits()) - but it can't use the TYPED "static const output_type
-   YMAXPHYS = ...;" constants further down in this file, because those
-   need output_type to already exist (the type being sized can't also
-   supply the number used to size it - a genuine circular dependency,
-   not just an ordering inconvenience). These plain macros break that
-   cycle: they carry no type, so they're usable before types.h defines
-   any type at all. The typed YMAXPHYS/YMINPHYS/SIGMA_UNNORM constants
-   below (in the existing "INPUT / OUTPUT HARD CONSTRAINTS" block) are
-   defined FROM these macros (single source of truth), not independently
-   restated.
+   UMINPHYS/UMAXPHYS/YMINPHYS/YMAXPHYS/SIGMA_UNNORM are the sensor's/
+   actuator's PHYSICAL range and the plant's measurement-noise amplitude
+   - facts about the hardware, not algorithm state. They stay plain
+   #define numbers, exactly like na/nb/nk/nGens above, rather than
+   "static const output_type/input_type/noise_type" constants, for two
+   reasons:
+
+   1. types.h needs their NUMERIC VALUES to size output_type's integer-
+      bit count automatically (see types.h's neededIntBits()), which
+      runs BEFORE any type in this codebase exists yet - a typed
+      constant can't supply the number used to size its own type (a
+      genuine circular dependency, not just an ordering inconvenience).
+      A plain macro carries no type, so it's usable arbitrarily early.
+
+   2. Every existing use of these values (setup.h's ADC/DAC and
+      normalization-gain formulas) already wraps them in an explicit
+      double(...) cast, and every place that needs one AS an
+      output_type/input_type value (YMIN/YMAX/UMIN/UMAX below, or
+      YNORMMAX/YNORMMIN/etc. in setup.h) already goes through an
+      implicit conversion regardless of whether the source is a plain
+      double or another ap_fixed specialization - so nothing downstream
+      needed them pre-typed in the first place. The CONSTRAINT bounds
+      (YMIN/YMAX/UMIN/UMAX, DELTAY, below) DO stay typed: those are
+      compared directly against output_type/input_type algorithm state
+      throughout costFunctionArx.cpp and friends, so their own rounding
+      needs to be baked in once, consistently, as a real value of that
+      type - not re-rounded independently at every point of use.
 
    THIS ALSO FIXES A PRE-EXISTING BUG: types.h's own
    "#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK"
@@ -74,29 +89,49 @@
    SYSTEM_BUCK_LOSS and SYSTEM_BUCK happened to want identical types.
    Moving the SYSTEM_* id block (above) and this one before
    "#include types.h" (below) fixes that dispatch for real.
-
-   Only defined for the systems that reach types.h's FIXED-mode
-   output_type branch today (BUCK/BUCK_LOSS/BUCK_ALBERTO) - add a system
-   here if/when it needs FIXED-mode support too.
    ====================================================================== */
-#if ACTIVE_SYSTEM == SYSTEM_BUCK
-  #define UMINPHYS_NUM 0
-  #define UMAXPHYS_NUM 1
-  #define YMINPHYS_NUM 0
-  #define YMAXPHYS_NUM 10
-  #define SIGMA_UNNORM_NUM 0.2
+#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
+  #define UMINPHYS -0.3
+  #define UMAXPHYS  0.3
+  #define YMINPHYS  0.0
+  #define YMAXPHYS  8.0
+  #define SIGMA_UNNORM 0.0
+#elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
+  #define UMINPHYS -1.9
+  #define UMAXPHYS  1.9
+  #define YMINPHYS -10.0
+  #define YMAXPHYS  8.0
+  #define SIGMA_UNNORM 0.20
+#elif ACTIVE_SYSTEM == SYSTEM_MILANO
+  #define UMINPHYS -200.0
+  #define UMAXPHYS  200.0
+  #define YMINPHYS -110.0
+  #define YMAXPHYS  110.0
+  #define SIGMA_UNNORM 4.4655
+#elif ACTIVE_SYSTEM == SYSTEM_BUCK
+  #define UMINPHYS 0
+  #define UMAXPHYS 1
+  #define YMINPHYS 0
+  #define YMAXPHYS 10
+  #define SIGMA_UNNORM 0.2
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-  #define UMINPHYS_NUM 0
-  #define UMAXPHYS_NUM 1
-  #define YMINPHYS_NUM 0
-  #define YMAXPHYS_NUM 10
-  #define SIGMA_UNNORM_NUM 0.02
+  #define UMINPHYS 0
+  #define UMAXPHYS 1
+  #define YMINPHYS 0
+  #define YMAXPHYS 10
+  #define SIGMA_UNNORM 0.02
+#elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
+  #define UMINPHYS 0
+  #define UMAXPHYS 1.5
+  #define YMINPHYS 0
+  #define YMAXPHYS 7
+  #define SIGMA_UNNORM 0.02
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-  #define UMINPHYS_NUM 0
-  #define UMAXPHYS_NUM 1
-  #define YMINPHYS_NUM 0
-  #define YMAXPHYS_NUM 100
-  #define SIGMA_UNNORM_NUM 0.2
+  #define UMINPHYS 0
+  #define UMAXPHYS 1
+  #define YMINPHYS 0
+  #define YMAXPHYS 100
+  #define SIGMA_UNNORM 0.2
 #endif
 
 #include "types.h"
@@ -153,89 +188,57 @@
   INPUT / OUTPUT HARD CONSTRAINTS
   ======================================================================
   These are the box constraints used by the progressive barrier in MADSARX.
-  They must be consistent with the ones for the ACTIVE_SYSTEM.
-  They are repeated as separate constants because ap_fixed<> prevents
-  deriving them from the config struct at compile time via constexpr.
+  They must be consistent with the ones for the ACTIVE_SYSTEM. Unlike
+  UMINPHYS/UMAXPHYS/YMINPHYS/YMAXPHYS/SIGMA_UNNORM above (plain physical
+  facts, now #define'd before types.h), these stay TYPED "static const"
+  constants: they're compared directly against output_type/input_type
+  algorithm state throughout costFunctionArx.cpp and friends, so their
+  rounding needs to be fixed once, as a real value of that type.
   ====================================================================== */
 #if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-static const input_type UMINPHYS = -0.3;
-static const input_type UMAXPHYS =  0.3;
-static const output_type YMINPHYS =  0.0;
-static const output_type YMAXPHYS =  8.0;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM` = 0.0;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-static const input_type UMINPHYS = -1.9;
-static const input_type UMAXPHYS =  1.9;
-static const output_type YMINPHYS = -10.0;
-static const output_type YMAXPHYS =  8.0;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 0.20;
 
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
-static const input_type  UMINPHYS = -200.0;
-static const input_type  UMAXPHYS =  200.0;
-static const output_type YMINPHYS = -110.0;
-static const output_type YMAXPHYS =  110.0;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 4.4655;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
-static const input_type  UMINPHYS = UMINPHYS_NUM;
-static const input_type  UMAXPHYS = UMAXPHYS_NUM;
-static const output_type YMINPHYS = YMINPHYS_NUM;
-static const output_type YMAXPHYS = YMAXPHYS_NUM;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = SIGMA_UNNORM_NUM;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-static const input_type  UMINPHYS = UMINPHYS_NUM;
-static const input_type  UMAXPHYS = UMAXPHYS_NUM;
-static const output_type YMINPHYS = YMINPHYS_NUM;
-static const output_type YMAXPHYS = YMAXPHYS_NUM;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
 static const output_type DELTAY = 0.1;
-static const noise_type SIGMA_UNNORM = SIGMA_UNNORM_NUM;
 
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1.5;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 7;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = 5;
 static const output_type DELTAY = 100; /* effectively unconstrained: this demo is about the static YMAX bound, not the rate limit */
-static const noise_type SIGMA_UNNORM = 0.02;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-static const input_type  UMINPHYS = UMINPHYS_NUM;
-static const input_type  UMAXPHYS = UMAXPHYS_NUM;
-static const output_type YMINPHYS = YMINPHYS_NUM;
-static const output_type YMAXPHYS = YMAXPHYS_NUM;
 static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = 85;
 static const output_type DELTAY = 5;
-static const noise_type SIGMA_UNNORM = SIGMA_UNNORM_NUM;
 
 #endif
 
