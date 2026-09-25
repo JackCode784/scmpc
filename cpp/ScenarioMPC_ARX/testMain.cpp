@@ -92,7 +92,7 @@ int main(void)
     #endif
 
     /* Measurement noise amplitude and values */
-    for(int i=0; i < nSim; i++) noise[i] = pseudoRandArx() * SIGMA_UNNORM; // noise in [-1, 1]
+    for(int i=0; i < nSim; i++) noise[i] = double(pseudoRandArx()) * double(SIGMA_UNNORM); // noise in [-1, 1]
     
     // generate reference trajectory based on ACTIVE_SYSTEM
     generateReference(yref, nSim);
