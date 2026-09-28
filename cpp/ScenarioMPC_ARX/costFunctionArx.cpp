@@ -359,6 +359,11 @@ void costFunctionArx(cost_type              cost[2],
             updateConstraintViolation(cost, yNext, yPastCurr[l][0]);
             #endif
 
+            /* Update output samples conditions for all scenarios */
+            for(int i = na - 1; i > 0; i--)
+                yPastCurr[l][i] = yPastCurr[l][i-1];
+            yPastCurr[l][0] = yNext;
+
             #ifdef DEBUG_PRINT
             cost_f[1] = cost[1].to_double();
             #endif
