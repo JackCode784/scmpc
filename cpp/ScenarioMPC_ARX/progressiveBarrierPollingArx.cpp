@@ -10,7 +10,8 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 								const norm_output_type yref, 
 								const norm_input_type pollMatrix[nOpt][2 * nOpt], 
 								mesh_exp_type frameExp[nOpt], 
-								const theta_type thetaScenarios[Nscen][nTheta])
+								const arx_coeff_type arxCoeff[Nscen+1][nTheta],
+								const arx_coeff_type arxOffset[Nscen+1])
 {
 	#ifdef PRAGMAS
 	/*
@@ -31,7 +32,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 	double frameExp_f[nOpt];
 	double yref_f = yref.to_double();
 	double yPast_f[na], uPast_f[nb+nk-2];
-	double thetaScenarios_f[Nscen][nTheta];
+	double arxCoeff_f[Nscen+1][nTheta], arxOffset_f[Nscen+1];
 
 	for(int i = 0; i < nOpt; i++) 
 	{
@@ -39,7 +40,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 		for(int j = 0; j < 2*nOpt; j++) pollMatrix_f[i][j] = pollMatrix[i][j].to_double();
 	}
 
-	for(int i = 0; i < Nscen; i++) for(int j = 0; j < nTheta; j++) thetaScenarios_f[i][j] = thetaScenarios[i][j].to_double();
+	for(int i = 0; i < Nscen+1; i++) { arxOffset_f[i] = arxOffset[i].to_double(); for(int j = 0; j < nTheta; j++) arxCoeff_f[i][j] = arxCoeff[i][j].to_double(); }
 	for(int i = 0; i < na; i++) yPast_f[i] = yPast[i].to_double();
 	for(int i = 0; i < nb+nk-2; i++) uPast_f[i] = uPast[i].to_double();
 	#endif
@@ -106,7 +107,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 		}
 
 		// compute the cost function and the constraints violation in a test point
-		costFunctionArx(costTestPoint, yPast, testPoint, uPast, yref, thetaScenarios);
+		costFunctionArx(costTestPoint, yPast, testPoint, uPast, yref, arxCoeff, arxOffset);
 		#ifdef DEBUG_PRINT
 		costTestPoint_f[0] = costTestPoint[0].to_double();
 		costTestPoint_f[1] = costTestPoint[1].to_double();

@@ -13,7 +13,10 @@
  *
  * where:
  *   ypred_nom(k+1)       - one-step prediction using the nominal parameter
- *                       vector thetaCenter (the current zonotope centre)
+ *                       vector thetaCenter (the current zonotope centre),
+ *                       via its effective coefficients arxCoeff[Nscen] /
+ *                       arxOffset[Nscen] (rows 0..Nscen-1 are the
+ *                       scenarios' - see computeArxCoeffs)
  *   scenariosContrib  - mean squared error over all Nscen uncertainty
  *                       scenarios, included only in PL/AL modes to penalise
  *                       poor performance across the uncertainty set
@@ -94,7 +97,8 @@ void costFunctionArx(cost_type              cost[2],
                      const norm_input_type  currU          [nOpt],
                      const norm_input_type  uPast          [nb + nk - 2],
                      const norm_output_type yref,
-                     const theta_type       thetaScenarios [Nscen][nTheta])
+                     const arx_coeff_type   arxCoeff       [Nscen+1][nTheta],
+                     const arx_coeff_type   arxOffset      [Nscen+1])
 {
     #ifdef PRAGMAS
     /*
@@ -365,7 +369,7 @@ void costFunctionArx(cost_type              cost[2],
             #pragma HLS UNROLL
             #endif
             norm_output_type yNext = computeArxOutput(yPastCurr[l], uSamples,
-                                                  thetaScenarios[l]);
+                                                  arxCoeff[l], arxOffset[l]);
 
             #ifdef DEBUG_PRINT
             yNext_f = yNext.to_double();
@@ -420,7 +424,7 @@ void costFunctionArx(cost_type              cost[2],
 
         /* --- Nominal prediction and output cost ----------------------- */
         norm_output_type yNext_nom = computeArxOutput(yPastCurr[Nscen], uSamples,
-                                                   thetaCenter);
+                                                   arxCoeff[Nscen], arxOffset[Nscen]);
         updateConstraintViolation(cost, yNext_nom, yPastCurr[Nscen][0]);
         err_type err_nom = yNext_nom - yref;
 

@@ -213,39 +213,42 @@ typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> strip_center_type;
 typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
 
 /**
- * computeArxOutput.cpp's NRMLZ branch chains two multiplies:
- * ((sample) * theta[i]) * myInvDmDg[i]. With no intermediate type, C++/
- * ap_fixed give (sample * theta[i]) - a product of two ap_fixed<18,2> -
- * its lossless result width: 18+18=36 total bits, 2+2=4 integer bits.
- * A 36-bit operand does not fit a single DSP48E1's native 25x18 signed
- * multiplier, so Vitis cascades two DSP48s plus LUT-built glue to
- * combine their partial products - confirmed in costFunctionArx's own
- * synthesis report as 24 instances of a "mul_36s_..." pattern, each
- * costing 2 DSP + 85 LUT (48 DSP / 2040 LUT total), the dominant single
- * contributor to CTRL_MODE_SCMPC's PRAGMA_PROFILE_LATENCY exceeding
- * 100% LUT utilisation by 414 LUT (see costFunctionArx.cpp).
+ * Effective ARX coefficients and offset in normalized I/O coordinates,
+ * computed once per controller() call by computeArxCoeffs() (see
+ * computeArxOutput.cpp for the derivation):
+ *   coeff[i] = myInvDmDg[i]*theta[i] + myInvDmc0[i]
+ *   offset   = sum_i qmyInvDmDg[i]*theta[i] + qmyInvDmc0 + yNormOffset
+ * so that a prediction is just  y = offset + sum_i sample[i]*coeff[i].
  *
- * arx_partial_type is that intermediate's EXPLICIT type, sized to break
- * the chain into two single-DSP multiplies instead of one 2-DSP one:
- *   - 4 integer bits, matching the lossless requirement above, so the
- *     first multiply cannot silently overflow before AP_SAT can act.
- *   - 20 fractional bits: 4 more than norm_output_type's 16, enough
- *     guard precision that rounding here should not be distinguishable
- *     from rounding at the FINAL cast this expression already performs
- *     (see below) - not a precision concession, since the 36-bit
- *     intermediate's "extra" bits beyond what norm_output_type can hold
- *     are already discarded by that existing final cast; this only
- *     moves WHERE they get discarded, from after the second multiply to
- *     before it.
- * AP_RND_CONV+AP_SAT match every other rounding-sensitive type in this
- * file, rather than introducing a different convention here.
+ * Range: |coeff[i]| <= |myInvDmc0[i]| + myInvDmDg[i]*|theta[i]|, which
+ * for SYSTEM_BUCK_LOSS is at most 1.818 + 0.222*2 = 2.26 even at
+ * theta_type's own +-2 limit (2.04 for |theta| <= 1, the normalized
+ * zonotope's actual extent), and smaller for SYSTEM_BUCK_ALBERTO; |offset|
+ * stays below 1. 3 integer bits ([-4, 4)) covers both with margin.
+ * Width 25: the DSP48E1 multiplier is 25x18, so sample (18 bits) x coeff
+ * (25 bits) is still ONE DSP per product, and the extra bits over 18 are
+ * free precision (22 fractional bits, 6 more than norm_output_type).
  */
-typedef ap_fixed<24,4,AP_RND_CONV,AP_SAT> arx_partial_type;
+typedef ap_fixed<25,3,AP_RND_CONV,AP_SAT> arx_coeff_type;
+
+/**
+ * Accumulator for  offset + sum_i sample[i]*coeff[i]  in computeArxOutput.
+ * Each 43-bit product (18x25) is TRUNCATED to 21 fractional bits before
+ * being added - dropping low bits is free wiring, and it keeps the three
+ * adders 26 bits wide instead of ~45. Worst-case truncation error is
+ * nTheta*2^-21 < 1.5e-6, i.e. under 0.1 LSB of norm_output_type (2^-16);
+ * the single AP_RND_CONV+AP_SAT cast to norm_output_type happens once, at
+ * the end. AP_WRAP (no saturation logic) is safe here: |sample| < 2 and
+ * |coeff| < 4 bound the true sum by 2*3*2.26 + 1 < 16, inside this type's
+ * 5 integer bits ([-16, 16)), so no partial sum can ever wrap.
+ */
+typedef ap_fixed<26,5,AP_TRN,AP_WRAP> arx_acc_type;
 #else
 typedef double norm_noise_type;
 typedef double norm_output_type;
 typedef double norm_input_type;
-typedef double arx_partial_type;
+typedef double arx_coeff_type;
+typedef double arx_acc_type;
 #endif
 #else
 typedef output_type norm_output_type;
@@ -253,6 +256,8 @@ typedef input_type norm_input_type;
 typedef noise_type norm_noise_type;
 typedef output_type phi_type; // output_type likely "larger" than input_type
 typedef output_type strip_center_type; // output_type likely "larger" than input_type
+/* Without NRMLZ the effective coefficients ARE theta and the offset is 0 */
+typedef theta_type arx_coeff_type;
 #ifdef FIXED
 typedef ap_ufixed<5,4> input_weight_type; /* R = RBaseline = 12.5 */
 #endif

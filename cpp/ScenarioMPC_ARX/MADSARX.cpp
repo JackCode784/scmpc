@@ -1,7 +1,7 @@
 #include "setup.h"
 
 // Uses MADS alg to compute optimal input sequence for ARX system
-void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2], const norm_output_type yInit[na], const norm_output_type yref, const theta_type thetaScenarios[Nscen][nTheta])
+void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2], const norm_output_type yInit[na], const norm_output_type yref, const arx_coeff_type arxCoeff[Nscen+1][nTheta], const arx_coeff_type arxOffset[Nscen+1])
 {
 	#ifdef DEBUG_PRINT
 	double frameExp_f[nOpt], meshExp_f[nOpt], cost_f[2];
@@ -34,7 +34,7 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 	#endif
 
 	// Compute the cost function and the constraints violation in the initial point
-	costFunctionArx(cost, yInit, uOpt, uInit, yref, thetaScenarios);
+	costFunctionArx(cost, yInit, uOpt, uInit, yref, arxCoeff, arxOffset);
 
 	#ifdef DEBUG_PRINT
 	cost_f[0] = cost[0].to_double();
@@ -103,7 +103,7 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 		#endif
 
 		/* BUG: success == 0 always, input never changes wrt original value [-1...,-1] <-> [0,...,0] */
-		progressiveBarrierPollingArx(cost, uOpt, yInit, uInit, yref, pollMatrix, frameExp, thetaScenarios);
+		progressiveBarrierPollingArx(cost, uOpt, yInit, uInit, yref, pollMatrix, frameExp, arxCoeff, arxOffset);
 
 		#ifdef DEBUG_PRINT
 		for(int i = 0; i < nOpt; i++) uOpt_f[i] = uOpt[i].to_double();

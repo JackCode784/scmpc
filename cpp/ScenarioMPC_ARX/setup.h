@@ -643,9 +643,10 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  * pattern testMain.cpp/volumeZonotope.cpp already use for an
  * ap_fixed-typed sign flip (matDet's result).
  *
- * computeArxOutput.cpp/controller.cpp read these as
- * stripCoeffs.myInvDmDg[i] etc. directly (touched at their five call
- * sites) rather than through a "static const auto&" reference alias to
+ * computeArxCoeffs (computeArxOutput.cpp - folds them into per-scenario
+ * effective ARX coefficients once per controller() call) and
+ * controller.cpp's PL/AL strip update read these as
+ * stripCoeffs.myInvDmDg[i] etc. directly, rather than through a "static const auto&" reference alias to
  * each member: a reference-to-array-of-ap_fixed is no different, in
  * principle, from a reference-to-array-of-double (reference binding
  * doesn't depend on the element type - it resolves to the underlying
@@ -762,10 +763,21 @@ digital_input_type controller(const digital_output_type yCurrDig,
 /* --- ARX model -------------------------------------------------------- */
 
 /** One-step-ahead prediction:
- *  ypred(k) = theta^T * [y(k-1),...,y(k-na), u(k-nk),...,u(k-nk-nb+1)]^T */
+ *  ypred(k) = offset + coeff^T * [y(k-1),...,y(k-na), u(k-nk),...,u(k-nk-nb+1)]^T
+ *  with coeff/offset from computeArxCoeffs (coeff = theta, offset = 0
+ *  without NRMLZ). */
 norm_output_type computeArxOutput(const norm_output_type yPast[na],
-                                  const norm_input_type uSamples[nb+nk-1],
-                                  const theta_type theta[nTheta]);
+                                  const norm_input_type  uSamples[nb+nk-1],
+                                  const arx_coeff_type   coeff[nTheta],
+                                  const arx_coeff_type   offset);
+
+/** Effective ARX coefficients/offset (normalization folded in) for the
+ *  Nscen scenarios (rows 0..Nscen-1) and the zonotope centre (row Nscen);
+ *  computed once per controller() call. */
+void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nTheta],
+                      const theta_type thetaNominal  [nTheta],
+                      arx_coeff_type   coeff         [Nscen+1][nTheta],
+                      arx_coeff_type   offset        [Nscen+1]);
 
 /* --- MPC cost function ------------------------------------------------ */
 
@@ -776,7 +788,8 @@ void costFunctionArx(cost_type              cost[2],
                      const norm_input_type  currU          [nOpt],
                      const norm_input_type  uPast          [nb + nk - 2],
                      const norm_output_type yref,
-                     const theta_type       thetaScenarios [Nscen][nTheta]);
+                     const arx_coeff_type   arxCoeff       [Nscen+1][nTheta],
+                     const arx_coeff_type   arxOffset      [Nscen+1]);
 
 /* --- MADS poll-step --------------------------------------------------- */
 
@@ -819,7 +832,8 @@ void MADSARX(norm_input_type uOpt[nOpt],
             const norm_input_type uInit[nb + nk - 2], 
             const norm_output_type yInit[na], 
             const norm_output_type yref, 
-            const theta_type thetaScenarios[Nscen][nTheta]);
+            const arx_coeff_type arxCoeff[Nscen+1][nTheta],
+            const arx_coeff_type arxOffset[Nscen+1]);
 
 /** Evaluate all 2*nOpt poll candidates; update the best feasible point
  *  via the progressive barrier strategy. */
@@ -830,7 +844,8 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
                                     const norm_output_type yref, 
                                     const norm_input_type pollMatrix[nOpt][2 * nOpt], 
                                     mesh_exp_type frameExp[nOpt], 
-                                    const theta_type thetaScenarios[Nscen][nTheta]);
+                                    const arx_coeff_type arxCoeff[Nscen+1][nTheta],
+                                    const arx_coeff_type arxOffset[Nscen+1]);
 
 /* --- Pseudo-random generation (three overloads) ----------------------- */
 /** Random number in [-1, 1] */

@@ -383,6 +383,25 @@ digital_input_type controller(const digital_output_type yCurrDig,
     #endif
 
     /* ------------------------------------------------------------------ */
+    /*  Step 4b - Effective ARX coefficients for every predictor          */
+    /* ------------------------------------------------------------------ */
+    /*
+     * The scenarios and the centre stay fixed for this whole call, so the
+     * normalization is folded into their coefficients once here, instead
+     * of inside each of the 43 costFunctionArx calls' predictions (see
+     * computeArxCoeffs). Row Nscen is the nominal (thetaCenter) predictor.
+     */
+    arx_coeff_type arxCoeff [Nscen+1][nTheta];
+    arx_coeff_type arxOffset[Nscen+1];
+    #ifdef PRAGMAS
+    /* Same reason as thetaScenarios above: every row is read in the same
+     * cycle by costFunctionArx's unrolled scenario/prediction logic. */
+    #pragma HLS ARRAY_PARTITION variable=arxCoeff  complete dim=0
+    #pragma HLS ARRAY_PARTITION variable=arxOffset complete dim=1
+    #endif
+    computeArxCoeffs(thetaScenarios, thetaCenter, arxCoeff, arxOffset);
+
+    /* ------------------------------------------------------------------ */
     /*  Step 5 - Update output history: push y(k) into yHist             */
     /* ------------------------------------------------------------------ */
     for (int i = na - 1; i > 0; i--)
@@ -404,7 +423,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* ------------------------------------------------------------------ */
     /*  Step 7 - Run MADS optimisation                                    */
     /* ------------------------------------------------------------------ */
-    MADSARX(uOptNorm, uPast, yHist, yrefNorm, thetaScenarios);
+    MADSARX(uOptNorm, uPast, yHist, yrefNorm, arxCoeff, arxOffset);
 
     /* ------------------------------------------------------------------ */
     /*  Step 7b - Save this solution as next call's warm-start seed       */

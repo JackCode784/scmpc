@@ -1,50 +1,114 @@
 #include "setup.h"
 
-/* computeArxOutput     
-Computes ARX model output using past output and input samples.
-ARX output is the scalar product between past output/input samples and theta
-parameters 
+/* computeArxOutput
+One-step-ahead ARX prediction from past output/input samples:
+    y = offset + sum_i sample[i] * coeff[i]
+where coeff/offset are the effective coefficients computed once per
+controller() call by computeArxCoeffs() below.
 */
-norm_output_type computeArxOutput(const norm_output_type yPast[na], const norm_input_type uSamples[nb+nk-1], const theta_type theta[nTheta])
+norm_output_type computeArxOutput(const norm_output_type yPast[na],
+                                  const norm_input_type  uSamples[nb+nk-1],
+                                  const arx_coeff_type   coeff[nTheta],
+                                  const arx_coeff_type   offset)
 {
     #ifdef PRAGMAS
     #pragma HLS INLINE
-    #pragma HLS ARRAY_PARTITION variable=theta dim=1 complete
+    #pragma HLS ARRAY_PARTITION variable=coeff dim=1 complete
     #pragma HLS ARRAY_PARTITION variable=yPast dim=1 complete
     #pragma HLS ARRAY_PARTITION variable=uSamples dim=1 complete
     #endif
 
-    norm_output_type yRes = 0;
-
-
+    #ifndef NRMLZ
+    /* Without normalization coeff == theta and offset == 0: unchanged
+     * from the original  yRes += sample * theta  formulation. */
+    norm_output_type yRes = offset;
     for(int i = 0; i < nTheta; i++)
     {
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        
-        #ifndef NRMLZ
-        yRes += ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * theta[i];
-        #else
-        /*
-         * Compute normalized output from normalized I/O samples.
-         *
-         * sampleTheta breaks the ((sample)*theta[i])*myInvDmDg[i] chain
-         * at an explicit, appropriately-sized intermediate type instead
-         * of letting it grow losslessly to 36 bits - see arx_partial_type
-         * in types.h for the full reasoning and the synthesis evidence
-         * that motivated this (introduced to fix CTRL_MODE_SCMPC's
-         * PRAGMA_PROFILE_LATENCY exceeding 100% LUT utilisation).
-         */
-        arx_partial_type sampleTheta = (arx_partial_type)(((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * theta[i]);
-        yRes += (norm_output_type)(sampleTheta * stripCoeffs.myInvDmDg[i] +
-                stripCoeffs.qmyInvDmDg[i] * theta[i] +
-                ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * stripCoeffs.myInvDmc0[i]);
-        #endif
+        yRes += ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * coeff[i];
     }
-    #ifdef NRMLZ
-    yRes += (norm_output_type)(stripCoeffs.qmyInvDmc0 + yNormOffset);
+    return yRes;
+    #else
+    /* See arx_acc_type in types.h: products truncated to 21 fractional
+     * bits, narrow wrap-around adds, ONE rounding/saturating cast at the end. */
+    arx_acc_type acc = (arx_acc_type)offset;
+    for(int i = 0; i < nTheta; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        acc += (arx_acc_type)(((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * coeff[i]);
+    }
+    return (norm_output_type)acc;
+    #endif
+}
+
+/* computeArxCoeffs
+Fold the normalization into the ARX coefficients, once per controller()
+call, for every parameter vector costFunctionArx will predict with: the
+Nscen scenarios (rows 0..Nscen-1) and the zonotope centre (row Nscen).
+
+The normalized prediction used to be evaluated, per term, as
+    sample*theta*myInvDmDg + qmyInvDmDg*theta + sample*myInvDmc0
+(3-4 multiplies, 2 wide adds and 2 rounding/saturating casts per term,
+inside every prediction step of every costFunctionArx call). Grouping by
+sample:
+    sample*(myInvDmDg*theta + myInvDmc0)  +  qmyInvDmDg*theta
+          \_______ coeff[i] ___________/     \_ part of offset _/
+Both brackets depend only on theta, which is fixed for the whole
+controller() call, so they are computed here once and the prediction
+itself reduces to one multiply per term. Mathematically identical; in
+fixed point only the rounding points move (see arx_coeff_type/arx_acc_type
+in types.h for the precision budget).
+*/
+void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nTheta],
+                      const theta_type thetaNominal  [nTheta],
+                      arx_coeff_type   coeff         [Nscen+1][nTheta],
+                      arx_coeff_type   offset        [Nscen+1])
+{
+    #ifdef PRAGMAS
+    #pragma HLS INLINE
     #endif
 
-    return yRes;
+    /* Scenario rows are only meaningful (and thetaScenarios only
+     * initialized) when scenarios are in use; the centre row always is. */
+    #if defined(USE_SCENS_COST) || defined(USE_SCENS_CONSTR)
+    constexpr int firstRow = 0;
+    #else
+    constexpr int firstRow = Nscen;
+    #endif
+
+    /*
+     * Row loop deliberately left rolled: this runs once per controller()
+     * call (vs. 43 costFunctionArx calls), so sharing one row's worth of
+     * multipliers across the Nscen+1 rows costs a few tens of cycles in
+     * total, while unrolling would add (Nscen+1)*2*nTheta = 30 DSPs.
+     */
+    for(int l = firstRow; l < Nscen+1; l++)
+    {
+        #ifndef NRMLZ
+        for(int i = 0; i < nTheta; i++)
+        {
+            #ifdef PRAGMAS
+            #pragma HLS UNROLL
+            #endif
+            coeff[l][i] = (l < Nscen) ? thetaScenarios[l][i] : thetaNominal[i];
+        }
+        offset[l] = 0;
+        #else
+        arx_coeff_type off = stripCoeffs.qmyInvDmc0 + yNormOffset;
+        for(int i = 0; i < nTheta; i++)
+        {
+            #ifdef PRAGMAS
+            #pragma HLS UNROLL
+            #endif
+            theta_type th = (l < Nscen) ? thetaScenarios[l][i] : thetaNominal[i];
+            coeff[l][i] = stripCoeffs.myInvDmDg[i] * th + stripCoeffs.myInvDmc0[i];
+            off += stripCoeffs.qmyInvDmDg[i] * th;
+        }
+        offset[l] = off;
+        #endif
+    }
 }
