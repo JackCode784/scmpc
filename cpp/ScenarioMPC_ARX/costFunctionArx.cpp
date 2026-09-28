@@ -185,12 +185,38 @@ void costFunctionArx(cost_type              cost[2],
     #pragma HLS ARRAY_PARTITION variable=uSamples  complete dim=1
     #endif
 
+    /*
+     * UNROLL on these and on the three rolling-window shift loops below,
+     * regardless of PRAGMA_PROFILE: unlike the Nhor/Nscen loops, their
+     * bodies are pure register copies (no multipliers), so there is no
+     * area/latency trade-off for a profile to make. With yPastCurr and
+     * uSamples completely partitioned, unrolled copies are plain wiring
+     * done in one cycle, while a rolled loop costs one cycle per
+     * iteration ((Nscen+1)*na = 10 here, on every one of the 42 calls per
+     * controller()) plus a counter and index-decoding muxes - i.e. more
+     * LUT, not less, so even PRAGMA_PROFILE_AREA is better off unrolled.
+     */
     for (int i = 0; i < Nscen+1; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
         for(int j = 0; j < na; j++)
+        {
+            #ifdef PRAGMAS
+            #pragma HLS UNROLL
+            #endif
             yPastCurr[i][j] = yPast[j];
+        }
+    }
 
     for (int i = 0; i < nb + nk - 2; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
         uSamples[i + 1] = uPast[i];
+    }
 
     /* ------------------------------------------------------------------ */
     /*  Input constraint check                                             */
@@ -361,7 +387,13 @@ void costFunctionArx(cost_type              cost[2],
 
             /* Update output samples conditions for all scenarios */
             for(int i = na - 1; i > 0; i--)
+            {
+                #ifdef PRAGMAS
+                /* register copies only - see init loops above */
+                #pragma HLS UNROLL
+                #endif
                 yPastCurr[l][i] = yPastCurr[l][i-1];
+            }
             yPastCurr[l][0] = yNext;
 
             #ifdef DEBUG_PRINT
@@ -412,11 +444,23 @@ void costFunctionArx(cost_type              cost[2],
 
         /* --- Shift rolling-window buffers for next prediction step ---- */
         for (int i = na - 1; i > 0; i--)
+        {
+            #ifdef PRAGMAS
+            /* register copies only - see init loops above */
+            #pragma HLS UNROLL
+            #endif
             yPastCurr[Nscen][i] = yPastCurr[Nscen][i - 1];
+        }
         yPastCurr[Nscen][0] = yNext_nom;
 
         for (int i = nb + nk - 2; i > 0; i--)
+        {
+            #ifdef PRAGMAS
+            /* register copies only - see init loops above */
+            #pragma HLS UNROLL
+            #endif
             uSamples[i] = uSamples[i - 1];
+        }
         /* uSamples[0] is set at the top of the next iteration            */
     }
 }
