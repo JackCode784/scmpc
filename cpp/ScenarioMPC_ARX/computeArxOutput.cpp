@@ -62,9 +62,17 @@ controller() call, so they are computed here once and the prediction
 itself reduces to one multiply per term. Mathematically identical; in
 fixed point only the rounding points move (see arx_coeff_type/arx_acc_type
 in types.h for the precision budget).
+
+The scenario/centre vectors only hold the nUnc UNCERTAIN parameters (the
+zonotope's own dimension, setup.h's UNC_MAP); each certain parameter i is
+re-inserted here as its known value: THETA_NOMINAL_UNNORM[i] without
+NRMLZ, 0 with it (its normalized value; myInvDmDg[i] = 0 then makes
+coeff[i] = myInvDmc0[i], its exact nominal coefficient). The i-loop is
+fully unrolled, so UNC_MAP.red[i] is a constant and the choice costs no
+hardware.
 */
-void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nTheta],
-                      const theta_type thetaNominal  [nTheta],
+void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
+                      const theta_type thetaNominal  [nUnc],
                       arx_coeff_type   coeff         [Nscen+1][nTheta],
                       arx_coeff_type   offset        [Nscen+1])
 {
@@ -94,7 +102,9 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nTheta],
             #ifdef PRAGMAS
             #pragma HLS UNROLL
             #endif
-            coeff[l][i] = (l < Nscen) ? thetaScenarios[l][i] : thetaNominal[i];
+            const int k = UNC_MAP.red[i];
+            coeff[l][i] = (k < 0)      ? theta_type(THETA_NOMINAL_UNNORM_TABLE[i]) :
+                          (l < Nscen)  ? thetaScenarios[l][k] : thetaNominal[k];
         }
         offset[l] = 0;
         #else
@@ -104,7 +114,9 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nTheta],
             #ifdef PRAGMAS
             #pragma HLS UNROLL
             #endif
-            theta_type th = (l < Nscen) ? thetaScenarios[l][i] : thetaNominal[i];
+            const int k = UNC_MAP.red[i];
+            theta_type th = (k < 0)     ? theta_type(0) :
+                            (l < Nscen) ? thetaScenarios[l][k] : thetaNominal[k];
             coeff[l][i] = stripCoeffs.myInvDmDg[i] * th + stripCoeffs.myInvDmc0[i];
             off += stripCoeffs.qmyInvDmDg[i] * th;
         }

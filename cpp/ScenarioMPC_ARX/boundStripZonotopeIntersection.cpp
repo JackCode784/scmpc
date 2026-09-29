@@ -143,12 +143,12 @@
     resource-constrained hardware like FPGAs/microcontrollers.
 */
 void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter, 
-                                    const phi_type phi[nTheta],
+                                    const phi_type phi[nUnc],
                                     const norm_noise_type stripRadius,
-                                    const theta_type oldCenter[nTheta],
-                                    const theta_type oldGens[nTheta][nGens], 
-                                    theta_type newCenter[nTheta], 
-                                    theta_type newGens[nTheta][nGens])
+                                    const theta_type oldCenter[nUnc],
+                                    const theta_type oldGens[nUnc][nGens], 
+                                    theta_type newCenter[nUnc], 
+                                    theta_type newGens[nUnc][nGens])
 {
     /* ------------------------------------------------------------------
     * Step 1 — Assemble the regressor vector phi = [yPast | uSamples]
@@ -159,7 +159,7 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
     
     /* Support strip for current zonotope */
     proj_type cproj = 0;
-    for(int i = 0; i < nTheta; i++) cproj += phi[i] * oldCenter[i];
+    for(int i = 0; i < nUnc; i++) cproj += phi[i] * oldCenter[i];
 
     proj_type gproj[nGens];
     support_strip_offset_type supStripOffset[2] = {0, 0};
@@ -170,7 +170,7 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
         #pragma HLS UNROLL
         #endif
         gproj[i] = 0;
-        for(int j = 0; j < nTheta; j++) gproj[i] += phi[j] * oldGens[j][i];
+        for(int j = 0; j < nUnc; j++) gproj[i] += phi[j] * oldGens[j][i];
 
         supStripOffset[0] += (gproj[i] < 0) ? support_strip_offset_type(-gproj[i]) : support_strip_offset_type(gproj[i]);
     }
@@ -195,7 +195,7 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
     /* Search over generator candidates */
     vol_type bestVol = zonotopeVolume(oldGens);
     int changed = 0;
-    theta_type tmpGens[nTheta][nGens];
+    theta_type tmpGens[nUnc][nGens];
     
     for(int genId = 0; genId < nGens; genId++)
     {
@@ -220,7 +220,7 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
         if(gproj[genId] != 0)
         {
             proj_inv_type gprojinv = 1 / gproj[genId];
-            for(int i = 0; i < nTheta; i++)
+            for(int i = 0; i < nUnc; i++)
             {
                 #ifdef PRAGMAS
                 #pragma HLS UNROLL
@@ -242,7 +242,7 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
             {
                 changed = 1;
                 bestVol = tmpVol;
-                for(int i = 0; i < nTheta; i++)
+                for(int i = 0; i < nUnc; i++)
                 {
                     #ifdef PRAGMAS
                     #pragma HLS UNROLL
@@ -263,7 +263,7 @@ void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter,
     
     if(!changed)
     {
-        for(int i = 0; i < nTheta; i++)
+        for(int i = 0; i < nUnc; i++)
         {
             #ifdef PRAGMAS
             #pragma HLS UNROLL

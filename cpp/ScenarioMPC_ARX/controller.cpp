@@ -13,8 +13,9 @@
  * copies would silently diverge as soon as one was updated.  That is the
  * wrong behaviour for shared controller state.
  *
- *   thetaCenter[nTheta]              - current zonotope centre c(k)
- *   thetaGens  [nTheta][nGens]- current generator matrix G(k)
+ *   thetaCenter[nUnc]                - current zonotope centre c(k)
+ *   thetaGens  [nUnc][nGens]  - current generator matrix G(k)
+ *   (nUnc = number of uncertain parameters - see setup.h's UNC_MAP)
  *   nGens                       - number of active generator columns
  *   yHist      [na]                  - output history y(k−1), ..., y(k−na)
  *   uHist      [nb+nk−1]             - input  history u(k−1), ..., u(k−nb−nk+1)
@@ -61,8 +62,8 @@
    No "static" - external linkage is required so all translation units
    share the same storage.
    ====================================================================== */
-theta_type  thetaCenter[nTheta];
-theta_type  thetaGens  [nTheta][nGens];
+theta_type  thetaCenter[nUnc];
+theta_type  thetaGens  [nUnc][nGens];
 norm_output_type yHist[na];
 norm_input_type  uHist[nb + nk - 1];
 /*
@@ -85,18 +86,20 @@ norm_input_type  uOptPrev[NhorU];
  * values in system_configs.h (THETA_NOMINAL_UNNORM, GENERATORS_UNNORM,
  * Y_HIST_UNNORM, U_HIST_UNNORM, U_PREV_UNNORM).
  *
+ * The zonotope only has rows for the nUnc UNCERTAIN parameters (setup.h's
+ * UNC_MAP: parameters whose GENERATORS_UNNORM row is non-zero); row k is
+ * full parameter i = UNC_MAP.full[k]. Certain parameters are not part of
+ * it at all - they re-enter as known constants in computeArxCoeffs and in
+ * the PL strip below.
+ *
  * With NRMLZ, the normalized parameter is theta_n[i] = (theta[i] - c0[i])
  * / Dg[i], Dg[i] = sum_j |G[i][j]| (the same Dg as computeStripCoeffs in
  * setup.h), so the initial zonotope {c0 + G*xi : ||xi||inf <= 1} maps to
  *   centre      0                     (c0 - c0 = 0, for every system)
  *   generators  G[i][j] / Dg[i]       (each row scaled by its |row sum|)
- * and every sample maps through the same affine maps as the live signals:
- *   y_n = yNormGain*y + yNormOffset,   u_n = uNormGain*u + uNormOffset.
- * An all-zero generator row (Dg[i] = 0: parameter i known exactly, e.g.
- * SYSTEM_SIMPLE) would be 0/0; its normalized row is set to 0 instead,
- * which is exact - theta_n[i] can then only ever be 0 - and is never
- * read with any weight anyway, since myInvDmDg[i] = gainRatio*Dg[i] = 0
- * makes computeArxCoeffs' coeff[i] the exact nominal coefficient.
+ * Dg[i] > 0 for every uncertain row by definition, so this never divides
+ * by zero. Every sample maps through the same affine maps as the live
+ * signals:  y_n = yNormGain*y + yNormOffset,  u_n = uNormGain*u + uNormOffset.
  * Without NRMLZ, the physical values are copied unchanged.
  *
  * CONSTRUCT: same idea as stripCoeffs in setup.h - an ordinary function
@@ -117,27 +120,27 @@ norm_input_type  uOptPrev[NhorU];
  */
 static bool initControllerState()
 {
-    const double G [nTheta][nGens]  = { GENERATORS_UNNORM };
     const double y0[na]             = { Y_HIST_UNNORM };
     const double u0[nb + nk - 1]    = { U_HIST_UNNORM };
     const double uPrev0[NhorU]      = { U_PREV_UNNORM };
-    #ifndef NRMLZ
-    const double c0[nTheta]         = { THETA_NOMINAL_UNNORM };
-    #endif
 
-    for (int i = 0; i < nTheta; i++)
+    for (int k = 0; k < nUnc; k++)
     {
+        const int i = UNC_MAP.full[k];
         #ifdef NRMLZ
         double Dg = 0.0;
         for (int j = 0; j < nGens; j++)
-            Dg += (G[i][j] < 0.0) ? -G[i][j] : G[i][j];
-        thetaCenter[i] = 0.0;
+        {
+            const double g = GENERATORS_UNNORM_TABLE[i][j];
+            Dg += (g < 0.0) ? -g : g;
+        }
+        thetaCenter[k] = 0.0;
         for (int j = 0; j < nGens; j++)
-            thetaGens[i][j] = (Dg > 0.0) ? G[i][j] / Dg : 0.0;
+            thetaGens[k][j] = GENERATORS_UNNORM_TABLE[i][j] / Dg;
         #else
-        thetaCenter[i] = c0[i];
+        thetaCenter[k] = THETA_NOMINAL_UNNORM_TABLE[i];
         for (int j = 0; j < nGens; j++)
-            thetaGens[i][j] = G[i][j];
+            thetaGens[k][j] = GENERATORS_UNNORM_TABLE[i][j];
         #endif
     }
 
@@ -200,10 +203,10 @@ digital_input_type controller(const digital_output_type yCurrDig,
     yrefNorm = dig2ctrlY(yrefDig);
 
     #ifdef DEBUG_PRINT
-    double center_f[nTheta], gens_f[nTheta][nGens];
+    double center_f[nUnc], gens_f[nUnc][nGens];
     double yCurrDig_f, yrefDig_f;
     double yCurrNorm_f, yrefNorm_f;
-    for(int i = 0; i < nTheta; i++) {
+    for(int i = 0; i < nUnc; i++) {
         center_f[i] = thetaCenter[i].to_double();
         for(int j = 0; j < nGens; j++) gens_f[i][j] = thetaGens[i][j].to_double();
     }
@@ -283,8 +286,8 @@ digital_input_type controller(const digital_output_type yCurrDig,
         * aliasing would corrupt the computation.
         * After the call we copy the result back into the globals.
         */
-    theta_type newCenter[nTheta];
-    theta_type newGens  [nTheta][nGens];
+    theta_type newCenter[nUnc];
+    theta_type newGens  [nUnc][nGens];
     #ifdef PRAGMAS
     /*
      * Declared here (their point of storage) rather than inside
@@ -293,7 +296,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * loops (both the "changed" and "!changed" branches), so whichever
      * concrete array is bound to those parameters needs to support
      * concurrent, per-element writes. Complete partitioning is cheap
-     * here (nTheta*nGens <= 36 elements across every ACTIVE_SYSTEM).
+     * here (nUnc*nGens <= 36 elements across every ACTIVE_SYSTEM).
      */
     #pragma HLS ARRAY_PARTITION variable=newCenter complete dim=1
     #pragma HLS ARRAY_PARTITION variable=newGens   complete dim=0
@@ -385,13 +388,44 @@ digital_input_type controller(const digital_output_type yCurrDig,
         phi[i+na] = uHist[i+nk-1];
     }
 
+    /*
+     * Certain parameters (setup.h's UNC_MAP) are not in the zonotope, so
+     * their contribution phi[i]*theta_i is known and moves into the strip
+     * centre:  |y - sum_certain phi_i*c0_i - phiUnc^T thetaUnc| <= sigma.
+     * With NRMLZ this already happened above: the myInvDmc0 loop subtracts
+     * every parameter's c0 part, certain ones included, and their
+     * myInvDmDg[i] = 0 zeroes their phi entry.
+     */
+    for(int i = 0; i < nTheta; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        if (UNC_MAP.red[i] < 0)
+            stripCenter -= phi[i] * theta_type(THETA_NOMINAL_UNNORM_TABLE[i]);
+    }
+
     #endif
-    boundStripZonotopeIntersectionNew(stripCenter, phi, sigma,
+
+    /* Restrict the regressor to the uncertain parameters. */
+    phi_type phiUnc[nUnc];
+    #ifdef PRAGMAS
+    #pragma HLS ARRAY_PARTITION variable=phiUnc complete dim=1
+    #endif
+    for(int k = 0; k < nUnc; k++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        phiUnc[k] = phi[UNC_MAP.full[k]];
+    }
+
+    boundStripZonotopeIntersectionNew(stripCenter, phiUnc, sigma,
                                     thetaCenter, thetaGens,
                                     newCenter, newGens);
 
     /* Copy result back into the shared global zonotope state. */
-    for (int i = 0; i < nTheta; i++) {
+    for (int i = 0; i < nUnc; i++) {
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
@@ -406,15 +440,15 @@ digital_input_type controller(const digital_output_type yCurrDig,
     }
 
     #ifdef DEBUG_PRINT
-    for(int i = 0; i < nTheta; i++) {
+    for(int i = 0; i < nUnc; i++) {
         center_f[i] = thetaCenter[i].to_double();
         for(int j = 0; j < nGens; j++) gens_f[i][j] = thetaGens[i][j].to_double();
     }
     printf("\n--- PL: updated zonotope ---\n");
     printf("thetaCenter: ");
-    for (int i = 0; i < nTheta; i++) printf("%f ", (double)thetaCenter[i]);
+    for (int i = 0; i < nUnc; i++) printf("%f ", (double)thetaCenter[i]);
     printf("\nthetaGens:\n");
-    for (int i = 0; i < nTheta; i++) {
+    for (int i = 0; i < nUnc; i++) {
         for (int j = 0; j < nGens; j++)
             printf("%8.6f ", (double)thetaGens[i][j]);
         printf("\n");
@@ -440,7 +474,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * flow visible to the HLS scheduler.  The values are the most recent
      * ones: updated by step 2 in PL mode, or fixed at init in SCMPC mode.
      */
-    theta_type thetaScenarios[Nscen][nTheta];
+    theta_type thetaScenarios[Nscen][nUnc];
     #ifdef PRAGMAS
     /*
      * Declared here (its point of storage), not inside generateScenarios
