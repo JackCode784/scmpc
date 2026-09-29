@@ -548,16 +548,21 @@ static const digital_input_type   UBias    = (double(ADC_MIN)*double(UMAXPHYS) -
 
 #ifdef NRMLZ
 /* Set these from user? */
-static const norm_output_type YNORMMAX = 1;
-static const norm_output_type YNORMMIN = -1;
-static const norm_input_type UNORMMAX = 1;
-static const norm_input_type UNORMMIN = -1;
+static const norm_output_type YNORMMAXPHYS = 1;
+static const norm_output_type YNORMMINPHYS = -1;
+static const norm_input_type UNORMMAXPHYS = 1;
+static const norm_input_type UNORMMINPHYS = -1;
 
-static const y_norm_coeff_type yNormGain = double(YNORMMAX - YNORMMIN) / double(YMAXPHYS - YMINPHYS);
-static const u_norm_coeff_type uNormGain = double(UNORMMAX - UNORMMIN) / double(UMAXPHYS - UMINPHYS);
-static const u_norm_inv_coeff_type uNormGainInverse = double(UMAXPHYS - UMINPHYS) / double(UNORMMAX - UNORMMIN);
-static const norm_output_type yNormOffset = double(YNORMMIN*YMAXPHYS - YNORMMAX*YMINPHYS) / double(YMAXPHYS - YMINPHYS);
-static const norm_input_type uNormOffset = double(UNORMMIN*UMAXPHYS - UNORMMAX*UMINPHYS) / double(UMAXPHYS - UMINPHYS);
+static const y_norm_coeff_type yNormGain = double(YNORMMAXPHYS - YNORMMINPHYS) / double(YMAXPHYS - YMINPHYS);
+static const u_norm_coeff_type uNormGain = double(UNORMMAXPHYS - UNORMMINPHYS) / double(UMAXPHYS - UMINPHYS);
+static const u_norm_inv_coeff_type uNormGainInverse = double(UMAXPHYS - UMINPHYS) / double(UNORMMAXPHYS - UNORMMINPHYS);
+static const norm_output_type yNormOffset = double(YNORMMINPHYS*YMAXPHYS - YNORMMAXPHYS*YMINPHYS) / double(YMAXPHYS - YMINPHYS);
+static const norm_input_type uNormOffset = double(UNORMMINPHYS*UMAXPHYS - UNORMMAXPHYS*UMINPHYS) / double(UMAXPHYS - UMINPHYS);
+
+static const norm_output_type YNORMMAX = double(yNormGain)*double(YMAX) + double(yNormOffset);
+static const norm_output_type YNORMMIN = double(yNormGain)*double(YMIN) + double(yNormOffset);
+static const norm_input_type UNORMMAX = double(uNormGain)*double(UMAX) + double(uNormOffset);
+static const norm_input_type UNORMMIN = double(uNormGain)*double(UMIN) + double(uNormOffset);
 
 static const input_weight_type R = double(RBaseLine) * double(yNormGain) * double(yNormGain) / (double(uNormGain) * double(uNormGain)); // 2^(-3)
 constexpr int log2R = -3;
@@ -694,11 +699,15 @@ static const StripCoeffs stripCoeffs = computeStripCoeffs();
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
 static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
 constexpr int log2R = 4;
-static const norm_output_type YNORMMAX = YMAXPHYS;
-static const norm_output_type YNORMMIN = YMINPHYS;
-static const norm_input_type UNORMMAX = UMAXPHYS;
-static const norm_input_type UNORMMIN = UMINPHYS;
+static const norm_output_type YNORMMAXPHYS = YMAXPHYS;
+static const norm_output_type YNORMMINPHYS = YMINPHYS;
+static const norm_input_type UNORMMAXPHYS = UMAXPHYS;
+static const norm_input_type UNORMMINPHYS = UMINPHYS;
 static const norm_output_type DELTAYNORM = DELTAY;
+static const norm_output_type YNORMMAX = YMAX;
+static const norm_output_type YNORMMIN = YMIN;
+static const norm_input_type UNORMMAX = UMAX;
+static const norm_input_type UNORMMIN = UMIN;
 #endif
 
 /* Choose appropriate coefficients based on the operation modes.
