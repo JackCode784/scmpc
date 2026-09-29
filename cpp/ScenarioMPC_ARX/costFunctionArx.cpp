@@ -145,8 +145,8 @@ void costFunctionArx(cost_type              cost[2],
     double outputWeight_f = outputWeight.to_double();
     double terminalOutputWeight_f = terminalOutputWeight.to_double();
     double yref_f = yref.to_double();
-    double center_f[nTheta];
-    for(int i = 0; i < nTheta; i++) center_f[i] = thetaCenter[i].to_double();
+    double center_f[nUnc];
+    for(int i = 0; i < nUnc; i++) center_f[i] = thetaCenter[i].to_double();
     for(int i = 0; i < nOpt; i++) currU_f[i] = currU[i].to_double();
     #endif
 

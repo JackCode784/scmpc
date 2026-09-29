@@ -6,20 +6,21 @@
  * ------
  * The parameter uncertainty is represented as the zonotope
  *
- *   Z = { center + G·ξ  :  ‖ξ‖∞ ≤ 1 }  ⊂  ℝ^nTheta
+ *   Z = { center + G·ξ  :  ‖ξ‖∞ ≤ 1 }  ⊂  ℝ^nUnc
  *
- * where  G ∈ ℝ^{nTheta × nGens}  is the generator matrix and
+ * where  G ∈ ℝ^{nUnc × nGens}  is the generator matrix and
  *        ξ ∈ ℝ^nGens             is a coefficient vector with each entry in [−1, 1].
  *
- * nTheta is the number of parameters (= na + nb) — the number of ROWS of G.
+ * nUnc is the number of UNCERTAIN parameters (<= nTheta = na + nb; certain
+ * ones are left out of the zonotope - see setup.h) — the number of ROWS of G.
  * nGens   is the number of generators        — the number of COLUMNS of G.
  *
  * These two dimensions are independent.  In particular:
- *   - CONFIG_BENCHMARK initially has nTheta=4 rows and nGens=6 columns.
- *   - After the PL interval-hull reduction, nGens is brought back to nTheta,
- *     making G square.  From that point on nGens == nTheta.
- *   - CONFIG_MILANO has nTheta=nGens=6 from the start (square matrix).
- *   - CONFIG_SIMPLE  has nTheta=nGens=3 from the start (diagonal matrix).
+ *   - CONFIG_BENCHMARK initially has nUnc=4 rows and nGens=6 columns.
+ *   - After the PL interval-hull reduction, nGens is brought back to nUnc,
+ *     making G square.  From that point on nGens == nUnc.
+ *   - CONFIG_MILANO has nUnc=nGens=6 from the start (square matrix).
+ *   - CONFIG_SIMPLE  has nTheta=nGens=3 but only nUnc=1 uncertain parameter.
  *
  * Drawing a random ξ ∈ [−1,1]^nGens and computing θ = center + G·ξ gives
  * one scenario — a parameter vector guaranteed to lie inside Z.
@@ -27,8 +28,8 @@
  * WHY nGens IS AN EXPLICIT ARGUMENT
  * ----------------------------------
  * The coefficients ξ must have one entry per generator COLUMN, so their
- * count is nGens, not nTheta.  Hardcoding nTheta as the coefficient count
- * would silently give wrong results whenever nGens ≠ nTheta (e.g. when
+ * count is nGens, not nUnc.  Hardcoding nUnc as the coefficient count
+ * would silently give wrong results whenever nGens ≠ nUnc (e.g. when
  * called with the initial CONFIG_BENCHMARK zonotope, which has 6 generators
  * for 4 parameters).
  *
@@ -49,9 +50,9 @@
  * Fill thetaScenarios[0..Nscen−1] with Nscen parameter vectors drawn
  * uniformly at random from  Z = { center + gens·ξ  :  ‖ξ‖∞ ≤ 1 }.
  *
- * @param thetaScenarios [out]  Nscen × nTheta array of scenario vectors.
- * @param center         [in]   Zonotope centre, length nTheta.
- * @param gens           [in]   Generator matrix, nTheta rows × nGens columns,
+ * @param thetaScenarios [out]  Nscen × nUnc array of scenario vectors.
+ * @param center         [in]   Zonotope centre, length nUnc.
+ * @param gens           [in]   Generator matrix, nUnc rows × nGens columns,
  *                               stored row-major: gens[i][j] is the i-th
  *                               component of the j-th generator.
  *                               The array is declared with nGens columns;
@@ -65,14 +66,14 @@
  * These allow all nGens columns of gens and all entries of center to be
  * read in a single clock cycle, enabling full pipelining of the inner loop.
  */
-void generateScenarios(theta_type       thetaScenarios[Nscen][nTheta],
-                       const theta_type center        [nTheta],
-                       const theta_type gens          [nTheta][nGens])
+void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
+                       const theta_type center        [nUnc],
+                       const theta_type gens          [nUnc][nGens])
 {
     #ifdef PRAGMAS
     /*
      * gens and center are complete-partitioned so every entry can be read
-     * in the same cycle by the fully-unrolled j/k loops below (nTheta and
+     * in the same cycle by the fully-unrolled j/k loops below (nUnc and
      * nGens are both <= 6, so this costs a handful of extra read ports,
      * not BRAMs). thetaScenarios itself is partitioned by the caller
      * (controller.cpp), at its point of declaration.
@@ -121,7 +122,7 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nTheta],
          * directly into thetaScenarios[i][j] makes it explicit to HLS that
          * there is no loop-carried dependency on the output array.
          */
-        for (int j = 0; j < nTheta; j++)
+        for (int j = 0; j < nUnc; j++)
         {
             #ifdef PRAGMAS
             #pragma HLS UNROLL

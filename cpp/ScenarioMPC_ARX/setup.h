@@ -379,6 +379,65 @@
 #endif
 
 /* ======================================================================
+   UNCERTAIN PARAMETERS - the zonotope's own dimension nUnc <= nTheta
+   ======================================================================
+   A parameter whose row of GENERATORS_UNNORM is entirely zero is known
+   exactly (theta_i = THETA_NOMINAL_UNNORM[i] for every point of the
+   zonotope). The zonotope, the scenarios and the PL/AL strip update live
+   only in the space of the nUnc UNCERTAIN parameters; certain ones are
+   re-inserted as known constants wherever the full nTheta-vector is
+   needed (computeArxCoeffs for predictions; the PL strip's known part).
+
+   Why not simply keep a zero row in an nTheta-dimensional zonotope: its
+   volume is then 0 for every candidate in boundStripZonotopeIntersection-
+   New's minimum-volume selection, so "tmpVol < bestVol" is never true
+   and PL learning silently stops (measured: PL output identical to
+   SCMPC's). In the nUnc-dimensional space the volume is positive and
+   meaningful, and generateScenarios/strip update/volume work on nUnc
+   rows instead of nTheta.
+
+   Detected at compile time from GENERATORS_UNNORM (C++14 constexpr):
+     nUnc                   number of uncertain parameters
+     UNC_MAP.full[k]        full index i of the k-th uncertain parameter
+     UNC_MAP.red[i]         reduced index k of parameter i, or -1 if certain
+   Both tables are compile-time constants: indexed with loop variables of
+   fully unrolled loops they fold away completely in hardware.
+   ====================================================================== */
+constexpr double GENERATORS_UNNORM_TABLE[nTheta][nGens]  = { GENERATORS_UNNORM };
+constexpr double THETA_NOMINAL_UNNORM_TABLE[nTheta]      = { THETA_NOMINAL_UNNORM };
+
+struct UncertainMap
+{
+    int n;              /* number of uncertain parameters                */
+    int full[nTheta];   /* [k] -> full index, valid for k < n            */
+    int red [nTheta];   /* [i] -> reduced index, or -1 if i is certain   */
+};
+
+constexpr UncertainMap makeUncertainMap()
+{
+    UncertainMap m{};
+    for (int i = 0; i < nTheta; i++)
+    {
+        bool uncertain = false;
+        for (int j = 0; j < nGens; j++)
+            if (GENERATORS_UNNORM_TABLE[i][j] != 0.0) uncertain = true;
+        m.red[i] = uncertain ? m.n : -1;
+        if (uncertain) m.full[m.n++] = i;
+    }
+    return m;
+}
+
+constexpr UncertainMap UNC_MAP = makeUncertainMap();
+constexpr int nUnc = UNC_MAP.n;
+
+static_assert(nUnc >= 1,
+    "Every row of GENERATORS_UNNORM is zero: the model is fully known, so there "
+    "is no uncertainty for the zonotope/scenario machinery to represent.");
+static_assert(nGens >= nUnc,
+    "Fewer generators than uncertain parameters: the zonotope is flat (zero "
+    "volume) in the uncertain space, which disables PL/AL's volume-based update.");
+
+/* ======================================================================
    CONTROLLER STATE
    ======================================================================
    These variables are DEFINED (storage allocated) in controller.cpp and
@@ -393,7 +452,8 @@
      exactly ONE copy (defined in controller.cpp) and all files share it.
 
    thetaCenter / thetaGens - the current parameter zonotope
-     Z(k) = { thetaCenter + thetaGens*ξ : || ξ ||inf <= 1 }.
+     Z(k) = { thetaCenter + thetaGens*ξ : || ξ ||inf <= 1 },
+     over the nUnc UNCERTAIN parameters only (see UNC_MAP above).
      Updated each step by boundStripZonotopeIntersection (PL/AL modes).
 
    yHist / uHist - ARX regressor history buffers
@@ -417,8 +477,8 @@
      applied input, so an inconsistent cold start can seed a persistent
      closed-loop problem rather than a one-call transient.
    ====================================================================== */
-extern theta_type  thetaCenter[nTheta];
-extern theta_type  thetaGens  [nTheta][nGens];
+extern theta_type  thetaCenter[nUnc];
+extern theta_type  thetaGens  [nUnc][nGens];
 extern norm_output_type yHist[na];
 extern norm_input_type  uHist[nb + nk - 1];
 /* uOptPrev[NhorU] is declared extern further below, once NhorU itself
@@ -771,8 +831,8 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na],
 /** Effective ARX coefficients/offset (normalization folded in) for the
  *  Nscen scenarios (rows 0..Nscen-1) and the zonotope centre (row Nscen);
  *  computed once per controller() call. */
-void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nTheta],
-                      const theta_type thetaNominal  [nTheta],
+void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
+                      const theta_type thetaNominal  [nUnc],
                       arx_coeff_type   coeff         [Nscen+1][nTheta],
                       arx_coeff_type   offset        [Nscen+1]);
 
@@ -818,9 +878,9 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt],
  *                              (= nTheta after interval-hull reduction;
  *                              may be larger for the initial zonotope).
  */
-void generateScenarios(theta_type       thetaScenarios[Nscen][nTheta],
-                       const theta_type center        [nTheta],
-                       const theta_type gens          [nTheta][nGens]);
+void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
+                       const theta_type center        [nUnc],
+                       const theta_type gens          [nUnc][nGens]);
 
 /* --- MADS main loop --------------------------------------------------- */
 
@@ -888,28 +948,31 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl);
  *   yCurr         - current measurement y(k)
  *   yPast         - output history  [y(k-1), ..., y(k-na)]
  *   uSamplesIn    - input  history  [u(k-1), ..., u(k-nb-nk+1)]
- *   oldCenter     - current zonotope centre  (length nTheta)
- *   oldGens       - current generator matrix (nTheta * nGens);
+ *   phi           - regressor restricted to the nUnc uncertain
+ *                   parameters; stripCenter already has the certain
+ *                   parameters' known contribution removed (controller.cpp)
+ *   oldCenter     - current zonotope centre  (length nUnc)
+ *   oldGens       - current generator matrix (nUnc * nGens);
  *                   only the first nGen columns are read
  *   nGen          - number of active generator columns
  *
  * Outputs:
- *   newCenter     - updated zonotope centre  (length nTheta)
- *   newGens       - updated generator matrix (nTheta * nGens);
+ *   newCenter     - updated zonotope centre  (length nUnc)
+ *   newGens       - updated generator matrix (nUnc * nGens);
  *                   exactly nGen columns are written (same as input)
  */
 void boundStripZonotopeIntersectionNew(const strip_center_type stripCenter, 
-                                    const phi_type phi[nTheta],
+                                    const phi_type phi[nUnc],
                                     const norm_noise_type stripRadius,
-                                    const theta_type oldCenter[nTheta],
-                                    const theta_type oldGens[nTheta][nGens], 
-                                    theta_type newCenter[nTheta], 
-                                    theta_type newGens[nTheta][nGens]);
+                                    const theta_type oldCenter[nUnc],
+                                    const theta_type oldGens[nUnc][nGens], 
+                                    theta_type newCenter[nUnc], 
+                                    theta_type newGens[nUnc][nGens]);
 
 #endif  /* CTRL_MODE == CTRL_MODE_PL */
 // Zonotope volume computation
-vol_type zonotopeVolume(const theta_type G[nTheta][nGens]);
+vol_type zonotopeVolume(const theta_type G[nUnc][nGens]);
 
 // (Generators) matrix determinant computation
-det_type matDet(const theta_type M[nTheta][nTheta]);
+det_type matDet(const theta_type M[nUnc][nUnc]);
 

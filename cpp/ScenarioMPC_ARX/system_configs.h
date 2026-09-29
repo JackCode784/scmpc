@@ -187,6 +187,11 @@ static const noise_type SIGMA_UNNORM = 0.2;
    Per system, only physical values are given here:
      THETA_NOMINAL_UNNORM  initial zonotope centre c0        (nTheta)
      GENERATORS_UNNORM     initial zonotope generators G     (nTheta x nGens)
+                           A parameter known EXACTLY gets an all-zero row:
+                           it is then left out of the zonotope, which only
+                           spans the nUnc uncertain parameters (setup.h,
+                           UNC_MAP), and enters predictions as its
+                           THETA_NOMINAL_UNNORM value.
      THETA_TRUE_INIT       true plant parameters (testMain.cpp only)
      Y_HIST_UNNORM         initial output samples y(-1), ..., y(-na)
      U_HIST_UNNORM         initial input samples, nb+nk-1 values

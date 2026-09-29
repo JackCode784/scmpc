@@ -125,8 +125,9 @@ int main(void)
         */
 
         // Current zonotope volume computation
-        volumes[k] = matDet(thetaGens);
-        volumes[k] = (volumes[k] < 0) ? (vol_type)(-volumes[k]) : volumes[k];
+        /* sum of |det| over nUnc-column subsets: = |det(thetaGens)| when
+         * the generator matrix is square, and still defined when it is not */
+        volumes[k] = zonotopeVolume(thetaGens);
 
         #ifdef DEBUG_PRINT
         volumes_f[k] = volumes[k].to_double();
