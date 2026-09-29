@@ -411,8 +411,8 @@
      a moving reference, which reduces (without eliminating) transient
      DELTAYNORM violations right after a reference step.
 
-     Its initial value (U_PREV_INIT, system_configs.h) MUST encode the
-     same cold-start operating point as Y_HIST_INIT/U_HIST_INIT - unlike
+     Its initial value (U_PREV_UNNORM, system_configs.h) MUST encode the
+     same cold-start operating point as Y_HIST_UNNORM/U_HIST_UNNORM - unlike
      the old flat warm start, this one is never re-anchored to the real
      applied input, so an inconsistent cold start can seed a persistent
      closed-loop problem rather than a one-call transient.
@@ -579,9 +579,7 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  *
  *   Z0 = (THETA_NOMINAL_UNNORM, GENERATORS_UNNORM), the INITIAL zonotope
  *        in UNNORMALIZED (physical parameter) space - deliberately NOT
- *        thetaCenter/thetaGens, AND NOT the NRMLZ-conditional
- *        THETA_NOMINAL_INIT/GENERATORS_INIT (see the two notes below
- *        for why each of those would be wrong).
+ *        thetaCenter/thetaGens (see the note below for why).
  *   Dg[i] = sum_j |GENERATORS_UNNORM[i][j]| - Z0's interval-hull
  *           half-width in parameter i (row-sum of |generators|).
  *   Dm[i] = yNormGain for i<na, uNormGain for i>=na - per-parameter
@@ -598,16 +596,6 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  * factor at all - which is why SYSTEM_BUCK_LOSS's first two (na=2)
  * hardcoded myInvDmDg/myInvDmc0 entries above used to just BE the
  * row-sum and the center component, unscaled.
- *
- * WHY THETA_NOMINAL_UNNORM/GENERATORS_UNNORM, NOT
- * THETA_NOMINAL_INIT/GENERATORS_INIT: under NRMLZ (system_configs.h),
- * THETA_NOMINAL_INIT/GENERATORS_INIT resolve to the ALREADY-NORMALIZED
- * zonotope (THETA_NOMINAL_INIT expands to "0, 0, 0" and GENERATORS_INIT
- * to the pre-normalized matrix) - i.e. the OUTPUT of exactly the
- * transform being computed here, not its input. THETA_NOMINAL_UNNORM/
- * GENERATORS_UNNORM are the physical-space values this transform
- * actually needs, and are defined unconditionally (regardless of
- * NRMLZ) for any system that wants strip-intersection support.
  *
  * WHY NOT thetaCenter/thetaGens: Z0 above is the INITIAL zonotope, not
  * whatever PL/AL mode has since updated thetaCenter/thetaGens to -

@@ -181,24 +181,47 @@ static const noise_type SIGMA_UNNORM = 0.2;
 
 #endif
 
+/* ======================================================================
+   INITIAL ZONOTOPE AND INITIAL CONDITIONS - physical (unnormalized) units
+   ======================================================================
+   Per system, only physical values are given here:
+     THETA_NOMINAL_UNNORM  initial zonotope centre c0        (nTheta)
+     GENERATORS_UNNORM     initial zonotope generators G     (nTheta x nGens)
+     THETA_TRUE_INIT       true plant parameters (testMain.cpp only)
+     Y_HIST_UNNORM         initial output samples y(-1), ..., y(-na)
+     U_HIST_UNNORM         initial input samples, nb+nk-1 values
+     U_PREV_UNNORM         initial MADS warm start, NhorU values - must be
+                           the same operating point as U_HIST_UNNORM (see
+                           uOptPrev in controller.cpp)
+   With NRMLZ, controller.cpp's initControllerState() derives the
+   normalized zonotope and samples from these at static-initialization
+   time (see there); without NRMLZ it copies them unchanged.
+   ====================================================================== */
 #if ACTIVE_SYSTEM == SYSTEM_SIMPLE
-    #define THETA_NOMINAL_INIT   2.0, -1.0, 1.0
-    #define GENERATORS_INIT \
+    #define THETA_NOMINAL_UNNORM   2.0, -1.0, 1.0
+    #define GENERATORS_UNNORM \
             { 0.0,  0.0,  0.0}, \
             { 0.0,  0.0,  0.0}, \
             { 0.0,  0.0,  0.5}
-    #define THETA_TRUE_INIT     2.0,  -1.0,   1.0 // == THETA_NOMINAL_INIT
+    #define THETA_TRUE_INIT     2.0,  -1.0,   1.0 // == THETA_NOMINAL_UNNORM
+    /* cold start at physical 0, as for the other systems */
+    #define Y_HIST_UNNORM 0, 0
+    #define U_HIST_UNNORM 0, 0
+    #define U_PREV_UNNORM 0, 0, 0
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-    #define THETA_NOMINAL_INIT  1.50,  -0.70,   1.00,   0.50
-    #define GENERATORS_INIT      \
+    #define THETA_NOMINAL_UNNORM  1.50,  -0.70,   1.00,   0.50
+    #define GENERATORS_UNNORM      \
             {  0.080,  0.020,  0.005,  0.000,  0.010,  0.000 }, \
             { -0.010,  0.060,  0.000,  0.008,  0.000,  0.005 }, \
             {  0.000,  0.010,  0.070, -0.015,  0.000,  0.010 }, \
             {  0.005,  0.000,  0.012,  0.055, -0.010,  0.000 }
     #define THETA_TRUE_INIT     1.5540,  -0.7433,   1.0570,   0.4761
+    #define Y_HIST_UNNORM 0, 0
+    #define U_HIST_UNNORM 0, 0
+    #define U_PREV_UNNORM 0, 0, 0
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
-    #define THETA_NOMINAL_INIT     0.7921,  0.1524, -0.1668,  0.0842,  0.0442,  0.0860 
-    #define GENERATORS_INIT  \
+    #define THETA_NOMINAL_UNNORM     0.7921,  0.1524, -0.1668,  0.0842,  0.0442,  0.0860 
+    #define GENERATORS_UNNORM  \
             { -0.8959, -0.4594, -0.0026, -0.0027, -0.0187,  0.0080 },   \
             {  1.3452, -0.1401,  0.0030,  0.0111, -0.0283,  0.0079 },   \
             { -0.5326,  0.4275, -0.0051,  0.0289, -0.0362,  0.0077 },   \
@@ -206,13 +229,19 @@ static const noise_type SIGMA_UNNORM = 0.2;
             {  0.0859,  0.0502, -0.1015, -0.0126,  0.0271,  0.0086 },   \
             {  0.0021,  0.1180,  0.0538, -0.0985,  0.0126,  0.0086 }    
     #define THETA_TRUE_INIT     0.7921,  0.1524, -0.1668,  0.0842,  0.0442,  0.0860
+    #define Y_HIST_UNNORM 0, 0, 0
+    #define U_HIST_UNNORM 0, 0, 0
+    #define U_PREV_UNNORM 0, 0, 0
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
-    #define THETA_NOMINAL_INIT  1.8889, -0.9333, 0.4444
-    #define GENERATORS_INIT \
+    #define THETA_NOMINAL_UNNORM  1.8889, -0.9333, 0.4444
+    #define GENERATORS_UNNORM \
             { 0.0625,        0,         0}, \
             {      0,   0.0606,         0}, \
             {      0,        0,    0.2500}  
     #define THETA_TRUE_INIT        1.8612,  -0.9276,    0.6732
+    #define Y_HIST_UNNORM 0, 0
+    #define U_HIST_UNNORM 0, 0
+    #define U_PREV_UNNORM 0, 0, 0
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
 #define THETA_NOMINAL_UNNORM 1.817972144631566,  -0.871463786797535,   0.457543557236585
 #define GENERATORS_UNNORM \
@@ -220,23 +249,9 @@ static const noise_type SIGMA_UNNORM = 0.2;
         {0.057591158572667,  -0.117838849718767,   0.003770097120654}, \
         {0.271071396611763,   0.068140402887871,   0.000360367556716}
 #define THETA_TRUE_INIT     1.857831352244614,  -0.933661885378246,   0.683201544134083
-#ifndef NRMLZ
-#define Y_HIST_INIT 0, 0
-#define U_HIST_INIT 0, 0 // nb+nk-1=2
-#define U_PREV_INIT 0, 0, 0  // NhorU
-#define THETA_NOMINAL_INIT THETA_NOMINAL_UNNORM
-#define GENERATORS_INIT GENERATORS_UNNORM
-#else
-#define Y_HIST_INIT -1, -1
-#define U_HIST_INIT -1, -1  // nb+nk-1=2
-#define U_PREV_INIT -1, -1, -1  // NhorU
-#define THETA_NOMINAL_INIT 0, 0, 0
-/* For now, computed offline in MATLAB and pasted here */
-#define GENERATORS_INIT \
-    {-0.422095251119916,   0.562742968468448,   0.015161780411636}, \
-    {0.321379044059322,  -0.657582479919780,   0.021038476020897}, \
-    {0.798273306559841,   0.200665453469169,   0.001061239970989}
-#endif
+#define Y_HIST_UNNORM 0, 0
+#define U_HIST_UNNORM 0, 0      // nb+nk-1=2
+#define U_PREV_UNNORM 0, 0, 0   // NhorU
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
 #define THETA_NOMINAL_UNNORM 1.733749265658302,  -0.881912845894497,  14.298236163643255
 #define GENERATORS_UNNORM \
@@ -244,22 +259,9 @@ static const noise_type SIGMA_UNNORM = 0.2;
     {-0.008278303729254,  -0.132496642357720,   0.004822306118286}, \
     {7.403892173947610,   0.001125040669095,   0.000048274664814}
 #define THETA_TRUE_INIT 1.753571428571429,  -0.894444444444444,  13.888888888888886
-#ifndef NRMLZ
-#define Y_HIST_INIT 0, 0
-#define U_HIST_INIT 0, 0
-#define U_PREV_INIT 0, 0, 0
-#define THETA_NOMINAL_INIT THETA_NOMINAL_UNNORM
-#define GENERATORS_INIT GENERATORS_UNNORM
-#else
-#define Y_HIST_INIT -1, -1
-#define U_HIST_INIT -1, -1
-#define U_PREV_INIT -1, -1, -1
-#define THETA_NOMINAL_INIT 0, 0, 0
-#define GENERATORS_INIT \
-    {-0.324674030329471,   0.653321112403822,   0.022004857266707}, \
-    {-0.056857554685053,  -0.910021585922029,   0.033120859392917}, \
-    {0.999841552335275,  0.000151928523890,   0.000006519140835}
-#endif
+#define Y_HIST_UNNORM 0, 0
+#define U_HIST_UNNORM 0, 0
+#define U_PREV_UNNORM 0, 0, 0
 
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
 /**
@@ -362,12 +364,12 @@ static const noise_type SIGMA_UNNORM = 0.2;
  *     not been added for this system - it exists to answer "is
  *     scenario MPC worth it", not to be synthesised.
  */
-#define THETA_NOMINAL_INIT  0.5, 2.0
-#define GENERATORS_INIT \
+#define THETA_NOMINAL_UNNORM  0.5, 2.0
+#define GENERATORS_UNNORM \
     {0.05,   0}, \
     {0,      1.0}
 #define THETA_TRUE_INIT     0.5, 3.0
-#define Y_HIST_INIT 0     // na=1
-#define U_HIST_INIT 0, 0  // nb+nk-1=2
-#define U_PREV_INIT 0, 0, 0  // NhorU
+#define Y_HIST_UNNORM 0     // na=1
+#define U_HIST_UNNORM 0, 0  // nb+nk-1=2
+#define U_PREV_UNNORM 0, 0, 0  // NhorU
 #endif

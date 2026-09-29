@@ -61,14 +61,14 @@
    No "static" - external linkage is required so all translation units
    share the same storage.
    ====================================================================== */
-theta_type  thetaCenter[nTheta]              = {    THETA_NOMINAL_INIT  };
-theta_type  thetaGens  [nTheta][nGens]       = {    GENERATORS_INIT     };
-norm_output_type yHist[na]                   = { Y_HIST_INIT };
-norm_input_type  uHist[nb + nk - 1]          = { U_HIST_INIT };
+theta_type  thetaCenter[nTheta];
+theta_type  thetaGens  [nTheta][nGens];
+norm_output_type yHist[na];
+norm_input_type  uHist[nb + nk - 1];
 /*
- * MUST be tied to U_HIST_INIT's operating point, not zero: a first
+ * MUST be tied to U_HIST_UNNORM's operating point, not zero: a first
  * MADS call warm-started from a value inconsistent with the assumed
- * equilibrium encoded in Y_HIST_INIT/U_HIST_INIT can return a poor
+ * equilibrium encoded in Y_HIST_UNNORM/U_HIST_UNNORM can return a poor
  * first solution, and - unlike the old flat "uOptNorm[i] = uHist[0]"
  * warm start, which re-anchored to the REAL applied input every single
  * call - the shifted warm start below carries that solution's quality
@@ -78,7 +78,81 @@ norm_input_type  uHist[nb + nk - 1]          = { U_HIST_INIT };
  * all-zero default here caused floating-point simulation to oscillate
  * and never settle for the whole run, not just its first few samples).
  */
-norm_input_type  uOptPrev[NhorU]             = { U_PREV_INIT };
+norm_input_type  uOptPrev[NhorU];
+
+/*
+ * Initial values of the five arrays above, derived from the PHYSICAL
+ * values in system_configs.h (THETA_NOMINAL_UNNORM, GENERATORS_UNNORM,
+ * Y_HIST_UNNORM, U_HIST_UNNORM, U_PREV_UNNORM).
+ *
+ * With NRMLZ, the normalized parameter is theta_n[i] = (theta[i] - c0[i])
+ * / Dg[i], Dg[i] = sum_j |G[i][j]| (the same Dg as computeStripCoeffs in
+ * setup.h), so the initial zonotope {c0 + G*xi : ||xi||inf <= 1} maps to
+ *   centre      0                     (c0 - c0 = 0, for every system)
+ *   generators  G[i][j] / Dg[i]       (each row scaled by its |row sum|)
+ * and every sample maps through the same affine maps as the live signals:
+ *   y_n = yNormGain*y + yNormOffset,   u_n = uNormGain*u + uNormOffset.
+ * An all-zero generator row (Dg[i] = 0: parameter i known exactly, e.g.
+ * SYSTEM_SIMPLE) would be 0/0; its normalized row is set to 0 instead,
+ * which is exact - theta_n[i] can then only ever be 0 - and is never
+ * read with any weight anyway, since myInvDmDg[i] = gainRatio*Dg[i] = 0
+ * makes computeArxCoeffs' coeff[i] the exact nominal coefficient.
+ * Without NRMLZ, the physical values are copied unchanged.
+ *
+ * CONSTRUCT: same idea as stripCoeffs in setup.h - an ordinary function
+ * evaluated once during static initialization, in double arithmetic.
+ * It WRITES the arrays instead of initializing a new object, because a
+ * C++ array cannot be initialized from a function's return value, and
+ * turning these five into struct members would change every use site
+ * and every ARRAY_PARTITION pragma. It is defined after them in this
+ * same translation unit, so it runs after their (zero) initialization,
+ * and after setup.h's yNormGain/uNormGain/yNormOffset/uNormOffset
+ * (same TU, declared earlier) - C++ orders initialization within one
+ * translation unit. Vitis HLS has to fold it into the registers' reset
+ * values exactly as it already does for every ap_fixed global
+ * initializer (ap_fixed has no constexpr constructor, so those are
+ * dynamic initialization too) and for stripCoeffs; C/RTL co-simulation
+ * is the check that it did - an unfolded initializer would make the RTL
+ * start from all-zero state and diverge from C simulation immediately.
+ */
+static bool initControllerState()
+{
+    const double G [nTheta][nGens]  = { GENERATORS_UNNORM };
+    const double y0[na]             = { Y_HIST_UNNORM };
+    const double u0[nb + nk - 1]    = { U_HIST_UNNORM };
+    const double uPrev0[NhorU]      = { U_PREV_UNNORM };
+    #ifndef NRMLZ
+    const double c0[nTheta]         = { THETA_NOMINAL_UNNORM };
+    #endif
+
+    for (int i = 0; i < nTheta; i++)
+    {
+        #ifdef NRMLZ
+        double Dg = 0.0;
+        for (int j = 0; j < nGens; j++)
+            Dg += (G[i][j] < 0.0) ? -G[i][j] : G[i][j];
+        thetaCenter[i] = 0.0;
+        for (int j = 0; j < nGens; j++)
+            thetaGens[i][j] = (Dg > 0.0) ? G[i][j] / Dg : 0.0;
+        #else
+        thetaCenter[i] = c0[i];
+        for (int j = 0; j < nGens; j++)
+            thetaGens[i][j] = G[i][j];
+        #endif
+    }
+
+    #ifdef NRMLZ
+    const double yGain = double(yNormGain), yOff = double(yNormOffset);
+    const double uGain = double(uNormGain), uOff = double(uNormOffset);
+    #else
+    const double yGain = 1.0, yOff = 0.0, uGain = 1.0, uOff = 0.0;
+    #endif
+    for (int i = 0; i < na; i++)         yHist[i]    = yGain * y0[i]     + yOff;
+    for (int i = 0; i < nb + nk - 1; i++) uHist[i]    = uGain * u0[i]     + uOff;
+    for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uPrev0[i] + uOff;
+    return true;
+}
+static const bool controllerStateInitialized = initControllerState();
 
 /* ======================================================================
    controller()
