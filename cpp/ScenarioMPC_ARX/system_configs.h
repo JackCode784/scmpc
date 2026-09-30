@@ -30,10 +30,17 @@
  */
 
 #pragma once
-#include "types.h"
 
 /* ======================================================================
    System identifiers - plain integers so they work in #if expressions.
+   ======================================================================
+   Defined BEFORE #include "types.h": types.h selects its system-dependent
+   fixed-point types with "#if ACTIVE_SYSTEM == SYSTEM_...". In an #if, an
+   identifier that is not (yet) a macro evaluates to 0, so if these ids
+   were defined afterwards every such comparison would read 0 == 0 and be
+   true for EVERY system - which is how SYSTEM_BUCK_ALBERTO used to get
+   SYSTEM_BUCK_LOSS's output_type, whose +-16 range saturates its
+   YMAXPHYS = 100 and YMAX = 85 in FIXED builds.
    ====================================================================== */
 #define SYSTEM_SIMPLE     0
 #define SYSTEM_BENCHMARK  1
@@ -42,6 +49,8 @@
 #define SYSTEM_BUCK_LOSS  4
 #define SYSTEM_BUCK_ALBERTO  5
 #define SYSTEM_GAIN_DEMO  6
+
+#include "types.h"
 
 /* ======================================================================
    ARX MODEL DIMENSIONS  (compile-time macros - must remain #define)

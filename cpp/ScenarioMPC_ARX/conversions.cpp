@@ -18,7 +18,7 @@ digital_output_type ADConvertY(const output_type yAn)
 	float yAn_f = yAn.to_float();
 	float YBias_f = YBias.to_float();
 	float yDig_f = yDig.to_float();
-	float YADCGAINF = 1 / (YMAX - YMIN).to_float();
+	float YADCGAINF = float(ADC_RANGE) / (YMAXPHYS - YMINPHYS).to_float(); /* cross-check of YADCGain: the ADC spans the PHYSICAL range */
 	#endif
 
 	return yDig;

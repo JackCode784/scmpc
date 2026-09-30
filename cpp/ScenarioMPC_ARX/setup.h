@@ -356,7 +356,9 @@
 /* ======================================================================
    Core headers
    ====================================================================== */
-#include "types.h"
+/* types.h is included by system_configs.h itself, AFTER the SYSTEM_* ids
+ * it needs - including it here first would bring the always-true
+ * "#if ACTIVE_SYSTEM == ..." problem back (see system_configs.h). */
 #include "system_configs.h"
 
 /* ======================================================================

@@ -43,14 +43,23 @@ constexpr int WORD_LENGTH = 18;
 /** System-dependent data type (based on I/O dynamic range)
  * Taken care of by MATLAB?
  */
-#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK
-typedef ap_fixed<WORD_LENGTH,5,AP_RND_CONV,AP_SAT> output_type; // [YMIN-SIGMA_UNNORM, YMAX+SIGMA_UNNORM] = [-0.02, 10.02]
-typedef ap_ufixed<WORD_LENGTH,1,AP_RND_CONV,AP_SAT> input_type; // [UMIN, UMAX] = [0, 1]
+#if ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS || ACTIVE_SYSTEM == SYSTEM_BUCK || ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
+/*
+ * output_type holds the PHYSICAL output, so it must cover the sensor range
+ * [YMINPHYS-SIGMA_UNNORM, YMAXPHYS+SIGMA_UNNORM] (the constraints YMIN/YMAX
+ * lie inside it). Signed ap_fixed<W,I> covers [-2^(I-1), 2^(I-1)).
+ */
+#if ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
+typedef ap_fixed<WORD_LENGTH,8,AP_RND_CONV,AP_SAT> output_type; // [YMINPHYS-SIGMA_UNNORM, YMAXPHYS+SIGMA_UNNORM] = [-0.2, 100.2] within [-128, 128)
+#else
+typedef ap_fixed<WORD_LENGTH,5,AP_RND_CONV,AP_SAT> output_type; // [YMINPHYS-SIGMA_UNNORM, YMAXPHYS+SIGMA_UNNORM] = [-0.02, 10.02] within [-16, 16)
+#endif
+typedef ap_ufixed<WORD_LENGTH,1,AP_RND_CONV,AP_SAT> input_type; // [UMINPHYS, UMAXPHYS] = [0, 1]
 typedef ap_fixed<WORD_LENGTH,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    #ifndef NRMLZ
    /* No normalization */
    typedef ap_fixed<WORD_LENGTH,5,AP_RND_CONV,AP_SAT> theta_type; // System-dependent theta dynamic range
-   typedef ap_fixed<WORD_LENGTH,5> output_strip_offset_type; // System-dependent output strip offset [SIGMA_UNNORM - YMAX, SIGMA_UNNORM+YMAX]=[-9.98, 10.02]
+   typedef ap_fixed<WORD_LENGTH,5> output_strip_offset_type; // System-dependent output strip offset [SIGMA_UNNORM - YMAXPHYS, SIGMA_UNNORM+YMAXPHYS]=[-9.98, 10.02]
    typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> proj_type; // |cproj| <= nTheta*..., same for |gproj|
    typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
    typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
