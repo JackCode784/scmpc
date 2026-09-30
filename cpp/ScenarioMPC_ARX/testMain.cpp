@@ -8,39 +8,52 @@
  *
  * SIMULATION STRUCTURE
  * ---------------------
- * At each time step k the harness:
- *  1. Simulates the plant (true ARX with thetaTrue) to obtain y(k).
- *  2. Converts y(k) and yref to digital samples (12-bit integers) - this mimics an AD conversion.
- *  3. Calls controller(), which returns the optimal digital input.
- *  4. Converts the digital input back to physical units for the plant.
+ * N_RUNS independent runs (plant.h). Each run:
+ *  - draws its true plant (plantSampleTrue) and measurement noise from the
+ *    test-bench generator, and resets the plant, the controller state and
+ *    the controller's random generator - as if the hardware had just been
+ *    reset, so every run is independent of the previous ones;
+ *  - at each time step k:
+ *     1. asks the plant for y(k) (plantNextOutput) and adds noise;
+ *     2. converts y(k) and yref to digital samples (CONVERSIONS_MODE);
+ *     3. calls controller(), which returns the optimal digital input;
+ *     4. converts it back to physical units, applies it to the plant
+ *        (plantPush) and logs everything.
+ * The test bench only lets things "play": what the true system is, and
+ * how its output is generated, lives in plant.h.
  *
- * CONTROLLER STATE
- * --------------------------------
- * The controller has the global history arrays (yHist, uHist), 
- * updated autonomously at each time step k and starting at zero.
+ * OUTPUT FILES
+ * ------------
+ * N_RUNS == 1: "output.txt", one row per step (format unchanged; the
+ *              columns depend on the compilation mode) - plotOutputCpp.m.
+ * N_RUNS  > 1: "runs_<ctrl>_<plant>_<run>.txt", same format, one per run,
+ *              plus "runs_<ctrl>_<plant>_summary.txt", one row per run with
+ *              the true plant parameters and constraint-violation metrics -
+ *              plotMultipleOutputsCpp.m. <ctrl> is scen / scencost /
+ *              scenconstr / noscen (from USE_SCENS_COST/USE_SCENS_CONSTR)
+ *              and <plant> is PLANT_TAG (plant.h), so builds with and
+ *              without scenarios write side by side, never over each other.
  *
- * OUTPUT FILE FORMAT
- * ------------------
- * "output.txt" has one row per simulation step; the columns depend on
- * the compilation mode.
- * 
  * NOTE ON VARIABLE-LENGTH ARRAYS
  * --------------------------------
  * nSim is a constexpr so that ySim[nSim] and uSim[nSim] are arrays with
  * compile-time-known sizes, NOT variable-length arrays (VLAs). VLAs are
- * arrays the size of which is a runtime variable. Such data structures 
+ * arrays the size of which is a runtime variable. Such data structures
  * are forbidden.
  */
 
 #include "setup.h"
+#include "plant.h"
 #include <stdio.h>
-#if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-#include <math.h>
-#endif
 
-#ifdef PRNG_STDLIB
-  #include <cstdlib>
-  #include <time.h>
+#if defined(USE_SCENS_COST) && defined(USE_SCENS_CONSTR)
+  #define TB_CTRL_TAG "scen"
+#elif defined(USE_SCENS_COST)
+  #define TB_CTRL_TAG "scencost"
+#elif defined(USE_SCENS_CONSTR)
+  #define TB_CTRL_TAG "scenconstr"
+#else
+  #define TB_CTRL_TAG "noscen"
 #endif
 
 inline void generateReference(output_type yref[], int nSim);
@@ -56,89 +69,69 @@ int main(void)
     printf("\tUse scenarios in cost: %s\n", USE_SCENS_COST_PRINT);
     printf("\tUse scenarios constraints: %s\n", USE_SCENS_CONSTR_PRINT);
     printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
+    printf("Experiment (plant.h):\n");
+    printf("\tRuns: %d, true plant: %s, plant model: %s, seed: %u\n",
+           N_RUNS, RANDOM_TRUE_PLANT ? "random" : "THETA_TRUE_INIT",
+           PLANT_TAG, (unsigned)TB_SEED);
     printf("\n\n");
-
-    for(int thetaTrueIter = 0; thetaTrueIter < 10; thetaTrueIter++)
-    {
-        /* WIP */
-        #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-        double xcur[na], xnext[na];
-        xcur[0] = -0.5; xcur[1] = 0;
-        constexpr int nEul = 100;
-        double g, m, l, tau;
-        g = 9.81; 
-        l = 0.9 * (1+pseudoRandArx()*0.2);
-        m = 0.2 * (1+pseudoRandArx()*0.2);
-        tau = 0.01/nEul;
-        #endif
-        #ifdef PRNG_STDLIB
-        srand(time(NULL));  // set random seed
-        #endif
 
     /* ------------------------------------------------------------------ */
     /*  Simulation parameters                                              */
     /* ------------------------------------------------------------------ */
     constexpr int nSim = 500;
 
-    /* Arrays to log the full simulation trajectory. */
+    /* Arrays to log one run's trajectory (reused by every run). */
     output_type ySim[nSim];
     input_type  uSim[nSim];
     output_type yref[nSim]; // output follows this
     output_type yCurr;
     vol_type volumes[nSim];
     noise_type noise[nSim];
-    /* ------------------------------------------------------------------ */
-    /*  True system (plant)                                               */
-    /* ------------------------------------------------------------------ */
-    /*
-     * thetaTrue is the parameter vector of the REAL plant used to generate
-     * the output data. It is taken from system_configs.h, depending on 
-     * the chosen ACTIVE_SYSTEM.
-     * The controller's initial zonotope has to contain thetaTrue and,
-     * hopefully, the updated zonotopes over time will still contain it.
-     */
-    theta_type thetaTrue[nTheta] = { THETA_TRUE_INIT };
     #if defined(CONVERSIONS_MODE)
     digital_output_type ySimDig[nSim];
     digital_input_type  uSimDig[nSim];
-    #ifdef DEBUG_PRINT
-    double yrefDig_f[nSim], ySimDig_f[nSim];
-    #endif
     #endif
 
-    /* Measurement noise amplitude and values */
-    for(int i=0; i < nSim; i++) noise[i] = double(pseudoRandArx()) * double(SIGMA_UNNORM); // noise in [-1, 1]
-    
-    // generate reference trajectory based on ACTIVE_SYSTEM
+    /* Reference: the same for every run */
     generateReference(yref, nSim);
-    
+
+    TbRng rng(TB_SEED);
+
+    FILE* summary = nullptr;
+    char fileName[128];
+    if (N_RUNS > 1)
+    {
+        snprintf(fileName, sizeof fileName, "runs_%s_%s_summary.txt", TB_CTRL_TAG, PLANT_TAG);
+        summary = fopen(fileName, "w");
+        if (!summary) { printf("ERROR: could not open %s for writing.\n", fileName); return 1; }
+    }
+    int runsViolY = 0, runsViolDy = 0;
+
+    for (int run = 0; run < N_RUNS; run++)
+    {
+    /* ------------------------------------------------------------------ */
+    /*  This run's true system, noise and a freshly reset controller      */
+    /* ------------------------------------------------------------------ */
+    Plant plant;
+    plantSampleTrue(plant, rng, RANDOM_TRUE_PLANT != 0);
+    plantReset(plant);
+    resetControllerState();
+    pseudoRandReset();
+
+    /* Measurement noise, uniform in [-SIGMA_UNNORM, SIGMA_UNNORM] */
+    for (int i = 0; i < nSim; i++) noise[i] = rng.uniform() * double(SIGMA_UNNORM);
+
     #ifdef DEBUG_PRINT
-    double ySim_f[nSim], yref_f[nSim], volumes_f[nSim], noise_f[nSim], thetaTrue_f[nTheta], yCurr_f, uOpt_f;
-    double yHist_f[na], uHist_f[nb+nk-1];
+    double ySim_f[nSim], yref_f[nSim], volumes_f[nSim], noise_f[nSim], yCurr_f, uOpt_f;
     for(int i = 0; i < nSim; i++)           noise_f[i] = noise[i].to_double();
     for(int i = 0; i < nSim; i++)           yref_f[i] = yref[i].to_double();
-    for(int i = 0; i < nTheta; i++)         thetaTrue_f[i] = thetaTrue[i].to_double();
+    #endif
 
-    #ifdef NRMLZ
-    double yNormGain_f, yNormOffset_f, uNormGain_f, uNormOffset_f;
-    yNormGain_f = yNormGain.to_double();
-    yNormOffset_f = yNormOffset.to_double();
-    uNormGain_f = uNormGain.to_double();
-    uNormOffset_f = uNormOffset.to_double();
-    #endif
-    #endif
-    
     /* ------------------------------------------------------------------ */
     /*  Closed-loop simulation                                            */
     /* ------------------------------------------------------------------ */
     for (int k = 0; k < nSim; k++)
     {
-        /* --- Simulate plant output y(k) -------------------------------- */
-        /*
-        * computeArxOutput evaluates
-        *   y(k) = [y(k−1),...,y(k−na), u(k−nk),...,u(k−nk−nb+1)]^T * thetaTrue
-        */
-
         // Current zonotope volume computation
         /* sum of |det| over nUnc-column subsets: = |det(thetaGens)| when
          * the generator matrix is square, and still defined when it is not */
@@ -146,31 +139,10 @@ int main(void)
 
         #ifdef DEBUG_PRINT
         volumes_f[k] = volumes[k].to_double();
-        for(int i = 0; i < na; i++)             yHist_f[i] = yHist[i].to_double();
-        for(int i = 0; i < nb + nk - 1; i++)    uHist_f[i] = uHist[i].to_double();
         #endif
 
-        yCurr = 0;
-        #ifdef NRMLZ
-        for(int i = 0; i < nTheta; i++) 
-            yCurr += output_type(((i < na) ? double(yHist[i] - yNormOffset)/double(yNormGain) : double(uHist[i-na+nk-1] - uNormOffset)/double(uNormGain)) * double(thetaTrue[i]));
-        #else
-
-        #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-        for(int i = 0; i < nEul; i++)
-        {
-            xnext[0] = xcur[0] + tau * xcur[1];
-            xnext[1] = tau*g/l*sin(xcur[0])+xcur[1]+tau/(m*l*l)*uHist[0];
-            xcur[0] = xnext[0];
-            xcur[1] = xnext[1];
-        }
-        yCurr = xcur[0];
-        #else
-
-        for(int i = 0; i < nTheta; i++)
-            yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];
-        #endif
-        #endif
+        /* --- True plant output y(k), plus measurement noise ----------- */
+        yCurr = plantNextOutput(plant);
         #ifdef DEBUG_PRINT
         yCurr_f = yCurr.to_double();
         #endif
@@ -185,10 +157,6 @@ int main(void)
         digital_output_type yrefDig = ADConvertY(yref[k]);
         digital_output_type yCurrDig = ADConvertY(yCurr);
         ySimDig[k] = yCurrDig;
-        #ifdef DEBUG_PRINT
-        yrefDig_f[k] = yrefDig.to_double();
-        ySimDig_f[k] = yCurrDig.to_double();
-        #endif
         #else
         digital_output_type yrefDig = yref[k];
         digital_output_type yCurrDig = yCurr;
@@ -204,37 +172,39 @@ int main(void)
          */
         digital_input_type uOptDig = controller(yCurrDig, yrefDig);
 
-        #ifdef DEBUG_PRINT
-        uOpt_f = uOptDig.to_double(); // digital value if CONVERSIONS_MODE
-        for(int i = 0; i < na; i++) yHist_f[i] = yHist[i].to_double();
-        for(int i = 0; i < nb+nk-1; i++) uHist_f[i] = uHist[i].to_double();
-        #endif
-        
         /* Receding-horizon: only u(k) = uOpt[0] is applied. */
         #ifdef CONVERSIONS_MODE
         uSimDig[k] = uOptDig;
         uSim[k] = DAConvertU(uOptDig);
-        #else 
+        #else
         uSim[k] = uOptDig;
         #endif
-        
+
         #ifdef DEBUG_PRINT
         uOpt_f = uSim[k].to_double();
         #endif
+
+        /* --- The plant records the measured y(k) and the applied u(k) --- */
+        plantPush(plant, double(ySim[k]), double(uSim[k]));
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Write simulation output to file                                    */
+    /*  Write this run's trajectory to file                               */
     /* ------------------------------------------------------------------ */
-    char outputFileName[12];
-    sprintf(outputFileName, "%s%d%s", "output0", thetaTrueIter, ".txt");
-    FILE* fp = fopen(outputFileName, "w");
+    if (N_RUNS == 1)
+        snprintf(fileName, sizeof fileName, "output.txt");
+    else
+        snprintf(fileName, sizeof fileName, "runs_%s_%s_%03d.txt", TB_CTRL_TAG, PLANT_TAG, run);
+    FILE* fp = fopen(fileName, "w");
     if (!fp) {
-        printf("ERROR: could not open output.txt for writing.\n");
+        printf("ERROR: could not open %s for writing.\n", fileName);
         return 1;
     }
 
-    #if defined(FIXED) || defined(CONVERSIONS_MODE)
+    /* Digital columns only exist with ADC/DAC conversions (FIXED without
+     * CONVERSIONS_MODE used to print uSimDig/ySimDig, which are not
+     * declared in that mode, and failed to compile) */
+    #if defined(CONVERSIONS_MODE)
         fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY uSimDig ySimDig vol\n");
     #else
         fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY vol\n");
@@ -242,7 +212,7 @@ int main(void)
 
     for (int k = 0; k < nSim; k++)
     {
-#ifdef FIXED
+#if defined(FIXED) && defined(CONVERSIONS_MODE)
         fprintf(fp, "%f %f %f %f %f %f %f %f %f %f %e\n",
                 uSim[k].to_float(), ySim[k].to_float(),
                 yref[k].to_float(),
@@ -250,6 +220,14 @@ int main(void)
                 YMIN.to_float(), YMAX.to_float(),
                 DELTAY.to_float(),
                 uSimDig[k].to_float(), ySimDig[k].to_float(),
+                volumes[k].to_float()/volumes[0].to_float());
+#elif defined(FIXED)
+        fprintf(fp, "%f %f %f %f %f %f %f %f %e\n",
+                uSim[k].to_float(), ySim[k].to_float(),
+                yref[k].to_float(),
+                UMIN.to_float(), UMAX.to_float(),
+                YMIN.to_float(), YMAX.to_float(),
+                DELTAY.to_float(),
                 volumes[k].to_float()/volumes[0].to_float());
 #elif defined(CONVERSIONS_MODE)
         fprintf(fp, "%f %f %f %f %f %f %f %f %d %d %e\n",
@@ -261,7 +239,7 @@ int main(void)
                 (int)uSimDig[k], (int)ySimDig[k],
                 (double)volumes[k]/(double)volumes[0]);
 #else
-        fprintf(fp, "%f %f %f %f %f %f %f %f %e\n", 
+        fprintf(fp, "%f %f %f %f %f %f %f %f %e\n",
                 (double)uSim[k], (double)ySim[k],
                 (double)yref[k],
                 (double)UMIN, (double)UMAX,
@@ -272,8 +250,61 @@ int main(void)
     }
 
     fclose(fp);
-    printf("Simulation complete.\nResults written to output%d.txt.\n", thetaTrueIter);
+
+    /* ------------------------------------------------------------------ */
+    /*  Constraint-violation metrics (physical units)                     */
+    /* ------------------------------------------------------------------ */
+    /*
+     * maxViolY : largest distance of y(k) outside [YMIN, YMAX]  (0 = none)
+     * nViolY   : number of samples outside [YMIN, YMAX]
+     * maxViolDy, nViolDy: the same for |y(k) - y(k-1)| > DELTAY
+     * rmse     : tracking RMSE, sqrt(mean((yref - y)^2))
+     */
+    double maxViolY = 0.0, maxViolDy = 0.0, sqErr = 0.0;
+    int nViolY = 0, nViolDy = 0;
+    for (int k = 0; k < nSim; k++)
+    {
+        const double y = double(ySim[k]);
+        const double v = (y > double(YMAX)) ? y - double(YMAX) :
+                         (y < double(YMIN)) ? double(YMIN) - y : 0.0;
+        if (v > 0.0) { nViolY++; if (v > maxViolY) maxViolY = v; }
+        if (k > 0)
+        {
+            const double dy = y - double(ySim[k - 1]);
+            const double vd = ((dy < 0.0) ? -dy : dy) - double(DELTAY);
+            if (vd > 0.0) { nViolDy++; if (vd > maxViolDy) maxViolDy = vd; }
+        }
+        const double e = double(yref[k]) - y;
+        sqErr += e * e;
     }
+    const double rmse = std::sqrt(sqErr / nSim);
+    runsViolY  += (nViolY  > 0);
+    runsViolDy += (nViolDy > 0);
+
+    printf("%s run %3d: y outside [yMin,yMax] %3d samples (max %.4g), |dy| > deltaY %3d samples (max %.4g), RMSE %.4g\n",
+           fileName, run, nViolY, maxViolY, nViolDy, maxViolDy, rmse);
+
+    if (summary)
+    {
+        if (run == 0)
+        {
+            fprintf(summary, "run");
+            plantPrintParams(plant, summary, true);
+            fprintf(summary, " maxViolY nViolY maxViolDy nViolDy rmse\n");
+        }
+        fprintf(summary, "%d", run);
+        plantPrintParams(plant, summary, false);
+        fprintf(summary, " %.6e %d %.6e %d %.6e\n", maxViolY, nViolY, maxViolDy, nViolDy, rmse);
+    }
+    } /* runs */
+
+    if (summary)
+    {
+        fclose(summary);
+        printf("\n%d runs: %d with y outside [yMin,yMax], %d with |dy| > deltaY.\n",
+               N_RUNS, runsViolY, runsViolDy);
+    }
+    printf("Simulation complete.\n");
     return 0;
 }
 

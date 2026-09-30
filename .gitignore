@@ -283,7 +283,7 @@ vitis/scmpc-arx/.apc/autopilot.apfmapping
 
 # Custom
 output.txt
-output*[0-9].txt
+runs_*.txt
 costFunctionArxOptimized.cpp
 interval.h
 boundIntervalsBuckloss.h

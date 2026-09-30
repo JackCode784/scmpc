@@ -157,6 +157,13 @@ static bool initControllerState()
 }
 static const bool controllerStateInitialized = initControllerState();
 
+/* Test-bench support (not called by the synthesized design): put the
+ * controller back into its power-on state before a new simulation run. */
+void resetControllerState()
+{
+    initControllerState();
+}
+
 /* ======================================================================
    controller()
    ====================================================================== */

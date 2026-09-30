@@ -5,7 +5,8 @@
 
 #ifndef PRNG_STDLIB
 // 32-bit initial state
-static unsigned int random_state = 0xAAAAAAAAu;
+constexpr unsigned int RANDOM_STATE_RESET = 0xAAAAAAAAu;
+static unsigned int random_state = RANDOM_STATE_RESET;
 
 inline void pseudoRandSeed(unsigned int seed)
 {
@@ -22,6 +23,18 @@ inline unsigned int xorshift32Step()
 	return x;
 }
 #endif
+
+/* Test-bench support (not called by the synthesized design): return the
+ * generator to its power-on state, so that each simulation run starts from
+ * the same controller as the hardware would after a reset. */
+void pseudoRandReset()
+{
+	#ifdef PRNG_STDLIB
+	srand(1u); // C standard: the sequence rand() produces before any srand()
+	#else
+	random_state = RANDOM_STATE_RESET;
+	#endif
+}
 
 /* Return one random sample in [-1, 1] */
 rand_type pseudoRandArx()

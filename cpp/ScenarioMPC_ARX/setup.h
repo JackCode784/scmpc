@@ -914,6 +914,13 @@ rand_type pseudoRandArx();
 /** nGens random coefficients in [-1, 1] for zonotope scenario sampling. */
 void pseudoRandArx(rand_type coeffs[nGens]);
 
+/* --- Test-bench support (never called by the synthesized design) ------ */
+/** Controller state (zonotope, I/O histories, warm start) and its random
+ *  generator back to their power-on values - one call each per new
+ *  simulation run, so runs are independent (see testMain.cpp). */
+void resetControllerState();
+void pseudoRandReset();
+
 /* --- Constraint violation --------------------------------------------- */
 
 /** Update cost[1] (the progressive-barrier violation term) given the

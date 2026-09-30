@@ -14,7 +14,10 @@ else
 end
 
 % Save data as table instead of matrix
-data = readtable(append(d, "output.txt"), VariableNamingRule="preserve");
+% opts.fileName (optional): plot one run of a multi-run experiment in
+% detail, e.g. "runs_scen_nl_007.txt"; default "output.txt"
+if isfield(opts, 'fileName'), fileName = opts.fileName; else, fileName = "output.txt"; end
+data = readtable(append(d, fileName), VariableNamingRule="preserve");
 
 % Tracking error
 data.err = data.yref - data.ySim;
