@@ -97,7 +97,7 @@
  * SYSTEM_GAIN_DEMO  - "is scenario MPC worth it" demo; also comment out
  *                     NRMLZ and CONVERSIONS_MODE for this one specifically
  *                     (see system_configs.h's SYSTEM_GAIN_DEMO comment) */
-#define ACTIVE_SYSTEM   SYSTEM_BUCK_ALBERTO
+#define ACTIVE_SYSTEM   SYSTEM_INVERTED_PENDULUM
 
 /**
  * Controller algorithm mode - choose one of:
@@ -370,7 +370,8 @@
     (ACTIVE_SYSTEM != SYSTEM_BUCK) && \
     (ACTIVE_SYSTEM != SYSTEM_BUCK_LOSS) && \
     (ACTIVE_SYSTEM != SYSTEM_BUCK_ALBERTO) && \
-    (ACTIVE_SYSTEM != SYSTEM_GAIN_DEMO)
+    (ACTIVE_SYSTEM != SYSTEM_GAIN_DEMO) && \
+    (ACTIVE_SYSTEM != SYSTEM_INVERTED_PENDULUM)
   #error "Unrecognized ACTIVE_SYSTEM!"
 #endif
 
@@ -492,7 +493,7 @@ extern norm_input_type  uHist[nb + nk - 1];
    ====================================================================== */
 
 /** Prediction horizon N: controller optimises over the next N steps. */
-constexpr int Nhor  = 5;
+constexpr int Nhor  = 15;
 
 /**
  * Control horizon Nu <= N: the input sequence u(k), ..., u(k+Nu-1) is
@@ -505,8 +506,8 @@ constexpr int NhorU = 3;
  * The cost is evaluated on Nscen + 1 models simultaneously.
  * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
  */
-constexpr int Nscen      = 4;   /* should always be a power of 2 */
-constexpr int LOG2NSCEN  = 2;   /* must satisfy (1 << LOG2NSCEN) == Nscen */
+constexpr int Nscen      = 16;   /* should always be a power of 2 */
+constexpr int LOG2NSCEN  = 4;   /* must satisfy (1 << LOG2NSCEN) == Nscen */
 
 static_assert(NhorU <= Nhor,
     "Control horizon NhorU must not exceed prediction horizon Nhor.");
@@ -531,17 +532,17 @@ extern norm_input_type uOptPrev[NhorU];
    Stage cost per step:  l(y, u) = outputWeight*(y - y_ref)^2 + R*u^2
    Terminal cost:        V_f(y)   = terminalOutputWeight*(y(k+N) - y_ref)^2
    ====================================================================== */
-static const output_weight_type terminalOutputWeight =  4.0;   /* terminal output weight */
-static const output_weight_type outputWeight =  4.0;   /* stage   output weight  */
-static const input_weight_type RBaseLine = 12.5; /* so that R = 0.125 = 2^(-3) in NRMLZ */
+static const output_weight_type terminalOutputWeight =  2.0;   /* terminal output weight */
+static const output_weight_type outputWeight =  2.0;   /* stage   output weight  */
+static const input_weight_type RBaseLine = 0.5; /* so that R = 0.125 = 2^(-3) in NRMLZ */
 /* 
     log2X are used for shift operations instead of multiplications in
     cost function computation. These should be consistent with the outputWeight, terminalOutputWeight, R
     values and with R value in particular since it depends on FIXED and NRMLZ
     operation modes.
 */
-constexpr int log2Q = 2;
-constexpr int log2P = 2;
+constexpr int log2Q = 1;
+constexpr int log2P = 1;
 
 /* ======================================================================
    MADS SOLVER PARAMETERS
@@ -551,10 +552,10 @@ constexpr int log2P = 2;
    Sizes are stored in log-scale (frameIdx, meshIdx) as integers for
    efficient hardware arithmetic.
    ====================================================================== */
-constexpr int MADS_ITER = 7;   /* MADS iterations per controller call     */
+constexpr int MADS_ITER = 200;   /* MADS iterations per controller call     */
 constexpr int TAU       = 1;   /* frame-size update base                  */
 constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
-constexpr int FRAME_EXP_MIN = -12; /* frameExp minimum value */
+constexpr int FRAME_EXP_MIN = -20; /* frameExp minimum value */
 
 /*
  * expC = 2^{-MADS_C}: pre-computed scaling factor for the mesh update.

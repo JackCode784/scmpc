@@ -63,7 +63,7 @@ int main(void)
     /* ------------------------------------------------------------------ */
     /*  Simulation parameters                                              */
     /* ------------------------------------------------------------------ */
-    constexpr int nSim = 300;
+    constexpr int nSim = 500;
 
     /* Arrays to log the full simulation trajectory. */
     output_type ySim[nSim];
@@ -285,5 +285,7 @@ inline void generateReference(output_type yref[], int nSim)
      * numbers this reference profile produces.
      */
     for(int i = 0; i < nSim; i++) yref[i] = (i < 100) ? 1.0 : 4.9;
+#elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
+    for(int i = 0; i < nSim; i++) yref[i] = 0.5;
 #endif  /* ACTIVE_SYSTEM */
 }
