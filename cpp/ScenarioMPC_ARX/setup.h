@@ -81,8 +81,8 @@
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
 //   #define FIXED            /* fixed point representation */
-#define CONVERSIONS_MODE /* ADC/DAC conversions */
-#define NRMLZ               /* normalization */
+// #define CONVERSIONS_MODE /* ADC/DAC conversions */
+// #define NRMLZ               /* normalization */
 #define USE_SCENS_COST      /* Enable scenarios cost contribution */
 #define USE_SCENS_CONSTR    /* Enable scenarios constraints contribution */
 // #define PRNG_STDLIB         /* use rand() as prng */
@@ -532,7 +532,7 @@ extern norm_input_type uOptPrev[NhorU];
    Stage cost per step:  l(y, u) = outputWeight*(y - y_ref)^2 + R*u^2
    Terminal cost:        V_f(y)   = terminalOutputWeight*(y(k+N) - y_ref)^2
    ====================================================================== */
-static const output_weight_type terminalOutputWeight =  2.0;   /* terminal output weight */
+static const output_weight_type terminalOutputWeight =  16.0;   /* terminal output weight */
 static const output_weight_type outputWeight =  2.0;   /* stage   output weight  */
 static const input_weight_type RBaseLine = 0.5; /* so that R = 0.125 = 2^(-3) in NRMLZ */
 /* 
@@ -542,7 +542,7 @@ static const input_weight_type RBaseLine = 0.5; /* so that R = 0.125 = 2^(-3) in
     operation modes.
 */
 constexpr int log2Q = 1;
-constexpr int log2P = 1;
+constexpr int log2P = 4;
 
 /* ======================================================================
    MADS SOLVER PARAMETERS

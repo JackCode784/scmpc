@@ -34,7 +34,9 @@
 
 #include "setup.h"
 #include <stdio.h>
-// #include <math.h>
+#if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
+#include <math.h>
+#endif
 
 #ifdef PRNG_STDLIB
   #include <cstdlib>
@@ -56,9 +58,22 @@ int main(void)
     printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
     printf("\n\n");
 
-    #ifdef PRNG_STDLIB
-    srand(time(NULL));  // set random seed
-    #endif
+    for(int thetaTrueIter = 0; thetaTrueIter < 10; thetaTrueIter++)
+    {
+        /* WIP */
+        #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
+        double xcur[na], xnext[na];
+        xcur[0] = -0.5; xcur[1] = 0;
+        constexpr int nEul = 100;
+        double g, m, l, tau;
+        g = 9.81; 
+        l = 0.9 * (1+pseudoRandArx()*0.2);
+        m = 0.2 * (1+pseudoRandArx()*0.2);
+        tau = 0.01/nEul;
+        #endif
+        #ifdef PRNG_STDLIB
+        srand(time(NULL));  // set random seed
+        #endif
 
     /* ------------------------------------------------------------------ */
     /*  Simulation parameters                                              */
@@ -140,8 +155,21 @@ int main(void)
         for(int i = 0; i < nTheta; i++) 
             yCurr += output_type(((i < na) ? double(yHist[i] - yNormOffset)/double(yNormGain) : double(uHist[i-na+nk-1] - uNormOffset)/double(uNormGain)) * double(thetaTrue[i]));
         #else
+
+        #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
+        for(int i = 0; i < nEul; i++)
+        {
+            xnext[0] = xcur[0] + tau * xcur[1];
+            xnext[1] = tau*g/l*sin(xcur[0])+xcur[1]+tau/(m*l*l)*uHist[0];
+            xcur[0] = xnext[0];
+            xcur[1] = xnext[1];
+        }
+        yCurr = xcur[0];
+        #else
+
         for(int i = 0; i < nTheta; i++)
             yCurr += ((i < na) ? yHist[i] : uHist[i-na+nk-1]) * thetaTrue[i];
+        #endif
         #endif
         #ifdef DEBUG_PRINT
         yCurr_f = yCurr.to_double();
@@ -198,7 +226,9 @@ int main(void)
     /* ------------------------------------------------------------------ */
     /*  Write simulation output to file                                    */
     /* ------------------------------------------------------------------ */
-    FILE* fp = fopen("output.txt", "w");
+    char outputFileName[12];
+    sprintf(outputFileName, "%s%d%s", "output0", thetaTrueIter, ".txt");
+    FILE* fp = fopen(outputFileName, "w");
     if (!fp) {
         printf("ERROR: could not open output.txt for writing.\n");
         return 1;
@@ -242,7 +272,8 @@ int main(void)
     }
 
     fclose(fp);
-    printf("Simulation complete.\nResults written to output.txt.\n");
+    printf("Simulation complete.\nResults written to output%d.txt.\n", thetaTrueIter);
+    }
     return 0;
 }
 
@@ -286,6 +317,6 @@ inline void generateReference(output_type yref[], int nSim)
      */
     for(int i = 0; i < nSim; i++) yref[i] = (i < 100) ? 1.0 : 4.9;
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-    for(int i = 0; i < nSim; i++) yref[i] = 0.5;
+    for(int i = 0; i < nSim; i++) yref[i] = 0.2;
 #endif  /* ACTIVE_SYSTEM */
 }
