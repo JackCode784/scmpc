@@ -339,7 +339,17 @@ void costFunctionArx(cost_type              cost[2],
             #ifndef FIXED
             cost[0] += (uSamples[0] - uSamples[1]) * R * (uSamples[0] - uSamples[1]);
             #else
-            cost[0] += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) << log2R;
+            /* Multiplied by R, not shifted by a log2R: R is a power of two
+             * only for some systems (0.125 for the buck converters, where a
+             * constant power-of-two multiply is a shift in hardware), but
+             * 5.5556 for the inverted pendulum, where a shift would have
+             * silently used a different weight than floating point. Also
+             * exact where the former "<< -3" was not: an ap_fixed shift
+             * keeps the operand's format, so shifting right dropped its 3
+             * lowest bits (~1e-10, below cost_type's resolution, but enough
+             * to flip rare roundings - BUCK_LOSS FIXED output is therefore
+             * not bit-identical to before, with equivalent behavior). */
+            cost[0] += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) * R;
             #endif
         }
         #ifdef DEBUG_PRINT
