@@ -534,7 +534,7 @@ extern norm_input_type uOptPrev[NhorU];
    ====================================================================== */
 static const output_weight_type terminalOutputWeight =  16.0;   /* terminal output weight */
 static const output_weight_type outputWeight =  16.0;   /* stage   output weight  */
-static const input_weight_type RBaseLine = 0.5; /* so that R = 0.125 = 2^(-3) in NRMLZ */
+static const input_weight_type RBaseLine = 0.36; /* so that R = 0.125 = 2^(-3) in NRMLZ */
 /* 
     log2Q/log2P are used for shift operations instead of multiplications in
     the FIXED cost function computation, so outputWeight/terminalOutputWeight
@@ -552,7 +552,7 @@ constexpr int log2P = 4;
    Sizes are stored in log-scale (frameIdx, meshIdx) as integers for
    efficient hardware arithmetic.
    ====================================================================== */
-constexpr int MADS_ITER = 200;   /* MADS iterations per controller call     */
+constexpr int MADS_ITER = 10;   /* MADS iterations per controller call     */
 constexpr int TAU       = 1;   /* frame-size update base                  */
 constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
 constexpr int FRAME_EXP_MIN = -20; /* frameExp minimum value */

@@ -87,7 +87,7 @@ int main(void)
     /* ------------------------------------------------------------------ */
     /*  Simulation parameters                                              */
     /* ------------------------------------------------------------------ */
-    constexpr int nSim = 500;
+    constexpr int nSim = 300;
 
     /* Arrays to log one run's trajectory (reused by every run). */
     output_type ySim[nSim];
