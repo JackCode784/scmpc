@@ -69,6 +69,15 @@ int main(void)
     printf("\tUse scenarios in cost: %s\n", USE_SCENS_COST_PRINT);
     printf("\tUse scenarios constraints: %s\n", USE_SCENS_CONSTR_PRINT);
     printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
+    /* FIXED applies the output weights as shifts by log2Q/log2P
+     * (costFunctionArx.cpp): any mismatch means FIXED and floating point
+     * optimize different costs. */
+    if (double(outputWeight) != std::ldexp(1.0, log2Q) ||
+        double(terminalOutputWeight) != std::ldexp(1.0, log2P))
+        printf("WARNING: outputWeight/terminalOutputWeight = %g/%g but 2^log2Q/2^log2P = %g/%g:\n"
+               "         FIXED and floating point will use different weights (setup.h).\n",
+               double(outputWeight), double(terminalOutputWeight),
+               std::ldexp(1.0, log2Q), std::ldexp(1.0, log2P));
     printf("Experiment (plant.h):\n");
     printf("\tRuns: %d, true plant: %s, plant model: %s, seed: %u\n",
            N_RUNS, RANDOM_TRUE_PLANT ? "random" : "THETA_TRUE_INIT",
@@ -283,6 +292,7 @@ int main(void)
 
     printf("%s run %3d: y outside [yMin,yMax] %3d samples (max %.4g), |dy| > deltaY %3d samples (max %.4g), RMSE %.4g\n",
            fileName, run, nViolY, maxViolY, nViolDy, maxViolDy, rmse);
+    fflush(stdout); /* progress is visible during long (e.g. FIXED) multi-run simulations */
 
     if (summary)
     {

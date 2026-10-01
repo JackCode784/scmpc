@@ -88,7 +88,7 @@ struct TbRng
      y(k) = 2*y(k-1) + (-1 + Ts^2*g/l)*y(k-2) + Ts^2/(m*l^2)*u(k-2)
    i.e. theta = [2, -1 + Ts^2*g/l, Ts^2/(m*l^2)] (na=2, nb=1, nk=2). The
    nominal l, m are recovered from THETA_NOMINAL_UNNORM through this map
-   (l = 0.9, m = 0.2 for the values in system_configs.h), so there is a
+   (l ~ 0.83, m ~ 0.19 for the current values in system_configs.h), so there is a
    single source of truth.
 
    A random true plant draws l and m uniformly in nominal*(1 +- REL_UNC);
