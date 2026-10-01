@@ -211,11 +211,10 @@ typedef ap_ufixed<16,0>                         frac_type;
 // typedef ap_ufixed<32,32> u16_type;
 typedef ap_uint<16>                         u16_type;
 
-/* Data type for outputWeight, terminalOutputWeight. FIXED applies them as
- * shifts by log2Q/log2P (costFunctionArx), so they must be powers of two -
- * testMain checks it. 8 bits so that the value itself (e.g. 16) is held
- * and can be checked: the former ap_ufixed<3,3> wrapped 16 around to 0. */
-typedef ap_ufixed<8,8> output_weight_type;
+/* Data type for outputWeight, terminalOutputWeight = 2^log2Q, 2^log2P
+ * (setup.h). FIXED applies them as shifts (costFunctionArx), so the type
+ * only has to hold the values for testMain's check: 2^-8 ... 2^7. */
+typedef ap_ufixed<16,8> output_weight_type;
 #else
 /* ---------------------------------------------------------------------- */
 /*  Floating point types for PC simulation / debugging                          */
@@ -300,10 +299,10 @@ typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_output_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_input_type;
 typedef ap_fixed<WORD_LENGTH,1,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> strip_center_type;
-/* Input weight R in normalized units, R = RBaseLine*(yNormGain/uNormGain)^2.
- * FIXED applies it as a shift by log2R (costFunctionArx.cpp), so this type
- * only has to hold R exactly for testMain.cpp's consistency check. */
-typedef ap_ufixed<24,4> input_weight_type; /* [2^-20, 16): pendulum R = 4, BUCK_LOSS R = 0.005 */
+/* Input weight R = 2^log2R in normalized units (setup.h). FIXED applies it
+ * as a shift by log2R (costFunctionArx.cpp), so this type only has to
+ * hold R for DEBUG_PRINT: 2^-20 ... 2^3. */
+typedef ap_ufixed<24,4> input_weight_type;
 
 /**
  * Effective ARX coefficients and offset in normalized I/O coordinates,

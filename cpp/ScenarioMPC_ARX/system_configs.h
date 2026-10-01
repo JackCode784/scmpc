@@ -222,9 +222,10 @@ static const noise_type SIGMA_UNNORM = 0.00;
      THETA_TRUE_INIT       true plant parameters (testMain.cpp only)
      Y_HIST_UNNORM         initial output samples y(-1), ..., y(-na)
      U_HIST_UNNORM         initial input samples, nb+nk-1 values
-     U_PREV_UNNORM         initial MADS warm start, NhorU values - must be
-                           the same operating point as U_HIST_UNNORM (see
-                           uOptPrev in controller.cpp)
+     U_PREV_UNNORM         initial MADS warm start, up to NhorU values (the
+                           last one is repeated) - must be the same
+                           operating point as U_HIST_UNNORM (see uOptPrev
+                           in controller.cpp)
    With NRMLZ, controller.cpp's initControllerState() derives the
    normalized zonotope and samples from these at static-initialization
    time (see there); without NRMLZ it copies them unchanged.
@@ -239,7 +240,7 @@ static const noise_type SIGMA_UNNORM = 0.00;
     /* cold start at physical 0, as for the other systems */
     #define Y_HIST_UNNORM 0, 0
     #define U_HIST_UNNORM 0, 0
-    #define U_PREV_UNNORM 0, 0, 0
+    #define U_PREV_UNNORM 0
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
     #define THETA_NOMINAL_UNNORM  1.50,  -0.70,   1.00,   0.50
     #define GENERATORS_UNNORM      \
@@ -250,7 +251,7 @@ static const noise_type SIGMA_UNNORM = 0.00;
     #define THETA_TRUE_INIT     1.5540,  -0.7433,   1.0570,   0.4761
     #define Y_HIST_UNNORM 0, 0
     #define U_HIST_UNNORM 0, 0
-    #define U_PREV_UNNORM 0, 0, 0
+    #define U_PREV_UNNORM 0
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
     #define THETA_NOMINAL_UNNORM     0.7921,  0.1524, -0.1668,  0.0842,  0.0442,  0.0860 
     #define GENERATORS_UNNORM  \
@@ -263,7 +264,7 @@ static const noise_type SIGMA_UNNORM = 0.00;
     #define THETA_TRUE_INIT     0.7921,  0.1524, -0.1668,  0.0842,  0.0442,  0.0860
     #define Y_HIST_UNNORM 0, 0, 0
     #define U_HIST_UNNORM 0, 0, 0
-    #define U_PREV_UNNORM 0, 0, 0
+    #define U_PREV_UNNORM 0
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
     #define THETA_NOMINAL_UNNORM  1.8889, -0.9333, 0.4444
     #define GENERATORS_UNNORM \
@@ -273,7 +274,7 @@ static const noise_type SIGMA_UNNORM = 0.00;
     #define THETA_TRUE_INIT        1.8612,  -0.9276,    0.6732
     #define Y_HIST_UNNORM 0, 0
     #define U_HIST_UNNORM 0, 0
-    #define U_PREV_UNNORM 0, 0, 0
+    #define U_PREV_UNNORM 0
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
 #define THETA_NOMINAL_UNNORM 1.817972144631566,  -0.871463786797535,   0.457543557236585
 #define GENERATORS_UNNORM \
@@ -283,7 +284,7 @@ static const noise_type SIGMA_UNNORM = 0.00;
 #define THETA_TRUE_INIT     1.857831352244614,  -0.933661885378246,   0.683201544134083
 #define Y_HIST_UNNORM 0, 0
 #define U_HIST_UNNORM 0, 0      // nb+nk-1=2
-#define U_PREV_UNNORM 0, 0, 0   // NhorU
+#define U_PREV_UNNORM 0
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
 #define THETA_NOMINAL_UNNORM 1.733749265658302,  -0.881912845894497,  14.298236163643255
 #define GENERATORS_UNNORM \
@@ -293,7 +294,7 @@ static const noise_type SIGMA_UNNORM = 0.00;
 #define THETA_TRUE_INIT 1.753571428571429,  -0.894444444444444,  13.888888888888886
 #define Y_HIST_UNNORM 0, 0
 #define U_HIST_UNNORM 0, 0
-#define U_PREV_UNNORM 0, 0, 0
+#define U_PREV_UNNORM 0
 
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
 /**
@@ -403,7 +404,7 @@ static const noise_type SIGMA_UNNORM = 0.00;
 #define THETA_TRUE_INIT     0.5, 3.0
 #define Y_HIST_UNNORM 0     // na=1
 #define U_HIST_UNNORM 0, 0  // nb+nk-1=2
-#define U_PREV_UNNORM 0, 0, 0  // NhorU
+#define U_PREV_UNNORM 0
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
 #define THETA_NOMINAL_UNNORM 2.000000000000000, -0.998821001683502, 0.000751434382693
 #define GENERATORS_UNNORM \
@@ -416,5 +417,5 @@ static const noise_type SIGMA_UNNORM = 0.00;
 //2.000000000000000,   -0.998637500000000,   0.001205632716049
 #define Y_HIST_UNNORM -0.78, -0.78
 #define U_HIST_UNNORM 0, 0
-#define U_PREV_UNNORM 0, 0, 0
+#define U_PREV_UNNORM 0
 #endif

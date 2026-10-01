@@ -45,6 +45,7 @@
 #include "setup.h"
 #include "plant.h"
 #include <stdio.h>
+#include <algorithm>
 
 #if defined(USE_SCENS_COST) && defined(USE_SCENS_CONSTR)
   #define TB_CTRL_TAG "scen"
@@ -70,19 +71,16 @@ int main(void)
     printf("\tUse scenarios constraints: %s\n", USE_SCENS_CONSTR_PRINT);
     printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
     /* FIXED applies the weights as shifts by log2Q/log2P/log2R
-     * (costFunctionArx.cpp): any mismatch means FIXED and floating point
-     * optimize different costs. R is computed from RBaseLine and the
-     * normalization gains, so it is only checked to 0.1%. */
-    if (double(outputWeight) != std::ldexp(1.0, log2Q) ||
-        double(terminalOutputWeight) != std::ldexp(1.0, log2P))
-        printf("WARNING: outputWeight/terminalOutputWeight = %g/%g but 2^log2Q/2^log2P = %g/%g:\n"
-               "         FIXED and floating point will use different weights (setup.h).\n",
-               double(outputWeight), double(terminalOutputWeight),
-               std::ldexp(1.0, log2Q), std::ldexp(1.0, log2P));
+     * (costFunctionArx.cpp). setup.h defines the weights from them, except
+     * R without NRMLZ (R = RBaseLine): a mismatch there means FIXED and
+     * floating point optimize different costs. */
     if (std::fabs(double(R) / std::ldexp(1.0, log2R) - 1.0) > 1e-3)
-        printf("WARNING: R = %g but 2^log2R = %g: FIXED and floating point will use\n"
-               "         different input weights (choose RBaseLine in setup.h so that R = 2^log2R).\n",
+        printf("WARNING: R = %g but 2^log2R = %g: FIXED will use a different input weight\n"
+               "         than floating point (HP_RBASELINE vs HP_LOG2R_RAW in setup.h).\n",
                double(R), std::ldexp(1.0, log2R));
+    printf("Hyperparameters (setup.h): Nhor %d, NhorU %d, Nscen %d, MADS_ITER %d, "
+           "log2Q/P/R %d/%d/%d, D0 %d, FRAME_EXP_MIN %d\n",
+           Nhor, NhorU, Nscen, MADS_ITER, log2Q, log2P, log2R, int(D0_VAL), FRAME_EXP_MIN);
     printf("Experiment (plant.h):\n");
     printf("\tRuns: %d, true plant: %s, plant model: %s, seed: %u\n",
            N_RUNS, RANDOM_TRUE_PLANT ? "random" : "THETA_TRUE_INIT",
@@ -92,7 +90,10 @@ int main(void)
     /* ------------------------------------------------------------------ */
     /*  Simulation parameters                                              */
     /* ------------------------------------------------------------------ */
-    constexpr int nSim = 300;
+    #ifndef TB_NSIM          /* tuning/sweep.py sets it with -D */
+    #define TB_NSIM 300
+    #endif
+    constexpr int nSim = TB_NSIM;
 
     /* Arrays to log one run's trajectory (reused by every run). */
     output_type ySim[nSim];
@@ -273,6 +274,16 @@ int main(void)
      * nViolY   : number of samples outside [YMIN, YMAX]
      * maxViolDy, nViolDy: the same for |y(k) - y(k-1)| > DELTAY
      * rmse     : tracking RMSE, sqrt(mean((yref - y)^2))
+     * rmseFloor: RMSE of the fastest output the constraints allow, which
+     *            no controller can beat: y(k) for k < nk (the input
+     *            cannot reach them yet), then a step towards yref of at
+     *            most DELTAY per sample, inside [YMIN, YMAX]. It ignores
+     *            the plant's dynamics and input limits, so it is a lower
+     *            bound, not always reachable; rmse/rmseFloor >= 1 compares
+     *            tracking across systems and references.
+     * rmsDu    : RMS of the input increments, normalized to the input
+     *            range (2*du/(UMAXPHYS-UMINPHYS), so 2 = full swing):
+     *            input activity / chattering.
      */
     double maxViolY = 0.0, maxViolDy = 0.0, sqErr = 0.0;
     int nViolY = 0, nViolDy = 0;
@@ -292,11 +303,35 @@ int main(void)
         sqErr += e * e;
     }
     const double rmse = std::sqrt(sqErr / nSim);
+
+    double yIdeal = 0.0, sqErrFloor = 0.0, sqDu = 0.0;
+    for (int k = 0; k < nSim; k++)
+    {
+        if (k < nk)
+            yIdeal = double(ySim[k]);
+        else
+        {
+            const double step = double(yref[k]) - yIdeal;
+            yIdeal += (step >  double(DELTAY)) ?  double(DELTAY) :
+                      (step < -double(DELTAY)) ? -double(DELTAY) : step;
+            yIdeal = std::min(std::max(yIdeal, double(YMIN)), double(YMAX));
+        }
+        const double e = double(yref[k]) - yIdeal;
+        sqErrFloor += e * e;
+        if (k > 0)
+        {
+            const double du = 2.0 * (double(uSim[k]) - double(uSim[k - 1]))
+                            / (double(UMAXPHYS) - double(UMINPHYS));
+            sqDu += du * du;
+        }
+    }
+    const double rmseFloor = std::sqrt(sqErrFloor / nSim);
+    const double rmsDu     = std::sqrt(sqDu / (nSim - 1));
     runsViolY  += (nViolY  > 0);
     runsViolDy += (nViolDy > 0);
 
-    printf("%s run %3d: y outside [yMin,yMax] %3d samples (max %.4g), |dy| > deltaY %3d samples (max %.4g), RMSE %.4g\n",
-           fileName, run, nViolY, maxViolY, nViolDy, maxViolDy, rmse);
+    printf("%s run %3d: y outside [yMin,yMax] %3d samples (max %.4g), |dy| > deltaY %3d samples (max %.4g), RMSE %.4g (floor %.4g)\n",
+           fileName, run, nViolY, maxViolY, nViolDy, maxViolDy, rmse, rmseFloor);
     fflush(stdout); /* progress is visible during long (e.g. FIXED) multi-run simulations */
 
     if (summary)
@@ -305,11 +340,12 @@ int main(void)
         {
             fprintf(summary, "run");
             plantPrintParams(plant, summary, true);
-            fprintf(summary, " maxViolY nViolY maxViolDy nViolDy rmse\n");
+            fprintf(summary, " maxViolY nViolY maxViolDy nViolDy rmse rmseFloor rmsDu\n");
         }
         fprintf(summary, "%d", run);
         plantPrintParams(plant, summary, false);
-        fprintf(summary, " %.6e %d %.6e %d %.6e\n", maxViolY, nViolY, maxViolDy, nViolDy, rmse);
+        fprintf(summary, " %.6e %d %.6e %d %.6e %.6e %.6e\n",
+                maxViolY, nViolY, maxViolDy, nViolDy, rmse, rmseFloor, rmsDu);
     }
     } /* runs */
 

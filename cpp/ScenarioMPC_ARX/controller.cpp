@@ -122,7 +122,12 @@ static bool initControllerState()
 {
     const double y0[na]             = { Y_HIST_UNNORM };
     const double u0[nb + nk - 1]    = { U_HIST_UNNORM };
-    const double uPrev0[NhorU]      = { U_PREV_UNNORM };
+    /* U_PREV_UNNORM may list fewer than NhorU values (NhorU is a tuning
+     * parameter): the missing ones repeat the last, as the warm-start
+     * shift in controller() does. */
+    const double uPrevInit[]        = { U_PREV_UNNORM };
+    constexpr int nUPrevInit        = sizeof(uPrevInit) / sizeof(uPrevInit[0]);
+    static_assert(nUPrevInit <= NhorU, "U_PREV_UNNORM has more than NhorU values.");
 
     for (int k = 0; k < nUnc; k++)
     {
@@ -152,7 +157,8 @@ static bool initControllerState()
     #endif
     for (int i = 0; i < na; i++)         yHist[i]    = yGain * y0[i]     + yOff;
     for (int i = 0; i < nb + nk - 1; i++) uHist[i]    = uGain * u0[i]     + uOff;
-    for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uPrev0[i] + uOff;
+    for (int i = 0; i < NhorU; i++)
+        uOptPrev[i] = uGain * uPrevInit[(i < nUPrevInit) ? i : nUPrevInit - 1] + uOff;
     return true;
 }
 static const bool controllerStateInitialized = initControllerState();

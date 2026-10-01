@@ -46,11 +46,15 @@
 /** Number of closed-loop simulations. 1 = the classic single run, written
  *  to output.txt (plotOutputCpp.m); more = one file per run plus a summary
  *  (plotMultipleOutputsCpp.m). */
+#ifndef N_RUNS   /* tuning/sweep.py sets it with -D */
 #define N_RUNS              5
+#endif
 
 /** 0: true plant = THETA_TRUE_INIT (system_configs.h), the same every run.
  *  1: a new true plant per run, drawn by plantSampleTrue(). */
+#ifndef RANDOM_TRUE_PLANT   /* tuning/sweep.py sets it with -D */
 #define RANDOM_TRUE_PLANT   1
+#endif
 
 /** Seed of the test-bench random generator, which draws the true plants
  *  and the measurement noise. It is separate from the controller's own
@@ -59,7 +63,9 @@
  *  give the two configurations DIFFERENT true plants and noise, and the
  *  comparison would not be fair. With this one, the same seed gives the
  *  same plants and noise to every controller configuration. */
+#ifndef TB_SEED   /* tuning/sweep.py sets it with -D */
 #define TB_SEED             1u
+#endif
 
 /* ======================================================================
    Test-bench random generator

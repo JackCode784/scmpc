@@ -340,15 +340,15 @@ void costFunctionArx(cost_type              cost[2],
             cost[0] += (uSamples[0] - uSamples[1]) * R * (uSamples[0] - uSamples[1]);
             #else
             /* Shift by log2R (setup.h) instead of multiplying by R = 2^log2R.
-             * An ap_fixed shift keeps the operand's format, so the product
-             * type must have room for |du|^2 * 2^log2R: with u normalized to
-             * [-1, 1], |du| <= 2 and |du|^2 <= 4 = 2^2, i.e. 2 + log2R
-             * magnitude bits (a right shift, log2R < 0, only drops LSBs far
-             * below cost_type's resolution). */
+             * An ap_fixed shift keeps the operand's format, so for log2R > 0
+             * the square is first widened by log2R integer bits (free in
+             * hardware: a constant shift is wiring), otherwise a large du
+             * would wrap. For log2R < 0 the shift only drops LSBs far below
+             * cost_type's resolution. */
             typedef decltype((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) du2_type;
-            static_assert(du2_type::iwidth - 1 > 2 + log2R,
-                          "log2R too large: the shifted input cost would wrap");
-            cost[0] += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) << log2R;
+            constexpr int du2Extra = (log2R > 0) ? log2R : 0;
+            typedef ap_fixed<du2_type::width + du2Extra, du2_type::iwidth + du2Extra> du2_shift_type;
+            cost[0] += du2_shift_type((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) << log2R;
             #endif
         }
         #ifdef DEBUG_PRINT

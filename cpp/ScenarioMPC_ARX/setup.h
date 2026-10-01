@@ -489,30 +489,107 @@ extern norm_input_type  uHist[nb + nk - 1];
 
 
 /* ======================================================================
+   HYPERPARAMETERS - per system (see TUNING.md)
+   ======================================================================
+   One set of defaults per system. Each HP_* can also be overridden from
+   the compiler command line (-DHP_NHOR=20 ...), which is how
+   tuning/sweep.py explores them without editing this file.
+
+     HP_NHOR          prediction horizon Nhor
+     HP_NHORU         control horizon NhorU (= number of MADS variables)
+     HP_LOG2NSCEN     Nscen = 2^HP_LOG2NSCEN scenarios
+     HP_MADS_ITER     MADS iterations per controller call
+     HP_LOG2Q/P       stage/terminal output weight = 2^HP_LOG2Q / 2^HP_LOG2P
+     HP_LOG2R         NRMLZ input weight R = 2^HP_LOG2R
+     HP_RBASELINE     input weight without NRMLZ (physical units); the
+                      NRMLZ-equivalent one is R*(uNormGain/yNormGain)^2
+     HP_LOG2R_RAW     log2 of HP_RBASELINE, for the FIXED shift without
+                      NRMLZ (testMain.cpp warns if it does not match)
+     HP_D0            initial MADS frame-size exponent (D0_VAL)
+     HP_FRAME_EXP_MIN smallest MADS frame-size exponent
+   ====================================================================== */
+#if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
+  #define HP_DEFAULT_NHOR           15
+  #define HP_DEFAULT_NHORU          3
+  #define HP_DEFAULT_LOG2NSCEN      4
+  #define HP_DEFAULT_MADS_ITER      10
+  #define HP_DEFAULT_LOG2Q          4
+  #define HP_DEFAULT_LOG2P          4
+  #define HP_DEFAULT_LOG2R          2     /* R = 4 */
+  #define HP_DEFAULT_RBASELINE      0.36  /* = 4*(0.3333/1.1111)^2 */
+  #define HP_DEFAULT_LOG2R_RAW      (-1)  /* unused: FIXED needs NRMLZ here */
+  #define HP_DEFAULT_D0             (-8)
+  #define HP_DEFAULT_FRAME_EXP_MIN  (-20)
+#else /* buck converters: the values they were synthesized with */
+  #define HP_DEFAULT_NHOR           5
+  #define HP_DEFAULT_NHORU          3
+  #define HP_DEFAULT_LOG2NSCEN      2
+  #define HP_DEFAULT_MADS_ITER      7
+  #define HP_DEFAULT_LOG2Q          2
+  #define HP_DEFAULT_LOG2P          2
+  #define HP_DEFAULT_LOG2R          (-3)  /* R = 0.125 */
+  #define HP_DEFAULT_RBASELINE      12.5  /* BUCK_LOSS: = 0.125*(2/0.2)^2 */
+  #define HP_DEFAULT_LOG2R_RAW      4     /* 16, the FIXED shift used so far */
+  #define HP_DEFAULT_D0             (-8)
+  #define HP_DEFAULT_FRAME_EXP_MIN  (-12)
+#endif
+#ifndef HP_NHOR
+  #define HP_NHOR           HP_DEFAULT_NHOR
+#endif
+#ifndef HP_NHORU
+  #define HP_NHORU          HP_DEFAULT_NHORU
+#endif
+#ifndef HP_LOG2NSCEN
+  #define HP_LOG2NSCEN      HP_DEFAULT_LOG2NSCEN
+#endif
+#ifndef HP_MADS_ITER
+  #define HP_MADS_ITER      HP_DEFAULT_MADS_ITER
+#endif
+#ifndef HP_LOG2Q
+  #define HP_LOG2Q          HP_DEFAULT_LOG2Q
+#endif
+#ifndef HP_LOG2P
+  #define HP_LOG2P          HP_DEFAULT_LOG2P
+#endif
+#ifndef HP_RBASELINE
+  #define HP_RBASELINE      HP_DEFAULT_RBASELINE
+#endif
+#ifndef HP_LOG2R
+  #define HP_LOG2R          HP_DEFAULT_LOG2R
+#endif
+#ifndef HP_LOG2R_RAW
+  #define HP_LOG2R_RAW      HP_DEFAULT_LOG2R_RAW
+#endif
+#ifndef HP_D0
+  #define HP_D0             HP_DEFAULT_D0
+#endif
+#ifndef HP_FRAME_EXP_MIN
+  #define HP_FRAME_EXP_MIN  HP_DEFAULT_FRAME_EXP_MIN
+#endif
+
+/* ======================================================================
    MPC PARAMETERS
    ====================================================================== */
 
 /** Prediction horizon N: controller optimises over the next N steps. */
-constexpr int Nhor  = 15;
+constexpr int Nhor  = HP_NHOR;
 
 /**
  * Control horizon Nu <= N: the input sequence u(k), ..., u(k+Nu-1) is
  * optimised; u is held constant from step Nu to N ("input blocking").
  */
-constexpr int NhorU = 3;
+constexpr int NhorU = HP_NHORU;
 
 /**
  * Number of uncertainty scenarios Nscen, EXCLUDING the nominal system.
  * The cost is evaluated on Nscen + 1 models simultaneously.
  * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
  */
-constexpr int Nscen      = 16;   /* should always be a power of 2 */
-constexpr int LOG2NSCEN  = 4;   /* must satisfy (1 << LOG2NSCEN) == Nscen */
+constexpr int LOG2NSCEN  = HP_LOG2NSCEN;
+constexpr int Nscen      = 1 << LOG2NSCEN;   /* always a power of 2 */
 
 static_assert(NhorU <= Nhor,
     "Control horizon NhorU must not exceed prediction horizon Nhor.");
-static_assert((1 << LOG2NSCEN) == Nscen,
-    "LOG2NSCEN must equal log2(Nscen).  Update both consistently.");
 static_assert(Nhor >= nk, 
     "Prediction horizon must be at least system delay.");
 static_assert(Nhor - nk >= NhorU - 1,
@@ -532,28 +609,20 @@ extern norm_input_type uOptPrev[NhorU];
    Stage cost per step:  l(y, u) = outputWeight*(y - y_ref)^2 + R*u^2
    Terminal cost:        V_f(y)   = terminalOutputWeight*(y(k+N) - y_ref)^2
    ====================================================================== */
-static const output_weight_type terminalOutputWeight =  16.0;   /* terminal output weight */
-static const output_weight_type outputWeight =  16.0;   /* stage   output weight  */
+constexpr int log2Q = HP_LOG2Q;
+constexpr int log2P = HP_LOG2P;
+/* 2^log2: FIXED shifts by log2Q/log2P, so the weights are defined from them */
+static const output_weight_type terminalOutputWeight = (log2P >= 0) ? double(1 << log2P) : 1.0 / double(1 << -log2P);
+static const output_weight_type outputWeight         = (log2Q >= 0) ? double(1 << log2Q) : 1.0 / double(1 << -log2Q);
 /*
-    RBaseLine is the input weight in physical units. With NRMLZ the cost
-    uses R = RBaseLine*(yNormGain/uNormGain)^2 (defined further below,
-    with log2R). It is a plain double: only R itself reaches the
-    controller, so quantizing RBaseLine first would only add error.
-*/
-#if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-constexpr double RBaseLine = 0.36; /* NRMLZ: R = 0.36*(1.1111/0.3333)^2 = 4 = 2^2  */
-#else
-constexpr double RBaseLine = 0.5;  /* NRMLZ: R = 0.5*(yNormGain/uNormGain)^2 = 0.125 = 2^(-3) */
-#endif
-/* 
     log2Q/log2P/log2R are used for shift operations instead of
-    multiplications in the FIXED cost function computation, so
-    outputWeight/terminalOutputWeight/R must equal 2^log2Q / 2^log2P /
-    2^log2R (testMain.cpp warns otherwise): pick RBaseLine so that R is a
-    power of two.
+    multiplications in the FIXED cost function computation, so the weights
+    are defined from them: outputWeight/terminalOutputWeight above, and
+    with NRMLZ also R = 2^log2R (below). Without NRMLZ, R = RBaseLine in
+    physical units and log2R = HP_LOG2R_RAW must match it (testMain.cpp
+    warns otherwise).
 */
-constexpr int log2Q = 4;
-constexpr int log2P = 4;
+constexpr double RBaseLine = HP_RBASELINE;
 
 /* ======================================================================
    MADS SOLVER PARAMETERS
@@ -563,10 +632,10 @@ constexpr int log2P = 4;
    Sizes are stored in log-scale (frameIdx, meshIdx) as integers for
    efficient hardware arithmetic.
    ====================================================================== */
-constexpr int MADS_ITER = 10;   /* MADS iterations per controller call     */
+constexpr int MADS_ITER = HP_MADS_ITER;   /* MADS iterations per controller call */
 constexpr int TAU       = 1;   /* frame-size update base                  */
 constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
-constexpr int FRAME_EXP_MIN = -20; /* frameExp minimum value */
+constexpr int FRAME_EXP_MIN = HP_FRAME_EXP_MIN; /* frameExp minimum value */
 
 /*
  * expC = 2^{-MADS_C}: pre-computed scaling factor for the mesh update.
@@ -586,7 +655,7 @@ constexpr int FRAME_EXP_MIN = -20; /* frameExp minimum value */
  * Initial frame size = tau^D0[j].  More negative -> finer initial mesh.
  * HLS hint: #pragma HLS ARRAY_PARTITION variable=D0 complete dim=1
  */
-static const mesh_exp_type D0_VAL = -8; // used in MADSARX, frameIdx init
+static const mesh_exp_type D0_VAL = HP_D0; // used in MADSARX, frameIdx init
 // static const mesh_exp_type D0[nOpt] = { -8, -8, -8 }; // not used
 
 /* ======================================================================
@@ -638,12 +707,10 @@ static const norm_output_type YNORMMIN = double(yNormGain)*double(YMIN) + double
 static const norm_input_type UNORMMAX = double(uNormGain)*double(UMAX) + double(uNormOffset);
 static const norm_input_type UNORMMIN = double(uNormGain)*double(UMIN) + double(uNormOffset);
 
-static const input_weight_type R = RBaseLine * double(yNormGain) * double(yNormGain) / (double(uNormGain) * double(uNormGain));
-#if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-constexpr int log2R = 2;    /* R = 4     */
-#else
-constexpr int log2R = -3;   /* R = 0.125 */
-#endif
+/* Normalized weights are dimensionless, so R is given directly (not from
+ * RBaseLine): R = 2^log2R, exactly what FIXED's shift applies. */
+constexpr int log2R = HP_LOG2R;
+static const input_weight_type R = (log2R >= 0) ? double(1 << log2R) : 1.0 / double(1 << -log2R);
 
 /* Normalization, use "normalized" noise in output strip */
 const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
@@ -776,7 +843,7 @@ static const StripCoeffs stripCoeffs = computeStripCoeffs();
 #else
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
 static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
-constexpr int log2R = -1;   /* R = 0.5 (buck converters; FIXED needs NRMLZ for the pendulum) */
+constexpr int log2R = HP_LOG2R_RAW;
 static const norm_output_type YNORMMAXPHYS = YMAXPHYS;
 static const norm_output_type YNORMMINPHYS = YMINPHYS;
 static const norm_input_type UNORMMAXPHYS = UMAXPHYS;
