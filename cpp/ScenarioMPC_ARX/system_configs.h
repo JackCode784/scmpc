@@ -195,15 +195,15 @@ static const output_type DELTAY = 5;
 static const noise_type SIGMA_UNNORM = 0.2;
 
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-static const input_type UMINPHYS = -1;
-static const input_type UMAXPHYS = 1;
-static const output_type YMINPHYS = -0.6;
-static const output_type YMAXPHYS = 0.6;
+static const input_type UMINPHYS = -3;
+static const input_type UMAXPHYS = 3;
+static const output_type YMINPHYS = -0.9;
+static const output_type YMAXPHYS = 0.9;
 static const input_type UMIN = UMINPHYS;
 static const input_type UMAX = UMAXPHYS;
-static const output_type YMIN = -0.6;
-static const output_type YMAX = 0.6;
-static const output_type DELTAY = 5e-3;
+static const output_type YMIN = YMINPHYS;
+static const output_type YMAX = YMAXPHYS;
+static const output_type DELTAY = 10e-3;
 static const noise_type SIGMA_UNNORM = 0.00;
 
 #endif
@@ -405,16 +405,16 @@ static const noise_type SIGMA_UNNORM = 0.00;
 #define U_HIST_UNNORM 0, 0  // nb+nk-1=2
 #define U_PREV_UNNORM 0, 0, 0  // NhorU
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-#define THETA_NOMINAL_UNNORM 2.000000000000000,   -0.998910000000000,   0.000617283950617
+#define THETA_NOMINAL_UNNORM 2.000000000000000, -0.998821001683502, 0.000751434382693
 #define GENERATORS_UNNORM \
     {-0.000001,                       0,                        0}, \
-    {0, 1e-3*-0.367415773927998, 1e-3*-0.094915773927989}, \
-    {0, 1e-3*-0.521473777591270, 1e-3*0.066874987840829}
+    {0, 1e-3*-0.281338543972914, 1e-4*-0.961862828825779}, \
+    {0, 1e-3*-0.386439223972734, 1e-4*0.700262993444492}
 #define THETA_TRUE_INIT THETA_NOMINAL_UNNORM
 //2.0000000000,   -0.998637500000000,   0.001205632716049
 //2.0, -0.999091666666667, 0.0003572245084590763
 //2.000000000000000,   -0.998637500000000,   0.001205632716049
-#define Y_HIST_UNNORM -0.5, -0.5
+#define Y_HIST_UNNORM -0.78, -0.78
 #define U_HIST_UNNORM 0, 0
 #define U_PREV_UNNORM 0, 0, 0
 #endif

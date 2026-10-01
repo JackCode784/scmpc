@@ -348,6 +348,6 @@ inline void generateReference(output_type yref[], int nSim)
      */
     for(int i = 0; i < nSim; i++) yref[i] = (i < 100) ? 1.0 : 4.9;
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-    for(int i = 0; i < nSim; i++) yref[i] = 0.2;
+    for(int i = 0; i < nSim; i++) yref[i] = 0.78;
 #endif  /* ACTIVE_SYSTEM */
 }

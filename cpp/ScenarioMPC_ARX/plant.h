@@ -46,7 +46,7 @@
 /** Number of closed-loop simulations. 1 = the classic single run, written
  *  to output.txt (plotOutputCpp.m); more = one file per run plus a summary
  *  (plotMultipleOutputsCpp.m). */
-#define N_RUNS              10
+#define N_RUNS              5
 
 /** 0: true plant = THETA_TRUE_INIT (system_configs.h), the same every run.
  *  1: a new true plant per run, drawn by plantSampleTrue(). */

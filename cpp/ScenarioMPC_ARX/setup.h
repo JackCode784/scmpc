@@ -533,7 +533,7 @@ extern norm_input_type uOptPrev[NhorU];
    Terminal cost:        V_f(y)   = terminalOutputWeight*(y(k+N) - y_ref)^2
    ====================================================================== */
 static const output_weight_type terminalOutputWeight =  16.0;   /* terminal output weight */
-static const output_weight_type outputWeight =  2.0;   /* stage   output weight  */
+static const output_weight_type outputWeight =  16.0;   /* stage   output weight  */
 static const input_weight_type RBaseLine = 0.5; /* so that R = 0.125 = 2^(-3) in NRMLZ */
 /* 
     log2X are used for shift operations instead of multiplications in
@@ -541,7 +541,7 @@ static const input_weight_type RBaseLine = 0.5; /* so that R = 0.125 = 2^(-3) in
     values and with R value in particular since it depends on FIXED and NRMLZ
     operation modes.
 */
-constexpr int log2Q = 1;
+constexpr int log2Q = 4;
 constexpr int log2P = 4;
 
 /* ======================================================================
@@ -761,7 +761,7 @@ static const StripCoeffs stripCoeffs = computeStripCoeffs();
 #else
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
 static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
-constexpr int log2R = 4;
+constexpr int log2R = -1;
 static const norm_output_type YNORMMAXPHYS = YMAXPHYS;
 static const norm_output_type YNORMMINPHYS = YMINPHYS;
 static const norm_input_type UNORMMAXPHYS = UMAXPHYS;
