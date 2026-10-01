@@ -489,7 +489,7 @@ extern norm_input_type  uHist[nb + nk - 1];
 
 
 /* ======================================================================
-   HYPERPARAMETERS - per system (see TUNING.md)
+   HYPERPARAMETERS - per system (how they were chosen: TUNING.md)
    ======================================================================
    One set of defaults per system. Each HP_* can also be overridden from
    the compiler command line (-DHP_NHOR=20 ...), which is how
@@ -509,7 +509,8 @@ extern norm_input_type  uHist[nb + nk - 1];
      HP_FRAME_EXP_MIN smallest MADS frame-size exponent
    ====================================================================== */
 #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-  #define HP_DEFAULT_NHOR           15
+  /* Tuned (TUNING.md): Nhor 15 -> 12 and D0 -8 -> -2 */
+  #define HP_DEFAULT_NHOR           12
   #define HP_DEFAULT_NHORU          3
   #define HP_DEFAULT_LOG2NSCEN      4
   #define HP_DEFAULT_MADS_ITER      10
@@ -518,9 +519,10 @@ extern norm_input_type  uHist[nb + nk - 1];
   #define HP_DEFAULT_LOG2R          2     /* R = 4 */
   #define HP_DEFAULT_RBASELINE      0.36  /* = 4*(0.3333/1.1111)^2 */
   #define HP_DEFAULT_LOG2R_RAW      (-1)  /* unused: FIXED needs NRMLZ here */
-  #define HP_DEFAULT_D0             (-8)
+  #define HP_DEFAULT_D0             (-2)
   #define HP_DEFAULT_FRAME_EXP_MIN  (-20)
-#else /* buck converters: the values they were synthesized with */
+#else /* buck converters: the values they were synthesized with (see
+       * TUNING.md for BUCK_ALBERTO's case for HP_LOG2NSCEN 3) */
   #define HP_DEFAULT_NHOR           5
   #define HP_DEFAULT_NHORU          3
   #define HP_DEFAULT_LOG2NSCEN      2
