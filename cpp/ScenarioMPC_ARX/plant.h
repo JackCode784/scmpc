@@ -61,6 +61,17 @@
  *  same plants and noise to every controller configuration. */
 #define TB_SEED             1u
 
+/* C/RTL co-simulation runs a single closed loop. resetControllerState()
+ * and pseudoRandReset() (testMain.cpp) reset the C copies of the
+ * controller's state, but in co-simulation that state lives in the RTL,
+ * which they cannot reach: a second run would start where the first one
+ * ended. Vitis defines __RTL_SIMULATION__ when it builds the test bench
+ * for co-simulation, so N_RUNS can stay > 1 for C simulation. */
+#ifdef __RTL_SIMULATION__
+#undef  N_RUNS
+#define N_RUNS 1
+#endif
+
 /* ======================================================================
    Test-bench random generator
    ======================================================================
