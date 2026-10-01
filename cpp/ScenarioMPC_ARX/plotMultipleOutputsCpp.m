@@ -67,7 +67,7 @@ for t = 1:nTags
     yline(data.yMax(1), 'k:', num2str(data.yMax(1)), LineWidth=1.5);
     hold off; grid on; xlabel('k'); ylabel('y_k');
     title(sprintf('%s: %d runs, %d leave [y_{min}, y_{max}], %d exceed \\Deltay (red: any violation)', ...
-        tag, height(S), sum(S.nViolY > 0), sum(S.nViolDy > 0)), Interpreter="tex");
+        strrep(tag, '_', ' '), height(S), sum(S.nViolY > 0), sum(S.nViolDy > 0)), Interpreter="tex");
 
     subplot(3,1,2);
     yline(data.deltaY(1)*[-1, 1], 'k:', {num2str(-data.deltaY(1)), num2str(data.deltaY(1))}, LineWidth=1.5);
@@ -88,16 +88,16 @@ if nTags > 1
     end
     subplot(3,1,1);
     bar(categorical(tags), counts);
-    legend('y outside [y_{min}, y_{max}]', '|\Deltay| > \Deltay_{max}', Location="best");
+    legend('y outside [y_{m}, y_{M}]', '|\Deltay| > \Deltay_{M}', Location="best");
     ylabel('Runs with violations'); grid on;
     title(sprintf('%d runs per experiment', height(summaries{1})));
 
     metrics = ["maxViolY", "maxViolDy"];
-    labels  = ["Largest excursion outside [y_{min}, y_{max}]", "Largest excess of |\Deltay| over \Deltay_{max}"];
+    labels  = ["Largest excursion outside [y_{m}, y_{M}]", "Largest excess of |\Deltay| over \Deltay_{M}"];
     for m = 1:2
         subplot(3,1,m+1); hold on;
         for t = 1:nTags
-            plot(summaries{t}.run, summaries{t}.(metrics(m)), 'o-', LineWidth=1.2, DisplayName=tags(t));
+            plot(summaries{t}.run, summaries{t}.(metrics(m)), 'o-', LineWidth=1.2, DisplayName=strrep(tags(t), '_', ' '));
         end
         hold off; grid on; legend(Location="best");
         xlabel('Run (same true plant in every experiment)'); ylabel(labels(m));
