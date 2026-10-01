@@ -339,17 +339,16 @@ void costFunctionArx(cost_type              cost[2],
             #ifndef FIXED
             cost[0] += (uSamples[0] - uSamples[1]) * R * (uSamples[0] - uSamples[1]);
             #else
-            /* Multiplied by R, not shifted by a log2R: R is a power of two
-             * only for some systems (0.125 for the buck converters, where a
-             * constant power-of-two multiply is a shift in hardware), but
-             * 5.5556 for the inverted pendulum, where a shift would have
-             * silently used a different weight than floating point. Also
-             * exact where the former "<< -3" was not: an ap_fixed shift
-             * keeps the operand's format, so shifting right dropped its 3
-             * lowest bits (~1e-10, below cost_type's resolution, but enough
-             * to flip rare roundings - BUCK_LOSS FIXED output is therefore
-             * not bit-identical to before, with equivalent behavior). */
-            cost[0] += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) * R;
+            /* Shift by log2R (setup.h) instead of multiplying by R = 2^log2R.
+             * An ap_fixed shift keeps the operand's format, so the product
+             * type must have room for |du|^2 * 2^log2R: with u normalized to
+             * [-1, 1], |du| <= 2 and |du|^2 <= 4 = 2^2, i.e. 2 + log2R
+             * magnitude bits (a right shift, log2R < 0, only drops LSBs far
+             * below cost_type's resolution). */
+            typedef decltype((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) du2_type;
+            static_assert(du2_type::iwidth - 1 > 2 + log2R,
+                          "log2R too large: the shifted input cost would wrap");
+            cost[0] += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) << log2R;
             #endif
         }
         #ifdef DEBUG_PRINT

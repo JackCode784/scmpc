@@ -301,12 +301,9 @@ typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_input_type;
 typedef ap_fixed<WORD_LENGTH,1,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> strip_center_type;
 /* Input weight R in normalized units, R = RBaseLine*(yNormGain/uNormGain)^2.
- * FIXED multiplies by it (costFunctionArx), like floating point does. */
-#if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* R = 0.5*(1.1111/0.3333)^2 = 5.5556 */
-#else
-typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
-#endif
+ * FIXED applies it as a shift by log2R (costFunctionArx.cpp), so this type
+ * only has to hold R exactly for testMain.cpp's consistency check. */
+typedef ap_ufixed<24,4> input_weight_type; /* [2^-20, 16): pendulum R = 4, BUCK_LOSS R = 0.005 */
 
 /**
  * Effective ARX coefficients and offset in normalized I/O coordinates,

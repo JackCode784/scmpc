@@ -69,15 +69,20 @@ int main(void)
     printf("\tUse scenarios in cost: %s\n", USE_SCENS_COST_PRINT);
     printf("\tUse scenarios constraints: %s\n", USE_SCENS_CONSTR_PRINT);
     printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
-    /* FIXED applies the output weights as shifts by log2Q/log2P
+    /* FIXED applies the weights as shifts by log2Q/log2P/log2R
      * (costFunctionArx.cpp): any mismatch means FIXED and floating point
-     * optimize different costs. */
+     * optimize different costs. R is computed from RBaseLine and the
+     * normalization gains, so it is only checked to 0.1%. */
     if (double(outputWeight) != std::ldexp(1.0, log2Q) ||
         double(terminalOutputWeight) != std::ldexp(1.0, log2P))
         printf("WARNING: outputWeight/terminalOutputWeight = %g/%g but 2^log2Q/2^log2P = %g/%g:\n"
                "         FIXED and floating point will use different weights (setup.h).\n",
                double(outputWeight), double(terminalOutputWeight),
                std::ldexp(1.0, log2Q), std::ldexp(1.0, log2P));
+    if (std::fabs(double(R) / std::ldexp(1.0, log2R) - 1.0) > 1e-3)
+        printf("WARNING: R = %g but 2^log2R = %g: FIXED and floating point will use\n"
+               "         different input weights (choose RBaseLine in setup.h so that R = 2^log2R).\n",
+               double(R), std::ldexp(1.0, log2R));
     printf("Experiment (plant.h):\n");
     printf("\tRuns: %d, true plant: %s, plant model: %s, seed: %u\n",
            N_RUNS, RANDOM_TRUE_PLANT ? "random" : "THETA_TRUE_INIT",

@@ -534,12 +534,23 @@ extern norm_input_type uOptPrev[NhorU];
    ====================================================================== */
 static const output_weight_type terminalOutputWeight =  16.0;   /* terminal output weight */
 static const output_weight_type outputWeight =  16.0;   /* stage   output weight  */
-static const input_weight_type RBaseLine = 0.36; /* so that R = 0.125 = 2^(-3) in NRMLZ */
+/*
+    RBaseLine is the input weight in physical units. With NRMLZ the cost
+    uses R = RBaseLine*(yNormGain/uNormGain)^2 (defined further below,
+    with log2R). It is a plain double: only R itself reaches the
+    controller, so quantizing RBaseLine first would only add error.
+*/
+#if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
+constexpr double RBaseLine = 0.36; /* NRMLZ: R = 0.36*(1.1111/0.3333)^2 = 4 = 2^2  */
+#else
+constexpr double RBaseLine = 0.5;  /* NRMLZ: R = 0.5*(yNormGain/uNormGain)^2 = 0.125 = 2^(-3) */
+#endif
 /* 
-    log2Q/log2P are used for shift operations instead of multiplications in
-    the FIXED cost function computation, so outputWeight/terminalOutputWeight
-    must equal 2^log2Q / 2^log2P (testMain.cpp warns otherwise). R is
-    multiplied, not shifted, so it can be any value.
+    log2Q/log2P/log2R are used for shift operations instead of
+    multiplications in the FIXED cost function computation, so
+    outputWeight/terminalOutputWeight/R must equal 2^log2Q / 2^log2P /
+    2^log2R (testMain.cpp warns otherwise): pick RBaseLine so that R is a
+    power of two.
 */
 constexpr int log2Q = 4;
 constexpr int log2P = 4;
@@ -627,7 +638,12 @@ static const norm_output_type YNORMMIN = double(yNormGain)*double(YMIN) + double
 static const norm_input_type UNORMMAX = double(uNormGain)*double(UMAX) + double(uNormOffset);
 static const norm_input_type UNORMMIN = double(uNormGain)*double(UMIN) + double(uNormOffset);
 
-static const input_weight_type R = double(RBaseLine) * double(yNormGain) * double(yNormGain) / (double(uNormGain) * double(uNormGain)); // 2^(-3) for the buck converters
+static const input_weight_type R = RBaseLine * double(yNormGain) * double(yNormGain) / (double(uNormGain) * double(uNormGain));
+#if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
+constexpr int log2R = 2;    /* R = 4     */
+#else
+constexpr int log2R = -3;   /* R = 0.125 */
+#endif
 
 /* Normalization, use "normalized" noise in output strip */
 const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
@@ -760,6 +776,7 @@ static const StripCoeffs stripCoeffs = computeStripCoeffs();
 #else
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
 static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
+constexpr int log2R = -1;   /* R = 0.5 (buck converters; FIXED needs NRMLZ for the pendulum) */
 static const norm_output_type YNORMMAXPHYS = YMAXPHYS;
 static const norm_output_type YNORMMINPHYS = YMINPHYS;
 static const norm_input_type UNORMMAXPHYS = UMAXPHYS;
