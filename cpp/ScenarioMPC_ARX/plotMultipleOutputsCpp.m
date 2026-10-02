@@ -87,7 +87,7 @@ if nTags > 1
         counts(t,:) = [sum(summaries{t}.nViolY > 0), sum(summaries{t}.nViolDy > 0)];
     end
     subplot(3,1,1);
-    bar(categorical(tags), counts);
+    bar(categorical(strrep(tags, '_', ' ')), counts);
     legend('y outside [y_{m}, y_{M}]', '|\Deltay| > \Deltay_{M}', Location="best");
     ylabel('Runs with violations'); grid on;
     title(sprintf('%d runs per experiment', height(summaries{1})));
