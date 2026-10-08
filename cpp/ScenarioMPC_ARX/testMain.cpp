@@ -116,6 +116,7 @@ int main(void)
     }
     int runsViolY = 0, runsViolDy = 0;
 
+    bool coSimFailed = false;   /* set by the co-simulation check below */
     for (int run = 0; run < N_RUNS; run++)
     {
     /* ------------------------------------------------------------------ */
@@ -306,6 +307,60 @@ int main(void)
         plantPrintParams(plant, summary, false);
         fprintf(summary, " %.6e %d %.6e %d %.6e\n", maxViolY, nViolY, maxViolDy, nViolDy, rmse);
     }
+
+    /* ------------------------------------------------------------------ */
+    /*  C/RTL co-simulation check (run 0)                                 */
+    /* ------------------------------------------------------------------ */
+    /*
+     * Vitis reports co-simulation as passed whenever main() returns 0: it
+     * does not compare the RTL with the C model by itself. So C simulation
+     * saves run 0's applied inputs as the golden reference, and
+     * co-simulation (which Vitis builds with __RTL_SIMULATION__ and runs
+     * in <solution>/sim/wrapc*, two levels below <solution>/csim/build)
+     * compares the RTL's against it: any difference makes main() return 1,
+     * i.e. a FAILED co-simulation. Run C simulation first.
+     */
+    if (run == 0)
+    {
+        #ifndef __RTL_SIMULATION__
+        FILE* g = fopen("golden_u.txt", "w");
+        if (g)
+        {
+            for (int k = 0; k < nSim; k++) fprintf(g, "%.17g\n", double(uSim[k]));
+            fclose(g);
+        }
+        #else
+        FILE* g = fopen("../../csim/build/golden_u.txt", "r");
+        if (!g) g = fopen("golden_u.txt", "r");
+        if (!g)
+        {
+            printf("CO-SIM CHECK FAILED: golden_u.txt not found - run C simulation first.\n");
+            coSimFailed = true;
+        }
+        else
+        {
+            int nMismatch = 0, firstMismatch = -1;
+            for (int k = 0; k < nSim; k++)
+            {
+                double ug;
+                if (fscanf(g, "%lf", &ug) != 1 || ug != double(uSim[k]))
+                {
+                    if (firstMismatch < 0) firstMismatch = k;
+                    nMismatch++;
+                }
+            }
+            fclose(g);
+            if (nMismatch)
+            {
+                printf("CO-SIM CHECK FAILED: the RTL's input u(k) differs from C simulation in %d of %d samples (first at k = %d).\n",
+                       nMismatch, nSim, firstMismatch);
+                coSimFailed = true;
+            }
+            else
+                printf("CO-SIM CHECK PASSED: the RTL's input u(k) matches C simulation in all %d samples.\n", nSim);
+        }
+        #endif
+    }
     } /* runs */
 
     if (summary)
@@ -315,7 +370,7 @@ int main(void)
                N_RUNS, runsViolY, runsViolDy);
     }
     printf("Simulation complete.\n");
-    return 0;
+    return coSimFailed ? 1 : 0;
 }
 
 /* ======================================================================

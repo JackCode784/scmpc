@@ -111,100 +111,177 @@
   ======================================================================
   These are the box constraints used by the progressive barrier in MADSARX.
   They must be consistent with the ones for the ACTIVE_SYSTEM.
-  They are repeated as separate constants because ap_fixed<> prevents
-  deriving them from the config struct at compile time via constexpr.
+  Each NAME_V is the constant's value as a compile-time double (already
+  rounded to its type by apq<>), and NAME builds the fixed-point value
+  where it is used: see "Compile-time constants" at the end of types.h
+  for why there are no static const ap_fixed globals.
   ====================================================================== */
 #if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-static const input_type UMINPHYS = -0.3;
-static const input_type UMAXPHYS =  0.3;
-static const output_type YMINPHYS =  0.0;
-static const output_type YMAXPHYS =  8.0;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
+constexpr double UMINPHYS_V = apq<input_type>(-0.3);
+#define UMINPHYS (input_type(UMINPHYS_V))
+constexpr double UMAXPHYS_V = apq<input_type>(0.3);
+#define UMAXPHYS (input_type(UMAXPHYS_V))
+constexpr double YMINPHYS_V = apq<output_type>(0.0);
+#define YMINPHYS (output_type(YMINPHYS_V))
+constexpr double YMAXPHYS_V = apq<output_type>(8.0);
+#define YMAXPHYS (output_type(YMAXPHYS_V))
+constexpr double UMIN_V = apq<input_type>(UMINPHYS_V);
+#define UMIN (input_type(UMIN_V))
+constexpr double UMAX_V = apq<input_type>(UMAXPHYS_V);
+#define UMAX (input_type(UMAX_V))
+constexpr double YMIN_V = apq<output_type>(YMINPHYS_V);
+#define YMIN (output_type(YMIN_V))
+constexpr double YMAX_V = apq<output_type>(YMAXPHYS_V);
+#define YMAX (output_type(YMAX_V))
 static const noise_type SIGMA_UNNORM` = 0.0;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-static const input_type UMINPHYS = -1.9;
-static const input_type UMAXPHYS =  1.9;
-static const output_type YMINPHYS = -10.0;
-static const output_type YMAXPHYS =  8.0;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 0.20;
+constexpr double UMINPHYS_V = apq<input_type>(-1.9);
+#define UMINPHYS (input_type(UMINPHYS_V))
+constexpr double UMAXPHYS_V = apq<input_type>(1.9);
+#define UMAXPHYS (input_type(UMAXPHYS_V))
+constexpr double YMINPHYS_V = apq<output_type>(-10.0);
+#define YMINPHYS (output_type(YMINPHYS_V))
+constexpr double YMAXPHYS_V = apq<output_type>(8.0);
+#define YMAXPHYS (output_type(YMAXPHYS_V))
+constexpr double UMIN_V = apq<input_type>(UMINPHYS_V);
+#define UMIN (input_type(UMIN_V))
+constexpr double UMAX_V = apq<input_type>(UMAXPHYS_V);
+#define UMAX (input_type(UMAX_V))
+constexpr double YMIN_V = apq<output_type>(YMINPHYS_V);
+#define YMIN (output_type(YMIN_V))
+constexpr double YMAX_V = apq<output_type>(YMAXPHYS_V);
+#define YMAX (output_type(YMAX_V))
+constexpr double SIGMA_UNNORM_V = apq<noise_type>(0.20);
+#define SIGMA_UNNORM (noise_type(SIGMA_UNNORM_V))
 
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
-static const input_type  UMINPHYS = -200.0;
-static const input_type  UMAXPHYS =  200.0;
-static const output_type YMINPHYS = -110.0;
-static const output_type YMAXPHYS =  110.0;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 4.4655;
+constexpr double UMINPHYS_V = apq<input_type>(-200.0);
+#define UMINPHYS (input_type(UMINPHYS_V))
+constexpr double UMAXPHYS_V = apq<input_type>(200.0);
+#define UMAXPHYS (input_type(UMAXPHYS_V))
+constexpr double YMINPHYS_V = apq<output_type>(-110.0);
+#define YMINPHYS (output_type(YMINPHYS_V))
+constexpr double YMAXPHYS_V = apq<output_type>(110.0);
+#define YMAXPHYS (output_type(YMAXPHYS_V))
+constexpr double UMIN_V = apq<input_type>(UMINPHYS_V);
+#define UMIN (input_type(UMIN_V))
+constexpr double UMAX_V = apq<input_type>(UMAXPHYS_V);
+#define UMAX (input_type(UMAX_V))
+constexpr double YMIN_V = apq<output_type>(YMINPHYS_V);
+#define YMIN (output_type(YMIN_V))
+constexpr double YMAX_V = apq<output_type>(YMAXPHYS_V);
+#define YMAX (output_type(YMAX_V))
+constexpr double SIGMA_UNNORM_V = apq<noise_type>(4.4655);
+#define SIGMA_UNNORM (noise_type(SIGMA_UNNORM_V))
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 10;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 0.2;
+constexpr double UMINPHYS_V = apq<input_type>(0);
+#define UMINPHYS (input_type(UMINPHYS_V))
+constexpr double UMAXPHYS_V = apq<input_type>(1);
+#define UMAXPHYS (input_type(UMAXPHYS_V))
+constexpr double YMINPHYS_V = apq<output_type>(0);
+#define YMINPHYS (output_type(YMINPHYS_V))
+constexpr double YMAXPHYS_V = apq<output_type>(10);
+#define YMAXPHYS (output_type(YMAXPHYS_V))
+constexpr double UMIN_V = apq<input_type>(UMINPHYS_V);
+#define UMIN (input_type(UMIN_V))
+constexpr double UMAX_V = apq<input_type>(UMAXPHYS_V);
+#define UMAX (input_type(UMAX_V))
+constexpr double YMIN_V = apq<output_type>(YMINPHYS_V);
+#define YMIN (output_type(YMIN_V))
+constexpr double YMAX_V = apq<output_type>(YMAXPHYS_V);
+#define YMAX (output_type(YMAX_V))
+constexpr double SIGMA_UNNORM_V = apq<noise_type>(0.2);
+#define SIGMA_UNNORM (noise_type(SIGMA_UNNORM_V))
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 10;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const output_type DELTAY = 0.1;
-static const noise_type SIGMA_UNNORM = 0.02;
+constexpr double UMINPHYS_V = apq<input_type>(0);
+#define UMINPHYS (input_type(UMINPHYS_V))
+constexpr double UMAXPHYS_V = apq<input_type>(1);
+#define UMAXPHYS (input_type(UMAXPHYS_V))
+constexpr double YMINPHYS_V = apq<output_type>(0);
+#define YMINPHYS (output_type(YMINPHYS_V))
+constexpr double YMAXPHYS_V = apq<output_type>(10);
+#define YMAXPHYS (output_type(YMAXPHYS_V))
+constexpr double UMIN_V = apq<input_type>(UMINPHYS_V);
+#define UMIN (input_type(UMIN_V))
+constexpr double UMAX_V = apq<input_type>(UMAXPHYS_V);
+#define UMAX (input_type(UMAX_V))
+constexpr double YMIN_V = apq<output_type>(YMINPHYS_V);
+#define YMIN (output_type(YMIN_V))
+constexpr double YMAX_V = apq<output_type>(YMAXPHYS_V);
+#define YMAX (output_type(YMAX_V))
+constexpr double DELTAY_V = apq<output_type>(0.1);
+#define DELTAY (output_type(DELTAY_V))
+constexpr double SIGMA_UNNORM_V = apq<noise_type>(0.02);
+#define SIGMA_UNNORM (noise_type(SIGMA_UNNORM_V))
 
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1.5;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 7;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = 5;
-static const output_type DELTAY = 100; /* effectively unconstrained: this demo is about the static YMAX bound, not the rate limit */
-static const noise_type SIGMA_UNNORM = 0.02;
+constexpr double UMINPHYS_V = apq<input_type>(0);
+#define UMINPHYS (input_type(UMINPHYS_V))
+constexpr double UMAXPHYS_V = apq<input_type>(1.5);
+#define UMAXPHYS (input_type(UMAXPHYS_V))
+constexpr double YMINPHYS_V = apq<output_type>(0);
+#define YMINPHYS (output_type(YMINPHYS_V))
+constexpr double YMAXPHYS_V = apq<output_type>(7);
+#define YMAXPHYS (output_type(YMAXPHYS_V))
+constexpr double UMIN_V = apq<input_type>(UMINPHYS_V);
+#define UMIN (input_type(UMIN_V))
+constexpr double UMAX_V = apq<input_type>(UMAXPHYS_V);
+#define UMAX (input_type(UMAX_V))
+constexpr double YMIN_V = apq<output_type>(YMINPHYS_V);
+#define YMIN (output_type(YMIN_V))
+constexpr double YMAX_V = apq<output_type>(5);
+#define YMAX (output_type(YMAX_V))
+constexpr double DELTAY_V = apq<output_type>(100); /* effectively unconstrained: this demo is about the static YMAX bound, not the rate limit */
+#define DELTAY (output_type(DELTAY_V))
+constexpr double SIGMA_UNNORM_V = apq<noise_type>(0.02);
+#define SIGMA_UNNORM (noise_type(SIGMA_UNNORM_V))
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 100;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = 85;
-static const output_type DELTAY = 5;
-static const noise_type SIGMA_UNNORM = 0.2;
+constexpr double UMINPHYS_V = apq<input_type>(0);
+#define UMINPHYS (input_type(UMINPHYS_V))
+constexpr double UMAXPHYS_V = apq<input_type>(1);
+#define UMAXPHYS (input_type(UMAXPHYS_V))
+constexpr double YMINPHYS_V = apq<output_type>(0);
+#define YMINPHYS (output_type(YMINPHYS_V))
+constexpr double YMAXPHYS_V = apq<output_type>(100);
+#define YMAXPHYS (output_type(YMAXPHYS_V))
+constexpr double UMIN_V = apq<input_type>(UMINPHYS_V);
+#define UMIN (input_type(UMIN_V))
+constexpr double UMAX_V = apq<input_type>(UMAXPHYS_V);
+#define UMAX (input_type(UMAX_V))
+constexpr double YMIN_V = apq<output_type>(YMINPHYS_V);
+#define YMIN (output_type(YMIN_V))
+constexpr double YMAX_V = apq<output_type>(85);
+#define YMAX (output_type(YMAX_V))
+constexpr double DELTAY_V = apq<output_type>(5);
+#define DELTAY (output_type(DELTAY_V))
+constexpr double SIGMA_UNNORM_V = apq<noise_type>(0.2);
+#define SIGMA_UNNORM (noise_type(SIGMA_UNNORM_V))
 
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-static const input_type UMINPHYS = -3;
-static const input_type UMAXPHYS = 3;
-static const output_type YMINPHYS = -0.9;
-static const output_type YMAXPHYS = 0.9;
-static const input_type UMIN = UMINPHYS;
-static const input_type UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const output_type DELTAY = 10e-3;
-static const noise_type SIGMA_UNNORM = 0.00;
+constexpr double UMINPHYS_V = apq<input_type>(-3);
+#define UMINPHYS (input_type(UMINPHYS_V))
+constexpr double UMAXPHYS_V = apq<input_type>(3);
+#define UMAXPHYS (input_type(UMAXPHYS_V))
+constexpr double YMINPHYS_V = apq<output_type>(-0.9);
+#define YMINPHYS (output_type(YMINPHYS_V))
+constexpr double YMAXPHYS_V = apq<output_type>(0.9);
+#define YMAXPHYS (output_type(YMAXPHYS_V))
+constexpr double UMIN_V = apq<input_type>(UMINPHYS_V);
+#define UMIN (input_type(UMIN_V))
+constexpr double UMAX_V = apq<input_type>(UMAXPHYS_V);
+#define UMAX (input_type(UMAX_V))
+constexpr double YMIN_V = apq<output_type>(YMINPHYS_V);
+#define YMIN (output_type(YMIN_V))
+constexpr double YMAX_V = apq<output_type>(YMAXPHYS_V);
+#define YMAX (output_type(YMAX_V))
+constexpr double DELTAY_V = apq<output_type>(10e-3);
+#define DELTAY (output_type(DELTAY_V))
+constexpr double SIGMA_UNNORM_V = apq<noise_type>(0.00);
+#define SIGMA_UNNORM (noise_type(SIGMA_UNNORM_V))
 
 #endif
 
@@ -225,9 +302,9 @@ static const noise_type SIGMA_UNNORM = 0.00;
      U_PREV_UNNORM         initial MADS warm start, NhorU values - must be
                            the same operating point as U_HIST_UNNORM (see
                            uOptPrev in controller.cpp)
-   With NRMLZ, controller.cpp's initControllerState() derives the
-   normalized zonotope and samples from these at static-initialization
-   time (see there); without NRMLZ it copies them unchanged.
+   With NRMLZ, controller.cpp's computeControllerInit() derives the
+   normalized zonotope and samples from these at compile time
+   (see there); without NRMLZ it copies them unchanged.
    ====================================================================== */
 #if ACTIVE_SYSTEM == SYSTEM_SIMPLE
     #define THETA_NOMINAL_UNNORM   2.0, -1.0, 1.0

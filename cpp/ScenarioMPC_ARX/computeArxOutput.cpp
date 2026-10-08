@@ -108,7 +108,7 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
         }
         offset[l] = 0;
         #else
-        arx_coeff_type off = stripCoeffs.qmyInvDmc0 + yNormOffset;
+        arx_coeff_type off = STRIP_qmyInvDmc0 + yNormOffset;
         for(int i = 0; i < nTheta; i++)
         {
             #ifdef PRAGMAS
@@ -117,8 +117,8 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
             const int k = UNC_MAP.red[i];
             theta_type th = (k < 0)     ? theta_type(0) :
                             (l < Nscen) ? thetaScenarios[l][k] : thetaNominal[k];
-            coeff[l][i] = stripCoeffs.myInvDmDg[i] * th + stripCoeffs.myInvDmc0[i];
-            off += stripCoeffs.qmyInvDmDg[i] * th;
+            coeff[l][i] = STRIP_myInvDmDg(i) * th + STRIP_myInvDmc0(i);
+            off += STRIP_qmyInvDmDg(i) * th;
         }
         offset[l] = off;
         #endif

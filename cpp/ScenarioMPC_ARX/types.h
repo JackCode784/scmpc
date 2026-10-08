@@ -363,3 +363,73 @@ typedef ap_ufixed<5,4> input_weight_type; /* R = RBaseline = 12.5 */
 typedef support_strip_offset_type tight_strip_offset_type; // conservative, intersection of output and support strip
 typedef tight_strip_center_type tight_strip_radius_type; // they are sum/diff of same things
 typedef norm_output_type  err_type;      // Tracking error  e(k) = y(k) - y_ref
+/* ======================================================================
+   Compile-time constants for the synthesized design
+   ======================================================================
+   ap_fixed has no constexpr constructor, so a namespace-scope
+   "static const ap_fixed<...> X = <value>;" is DYNAMIC initialization:
+   the object is zero in the compiled design and gets its value from a
+   constructor that runs when a program starts. A synthesized top function
+   has no program start, so a tool that does not evaluate those
+   constructors sees every such constant as 0 (with them, controller()'s
+   output u = uConvCoeff*u_n + uConvOffset is a constant 0).
+
+   So every constant the design uses is a constexpr double, NAME_V, and
+   NAME is a macro that builds the fixed-point value from it where it is
+   used: "T(NAME_V)" inside a function, an ordinary constant that HLS folds.
+   apq<T>(x) gives, at compile time, the exact value x takes once
+   converted to T (the same rounding and saturation as ap_fixed), so NAME
+   has the same value as the old static const.
+   ====================================================================== */
+namespace hwc {
+constexpr double pow2(int e)
+{
+    double r = 1.0;
+    if (e >= 0) for (int i = 0; i < e; i++)  r *= 2.0;
+    else        for (int i = 0; i < -e; i++) r *= 0.5;
+    return r;
+}
+constexpr double floorD(double s)        /* |s| < 2^62 */
+{
+    const long long t = static_cast<long long>(s);
+    return (static_cast<double>(t) > s) ? static_cast<double>(t - 1) : static_cast<double>(t);
+}
+enum { Q_TRN, Q_RND_CONV, Q_RND };
+enum { O_WRAP, O_SAT };
+/** x converted to a W-bit fixed-point number with I integer bits (sign
+ *  included if S), quantization q and overflow o, as a double. */
+constexpr double quantize(double x, int W, int I, bool S, int q, int o)
+{
+    double s = x * pow2(W - I);
+    s = (s > 4e18) ? 4e18 : (s < -4e18) ? -4e18 : s;
+    double n = floorD(s);
+    if (q != Q_TRN)
+    {
+        const double r = s - n;                         /* exact, in [0, 1) */
+        if (r > 0.5 || (r == 0.5 && (q == Q_RND || floorD(n * 0.5) * 2.0 != n)))
+            n += 1.0;                                   /* AP_RND_CONV: ties to even */
+    }
+    const double lo = S ? -pow2(W - 1) : 0.0;
+    const double hi = S ? pow2(W - 1) - 1.0 : pow2(W) - 1.0;
+    if (o == O_SAT) n = (n < lo) ? lo : (n > hi) ? hi : n;
+    else            n -= floorD((n - lo) / pow2(W)) * pow2(W);
+    return n / pow2(W - I);
+}
+/* Arithmetic types (floating-point builds, int): the C++ conversion */
+template <class T> struct Q { static constexpr double of(double x) { return static_cast<double>(static_cast<T>(x)); } };
+#ifdef FIXED
+constexpr int qmode(ap_q_mode m) { return m == AP_TRN ? Q_TRN : m == AP_RND_CONV ? Q_RND_CONV : m == AP_RND ? Q_RND : -1; }
+constexpr int omode(ap_o_mode m) { return m == AP_WRAP ? O_WRAP : m == AP_SAT ? O_SAT : -1; }
+template <int W, int I, ap_q_mode QM, ap_o_mode OM, int N> struct Q<ap_fixed<W, I, QM, OM, N> >
+{
+    static_assert(qmode(QM) >= 0 && omode(OM) >= 0 && N == 0, "apq: unsupported ap_fixed mode");
+    static constexpr double of(double x) { return quantize(x, W, I, true, qmode(QM), omode(OM)); }
+};
+template <int W, int I, ap_q_mode QM, ap_o_mode OM, int N> struct Q<ap_ufixed<W, I, QM, OM, N> >
+{
+    static_assert(qmode(QM) >= 0 && omode(OM) >= 0 && N == 0, "apq: unsupported ap_ufixed mode");
+    static constexpr double of(double x) { return quantize(x, W, I, false, qmode(QM), omode(OM)); }
+};
+#endif
+}  /* namespace hwc */
+template <class T> constexpr double apq(double x) { return hwc::Q<T>::of(x); }
