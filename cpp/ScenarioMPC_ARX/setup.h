@@ -20,8 +20,12 @@
  * --------------------------------------
  * * "constexpr int" is fully supported (C++14 mode).  Used for all
  *   integer algorithm parameters (Nhor, NhorU, etc.).
- * * "static const <type>" is used for fixed-point constants because
- *   ap_fixed<> does not have a constexpr constructor.
+ * * Fixed-point constants are NOT "static const ap_fixed" globals:
+ *   ap_fixed<> has no constexpr constructor, so those would be dynamic
+ *   initialization, which the synthesized design does not run (they
+ *   would be 0 in hardware). Each is a constexpr double NAME_V and a
+ *   macro NAME that builds the value where it is used - see
+ *   "Compile-time constants" at the end of types.h.
  * * na, nb, nk, nTheta, nOpt remain #define macros because array sizes
  *   in function prototypes  (e.g. theta[nTheta])  must be integral
  *   constant expressions visible at the point of declaration, and #define
@@ -532,8 +536,11 @@ extern norm_input_type uOptPrev[NhorU];
    Stage cost per step:  l(y, u) = outputWeight*(y - y_ref)^2 + R*u^2
    Terminal cost:        V_f(y)   = terminalOutputWeight*(y(k+N) - y_ref)^2
    ====================================================================== */
-static const output_weight_type terminalOutputWeight =  16.0;   /* terminal output weight */
-static const output_weight_type outputWeight =  16.0;   /* stage   output weight  */
+/* see "Compile-time constants" at the end of types.h */
+constexpr double terminalOutputWeight_V = apq<output_weight_type>(16.0);  /* terminal output weight */
+#define terminalOutputWeight (output_weight_type(terminalOutputWeight_V))
+constexpr double outputWeight_V = apq<output_weight_type>(16.0);          /* stage   output weight  */
+#define outputWeight (output_weight_type(outputWeight_V))
 /*
     RBaseLine is the input weight in physical units. With NRMLZ the cost
     uses R = RBaseLine*(yNormGain/uNormGain)^2 (defined further below,
@@ -575,10 +582,9 @@ constexpr int FRAME_EXP_MIN = -20; /* frameExp minimum value */
  * If MADS_C changes, update expC and its type consistently.
  */
 #ifdef FIXED
-  static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5;
-//   static const norm_input_type expC = 0.5;
+  #define expC (ap_ufixed<1, 0, AP_TRN, AP_WRAP>(0.5))   /* built where used: types.h */
 #else
-  static const householder_type expC = 0.5;
+  #define expC (householder_type(0.5))
 #endif
 
 /*
@@ -586,7 +592,7 @@ constexpr int FRAME_EXP_MIN = -20; /* frameExp minimum value */
  * Initial frame size = tau^D0[j].  More negative -> finer initial mesh.
  * HLS hint: #pragma HLS ARRAY_PARTITION variable=D0 complete dim=1
  */
-static const mesh_exp_type D0_VAL = -8; // used in MADSARX, frameIdx init
+#define D0_VAL (mesh_exp_type(-8)) // used in MADSARX, frameIdx init (built where used: types.h)
 // static const mesh_exp_type D0[nOpt] = { -8, -8, -8 }; // not used
 
 /* ======================================================================
@@ -612,33 +618,41 @@ constexpr int ADC_MAX   = 4095;
 constexpr int ADC_MIN   = 0;
 constexpr int ADC_RANGE = ADC_MAX - ADC_MIN;
 
-static const output_adc_coeff_type YADCGain = double(ADC_RANGE) / double(YMAXPHYS - YMINPHYS);
-static const output_dac_coeff_type YDACGain = double(YMAXPHYS - YMINPHYS) / double(ADC_RANGE);
-static const digital_output_type  YBias    = (double(ADC_MIN)*double(YMAXPHYS) - double(ADC_MAX)*double(YMINPHYS)) / double(YMAXPHYS - YMINPHYS);
-static const input_adc_coeff_type UADCGain = double(ADC_RANGE) / double(UMAXPHYS - UMINPHYS);
-static const input_dac_coeff_type UDACGain = double(UMAXPHYS - UMINPHYS) / double(ADC_RANGE);
-static const digital_input_type   UBias    = (double(ADC_MIN)*double(UMAXPHYS) - double(ADC_MAX)*double(UMINPHYS)) / double(UMAXPHYS - UMINPHYS);
+/* see "Compile-time constants" at the end of types.h */
+constexpr double YADCGain_V = apq<output_adc_coeff_type>(double(ADC_RANGE) / (YMAXPHYS_V - YMINPHYS_V));
+constexpr double YDACGain_V = apq<output_dac_coeff_type>((YMAXPHYS_V - YMINPHYS_V) / double(ADC_RANGE));
+constexpr double YBias_V    = apq<digital_output_type>((double(ADC_MIN)*YMAXPHYS_V - double(ADC_MAX)*YMINPHYS_V) / (YMAXPHYS_V - YMINPHYS_V));
+constexpr double UADCGain_V = apq<input_adc_coeff_type>(double(ADC_RANGE) / (UMAXPHYS_V - UMINPHYS_V));
+constexpr double UDACGain_V = apq<input_dac_coeff_type>((UMAXPHYS_V - UMINPHYS_V) / double(ADC_RANGE));
+constexpr double UBias_V    = apq<digital_input_type>((double(ADC_MIN)*UMAXPHYS_V - double(ADC_MAX)*UMINPHYS_V) / (UMAXPHYS_V - UMINPHYS_V));
+#define YADCGain (output_adc_coeff_type(YADCGain_V))
+#define YDACGain (output_dac_coeff_type(YDACGain_V))
+#define YBias    (digital_output_type(YBias_V))
+#define UADCGain (input_adc_coeff_type(UADCGain_V))
+#define UDACGain (input_dac_coeff_type(UDACGain_V))
+#define UBias    (digital_input_type(UBias_V))
 #endif
 
 #ifdef NRMLZ
 /* Set these from user? */
-static const norm_output_type YNORMMAXPHYS = 1;
-static const norm_output_type YNORMMINPHYS = -1;
-static const norm_input_type UNORMMAXPHYS = 1;
-static const norm_input_type UNORMMINPHYS = -1;
+/* see "Compile-time constants" at the end of types.h */
+constexpr double YNORMMAXPHYS_V = apq<norm_output_type>(1);
+constexpr double YNORMMINPHYS_V = apq<norm_output_type>(-1);
+constexpr double UNORMMAXPHYS_V = apq<norm_input_type>(1);
+constexpr double UNORMMINPHYS_V = apq<norm_input_type>(-1);
 
-static const y_norm_coeff_type yNormGain = double(YNORMMAXPHYS - YNORMMINPHYS) / double(YMAXPHYS - YMINPHYS);
-static const u_norm_coeff_type uNormGain = double(UNORMMAXPHYS - UNORMMINPHYS) / double(UMAXPHYS - UMINPHYS);
-static const u_norm_inv_coeff_type uNormGainInverse = double(UMAXPHYS - UMINPHYS) / double(UNORMMAXPHYS - UNORMMINPHYS);
-static const norm_output_type yNormOffset = double(YNORMMINPHYS*YMAXPHYS - YNORMMAXPHYS*YMINPHYS) / double(YMAXPHYS - YMINPHYS);
-static const norm_input_type uNormOffset = double(UNORMMINPHYS*UMAXPHYS - UNORMMAXPHYS*UMINPHYS) / double(UMAXPHYS - UMINPHYS);
+constexpr double yNormGain_V        = apq<y_norm_coeff_type>((YNORMMAXPHYS_V - YNORMMINPHYS_V) / (YMAXPHYS_V - YMINPHYS_V));
+constexpr double uNormGain_V        = apq<u_norm_coeff_type>((UNORMMAXPHYS_V - UNORMMINPHYS_V) / (UMAXPHYS_V - UMINPHYS_V));
+constexpr double uNormGainInverse_V = apq<u_norm_inv_coeff_type>((UMAXPHYS_V - UMINPHYS_V) / (UNORMMAXPHYS_V - UNORMMINPHYS_V));
+constexpr double yNormOffset_V      = apq<norm_output_type>((YNORMMINPHYS_V*YMAXPHYS_V - YNORMMAXPHYS_V*YMINPHYS_V) / (YMAXPHYS_V - YMINPHYS_V));
+constexpr double uNormOffset_V      = apq<norm_input_type>((UNORMMINPHYS_V*UMAXPHYS_V - UNORMMAXPHYS_V*UMINPHYS_V) / (UMAXPHYS_V - UMINPHYS_V));
 
-static const norm_output_type YNORMMAX = double(yNormGain)*double(YMAX) + double(yNormOffset);
-static const norm_output_type YNORMMIN = double(yNormGain)*double(YMIN) + double(yNormOffset);
-static const norm_input_type UNORMMAX = double(uNormGain)*double(UMAX) + double(uNormOffset);
-static const norm_input_type UNORMMIN = double(uNormGain)*double(UMIN) + double(uNormOffset);
+constexpr double YNORMMAX_V = apq<norm_output_type>(yNormGain_V*YMAX_V + yNormOffset_V);
+constexpr double YNORMMIN_V = apq<norm_output_type>(yNormGain_V*YMIN_V + yNormOffset_V);
+constexpr double UNORMMAX_V = apq<norm_input_type>(uNormGain_V*UMAX_V + uNormOffset_V);
+constexpr double UNORMMIN_V = apq<norm_input_type>(uNormGain_V*UMIN_V + uNormOffset_V);
 
-static const input_weight_type R = RBaseLine * double(yNormGain) * double(yNormGain) / (double(uNormGain) * double(uNormGain));
+constexpr double R_V = apq<input_weight_type>(RBaseLine * yNormGain_V * yNormGain_V / (uNormGain_V * uNormGain_V));
 #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
 constexpr int log2R = 2;    /* R = 4     */
 #else
@@ -646,8 +660,8 @@ constexpr int log2R = -3;   /* R = 0.125 */
 #endif
 
 /* Normalization, use "normalized" noise in output strip */
-const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
-static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
+constexpr double sigma_V      = apq<norm_noise_type>(yNormGain_V*SIGMA_UNNORM_V);
+constexpr double DELTAYNORM_V = apq<norm_output_type>(yNormGain_V * DELTAY_V);
 
 /*
  * Strip-intersection normalization constants (Bravo et al. zonotope
@@ -684,108 +698,109 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  * whatever PL/AL mode has since updated thetaCenter/thetaGens to -
  * reading the mutable extern globals here would silently give the
  * wrong answer after the first update.
- * It also sidesteps a real hazard: theta_type's ap_fixed constructor is
- * not constexpr (see this file's own header comment), so
- * thetaCenter/thetaGens's initialization in controller.cpp is DYNAMIC
- * initialization, and C++ gives NO ordering guarantee between dynamic
- * initializers in different translation units - reading them from HERE
- * (a different .cpp file, via the extern declaration) could observe
- * them still zero, depending on link order. The function below instead
- * builds its own FUNCTION-LOCAL c0/G straight from the macros, so the
- * only things it depends on (yNormGain, uNormGain, yNormOffset,
- * uNormOffset, na) are ordinary same-translation-unit globals declared
- * earlier in THIS file - C++ guarantees in-order initialization within
- * one translation unit, so that dependency is always safe.
  *
- * CONSTRUCT: an ordinary (non-constexpr - ap_fixed<> still has no
- * constexpr constructor) function, called exactly once, its result
- * assigned into "static const" variables - the same "compute via a
- * double expression at static-initialization time" idiom yNormGain/
- * uNormGain above already use, just generalised from one scalar to a
- * small aggregate of arrays by bundling them in a plain struct (structs
- * with array members ARE returnable/copyable by value in C++, unlike
- * bare arrays, so no std::array or other container is needed - keeping
- * this to the same plain-C-array style as everywhere else in the
- * codebase). All arithmetic is done in double via explicit casts,
- * exactly like yNormGain/uNormGain, so no ap_fixed rounding mode acts
- * on any INTERMEDIATE step, only on the final assignment into each
- * struct member. The '<0.0 ? - : ' absolute value (rather than
- * std::abs, which would need a new #include) matches the same by-hand
- * pattern testMain.cpp/volumeZonotope.cpp already use for an
- * ap_fixed-typed sign flip (matDet's result).
- *
- * computeArxCoeffs (computeArxOutput.cpp - folds them into per-scenario
- * effective ARX coefficients once per controller() call) and
- * controller.cpp's PL/AL strip update read these as
- * stripCoeffs.myInvDmDg[i] etc. directly, rather than through a "static const auto&" reference alias to
- * each member: a reference-to-array-of-ap_fixed is no different, in
- * principle, from a reference-to-array-of-double (reference binding
- * doesn't depend on the element type - it resolves to the underlying
- * storage before any element-type arithmetic comes into play), but
- * that claim was only checked numerically here in double/host-
- * simulation mode (no Vitis HLS/ap_fixed.h available in this
- * environment) - accessing the struct directly removes the need to
- * rely on that reasoning at all, leaving only the same "static const
- * computed via a non-constexpr function" mechanism this file's
- * existing scalar constants (yNormGain, uNormGain, R, DELTAYNORM, ...)
- * already depend on successfully.
+ * CONSTRUCT: a constexpr function evaluated by the compiler, in double
+ * arithmetic, from the constexpr tables and the *_V constants above, so
+ * nothing is computed at run time (see "Compile-time constants" at the
+ * end of types.h). c0 and G go through apq<theta_type>, and each result
+ * through apq<member type>, exactly as the former run-time version
+ * stored them in theta_type arrays and fixed-point members, so the
+ * values are unchanged. Users read them through the STRIP_* macros
+ * below, which build the fixed-point value inside the function, from
+ * fully unrolled loops (constant indices).
  */
-struct StripCoeffs
+struct StripCoeffsV   /* values as doubles, rounded to each member's type */
 {
-    strip_coeff_type      myInvDmDg[nTheta];
-    strip_q_coeff_type    qmyInvDmDg[nTheta];
-    strip_coeff_c0_type   myInvDmc0[nTheta];
-    strip_q_coeff_c0_type qmyInvDmc0;
+    double myInvDmDg[nTheta];    /* strip_coeff_type      */
+    double qmyInvDmDg[nTheta];   /* strip_q_coeff_type    */
+    double myInvDmc0[nTheta];    /* strip_coeff_c0_type   */
+    double qmyInvDmc0;           /* strip_q_coeff_c0_type */
 };
 
-static StripCoeffs computeStripCoeffs()
+constexpr StripCoeffsV computeStripCoeffs()
 {
-    theta_type c0[nTheta]        = { THETA_NOMINAL_UNNORM };  // Z0.c
-    theta_type G [nTheta][nGens] = { GENERATORS_UNNORM };      // Z0.G
-
-    StripCoeffs out{};
+    StripCoeffsV out{};
     double qmyInvDmc0Acc = 0.0;
 
     for (int i = 0; i < nTheta; i++)
     {
+        /* Z0.c, Z0.G as theta_type values, like the theta_type arrays this
+         * used to read them through */
         double Dg_i = 0.0;
         for (int j = 0; j < nGens; j++)
         {
-            double g = double(G[i][j]);
+            const double g = apq<theta_type>(GENERATORS_UNNORM_TABLE[i][j]);
             Dg_i += (g < 0.0) ? -g : g;
         }
+        const double c0_i = apq<theta_type>(THETA_NOMINAL_UNNORM_TABLE[i]);
 
         const bool   isY        = (i < na);
-        const double gainRatio  = isY ? 1.0 : double(yNormGain) / double(uNormGain);
-        const double qi         = isY ? double(yNormOffset)    : double(uNormOffset);
+        const double gainRatio  = isY ? 1.0 : yNormGain_V / uNormGain_V;
+        const double qi         = isY ? yNormOffset_V : uNormOffset_V;
 
         const double myInvDmDg_i = gainRatio * Dg_i;
-        const double myInvDmc0_i = gainRatio * double(c0[i]);
+        const double myInvDmc0_i = gainRatio * c0_i;
 
-        out.myInvDmDg[i]  = myInvDmDg_i;
-        out.qmyInvDmDg[i] = -qi * myInvDmDg_i;
-        out.myInvDmc0[i]  = myInvDmc0_i;
+        out.myInvDmDg[i]  = apq<strip_coeff_type>(myInvDmDg_i);
+        out.qmyInvDmDg[i] = apq<strip_q_coeff_type>(-qi * myInvDmDg_i);
+        out.myInvDmc0[i]  = apq<strip_coeff_c0_type>(myInvDmc0_i);
         qmyInvDmc0Acc    += qi * myInvDmc0_i;
     }
 
-    out.qmyInvDmc0 = -qmyInvDmc0Acc;
+    out.qmyInvDmc0 = apq<strip_q_coeff_c0_type>(-qmyInvDmc0Acc);
     return out;
 }
 
-static const StripCoeffs stripCoeffs = computeStripCoeffs();
+constexpr StripCoeffsV stripCoeffsV = computeStripCoeffs();
+/* The fixed-point coefficients, built where they are used (the indices
+ * come from fully unrolled loops, so each one is a constant) */
+#define STRIP_myInvDmDg(i)  (strip_coeff_type(stripCoeffsV.myInvDmDg[i]))
+#define STRIP_qmyInvDmDg(i) (strip_q_coeff_type(stripCoeffsV.qmyInvDmDg[i]))
+#define STRIP_myInvDmc0(i)  (strip_coeff_c0_type(stripCoeffsV.myInvDmc0[i]))
+#define STRIP_qmyInvDmc0    (strip_q_coeff_c0_type(stripCoeffsV.qmyInvDmc0))
 #else
-const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
-static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
+constexpr double sigma_V = apq<norm_noise_type>(SIGMA_UNNORM_V); // no normalization, use normal noise in output strip
+constexpr double R_V = apq<input_weight_type>(RBaseLine);   /* stage   input  weight  */
 constexpr int log2R = -1;   /* R = 0.5 (buck converters; FIXED needs NRMLZ for the pendulum) */
-static const norm_output_type YNORMMAXPHYS = YMAXPHYS;
-static const norm_output_type YNORMMINPHYS = YMINPHYS;
-static const norm_input_type UNORMMAXPHYS = UMAXPHYS;
-static const norm_input_type UNORMMINPHYS = UMINPHYS;
-static const norm_output_type DELTAYNORM = DELTAY;
-static const norm_output_type YNORMMAX = YMAX;
-static const norm_output_type YNORMMIN = YMIN;
-static const norm_input_type UNORMMAX = UMAX;
-static const norm_input_type UNORMMIN = UMIN;
+constexpr double YNORMMAXPHYS_V = apq<norm_output_type>(YMAXPHYS_V);
+constexpr double YNORMMINPHYS_V = apq<norm_output_type>(YMINPHYS_V);
+constexpr double UNORMMAXPHYS_V = apq<norm_input_type>(UMAXPHYS_V);
+constexpr double UNORMMINPHYS_V = apq<norm_input_type>(UMINPHYS_V);
+constexpr double DELTAYNORM_V = apq<norm_output_type>(DELTAY_V);
+constexpr double YNORMMAX_V = apq<norm_output_type>(YMAX_V);
+constexpr double YNORMMIN_V = apq<norm_output_type>(YMIN_V);
+constexpr double UNORMMAX_V = apq<norm_input_type>(UMAX_V);
+constexpr double UNORMMIN_V = apq<norm_input_type>(UMIN_V);
+#endif
+
+/* Built where used (types.h). R and the weights are only read by the
+ * floating-point cost and the test bench: FIXED shifts by log2Q/P/R. */
+#ifdef NRMLZ
+#define YNORMMAXPHYS     (norm_output_type(YNORMMAXPHYS_V))
+#define YNORMMINPHYS     (norm_output_type(YNORMMINPHYS_V))
+#define UNORMMAXPHYS     (norm_input_type(UNORMMAXPHYS_V))
+#define UNORMMINPHYS     (norm_input_type(UNORMMINPHYS_V))
+#define yNormGain        (y_norm_coeff_type(yNormGain_V))
+#define uNormGain        (u_norm_coeff_type(uNormGain_V))
+#define uNormGainInverse (u_norm_inv_coeff_type(uNormGainInverse_V))
+#define yNormOffset      (norm_output_type(yNormOffset_V))
+#define uNormOffset      (norm_input_type(uNormOffset_V))
+#else
+#define YNORMMAXPHYS     (norm_output_type(YNORMMAXPHYS_V))
+#define YNORMMINPHYS     (norm_output_type(YNORMMINPHYS_V))
+#define UNORMMAXPHYS     (norm_input_type(UNORMMAXPHYS_V))
+#define UNORMMINPHYS     (norm_input_type(UNORMMINPHYS_V))
+#endif
+#define YNORMMAX         (norm_output_type(YNORMMAX_V))
+#define YNORMMIN         (norm_output_type(YNORMMIN_V))
+#define UNORMMAX         (norm_input_type(UNORMMAX_V))
+#define UNORMMIN         (norm_input_type(UNORMMIN_V))
+#define DELTAYNORM       (norm_output_type(DELTAYNORM_V))
+#define sigma            (norm_noise_type(sigma_V))
+#ifdef FIXED
+constexpr double R = R_V;
+#else
+static const input_weight_type R = R_V;   /* float: constant initialization */
 #endif
 
 /* Choose appropriate coefficients based on the operation modes.
@@ -793,29 +808,34 @@ static const norm_input_type UNORMMIN = UMIN;
     conversions functions. */
 #ifdef CONVERSIONS_MODE
     #ifdef NRMLZ
-    static const dig2ctrl_type yConvCoeff = double(yNormGain)*double(YDACGain);
-    static const ctrl2dig_type uConvCoeff = double(UADCGain)*double(uNormGainInverse);
-    static const norm_output_type yConvOffset = double(yNormOffset) - double(YDACGain)*double(YBias)*double(yNormGain);
-    static const digital_input_type uConvOffset = double(UBias) - double(uNormOffset)*double(uNormGainInverse)*double(UADCGain);
+    constexpr double yConvCoeff_V  = apq<dig2ctrl_type>(yNormGain_V*YDACGain_V);
+    constexpr double uConvCoeff_V  = apq<ctrl2dig_type>(UADCGain_V*uNormGainInverse_V);
+    constexpr double yConvOffset_V = apq<norm_output_type>(yNormOffset_V - YDACGain_V*YBias_V*yNormGain_V);
+    constexpr double uConvOffset_V = apq<digital_input_type>(UBias_V - uNormOffset_V*uNormGainInverse_V*UADCGain_V);
     #else
-    static const dig2ctrl_type yConvCoeff = YDACGain;
-    static const ctrl2dig_type uConvCoeff = UADCGain;
-    static const norm_output_type yConvOffset = double(-YBias)*double(YDACGain);
-    static const digital_input_type uConvOffset = UBias;
+    constexpr double yConvCoeff_V  = apq<dig2ctrl_type>(YDACGain_V);
+    constexpr double uConvCoeff_V  = apq<ctrl2dig_type>(UADCGain_V);
+    constexpr double yConvOffset_V = apq<norm_output_type>((-YBias_V)*YDACGain_V);
+    constexpr double uConvOffset_V = apq<digital_input_type>(UBias_V);
     #endif
     #else
     #ifdef NRMLZ
-    static const dig2ctrl_type yConvCoeff = yNormGain;
-    static const ctrl2dig_type uConvCoeff = uNormGainInverse;
-    static const norm_output_type yConvOffset = yNormOffset;
-    static const digital_input_type uConvOffset = double(-uNormOffset)*double(uNormGainInverse);
+    constexpr double yConvCoeff_V  = apq<dig2ctrl_type>(yNormGain_V);
+    constexpr double uConvCoeff_V  = apq<ctrl2dig_type>(uNormGainInverse_V);
+    constexpr double yConvOffset_V = apq<norm_output_type>(yNormOffset_V);
+    constexpr double uConvOffset_V = apq<digital_input_type>((-uNormOffset_V)*uNormGainInverse_V);
     #else
-    static const dig2ctrl_type yConvCoeff = 1;
-    static const ctrl2dig_type uConvCoeff = 1;
-    static const norm_output_type yConvOffset = 0;
-    static const digital_input_type uConvOffset = 0;
+    constexpr double yConvCoeff_V  = apq<dig2ctrl_type>(1);
+    constexpr double uConvCoeff_V  = apq<ctrl2dig_type>(1);
+    constexpr double yConvOffset_V = apq<norm_output_type>(0);
+    constexpr double uConvOffset_V = apq<digital_input_type>(0);
     #endif
 #endif
+/* built where used (types.h) */
+#define yConvCoeff  (dig2ctrl_type(yConvCoeff_V))
+#define uConvCoeff  (ctrl2dig_type(uConvCoeff_V))
+#define yConvOffset (norm_output_type(yConvOffset_V))
+#define uConvOffset (digital_input_type(uConvOffset_V))
 
 /* ======================================================================
    FUNCTION PROTOTYPES

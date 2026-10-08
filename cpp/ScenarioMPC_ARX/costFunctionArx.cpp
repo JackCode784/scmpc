@@ -330,7 +330,7 @@ void costFunctionArx(cost_type              cost[2],
         #ifdef DEBUG_PRINT
         for(int i = 0; i < Nscen; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = yPastCurr[i][j].to_double();
         for(int i = 0; i < nb+nk-2; i++) uSamples_f[i] = uSamples[i].to_double();
-        input_cost_term_f = (uSamples_f[0] - uSamples_f[1]) * (uSamples_f[0] - uSamples_f[1]) * R.to_double();
+        input_cost_term_f = (uSamples_f[0] - uSamples_f[1]) * (uSamples_f[0] - uSamples_f[1]) * double(R);
         #endif
 
         /* --- Input cost term (all steps except the terminal one) ------- */

@@ -102,24 +102,28 @@ norm_input_type  uOptPrev[NhorU];
  * signals:  y_n = yNormGain*y + yNormOffset,  u_n = uNormGain*u + uNormOffset.
  * Without NRMLZ, the physical values are copied unchanged.
  *
- * CONSTRUCT: same idea as stripCoeffs in setup.h - an ordinary function
- * evaluated once during static initialization, in double arithmetic.
- * It WRITES the arrays instead of initializing a new object, because a
- * C++ array cannot be initialized from a function's return value, and
- * turning these five into struct members would change every use site
- * and every ARRAY_PARTITION pragma. It is defined after them in this
- * same translation unit, so it runs after their (zero) initialization,
- * and after setup.h's yNormGain/uNormGain/yNormOffset/uNormOffset
- * (same TU, declared earlier) - C++ orders initialization within one
- * translation unit. Vitis HLS has to fold it into the registers' reset
- * values exactly as it already does for every ap_fixed global
- * initializer (ap_fixed has no constexpr constructor, so those are
- * dynamic initialization too) and for stripCoeffs; C/RTL co-simulation
- * is the check that it did - an unfolded initializer would make the RTL
- * start from all-zero state and diverge from C simulation immediately.
+ * CONSTRUCT: the values are computed by the compiler (constexpr, double
+ * arithmetic, each rounded by apq<> to its array's type exactly as the
+ * former assignments did) and copied into the arrays by the first
+ * controller() call. Initializing the arrays at static-initialization
+ * time instead would be dynamic initialization (ap_fixed has no
+ * constexpr constructor), which the synthesized design does not run:
+ * the registers would start at 0. stateLoaded is a plain bool with a
+ * constant initializer, i.e. a register whose reset value is false.
+ * See "Compile-time constants" at the end of types.h.
  */
-static bool initControllerState()
+struct ControllerInitV
 {
+    double thetaCenter[nUnc];
+    double thetaGens[nUnc][nGens];
+    double yHist[na];
+    double uHist[nb + nk - 1];
+    double uOptPrev[NhorU];
+};
+
+constexpr ControllerInitV computeControllerInit()
+{
+    ControllerInitV v{};
     const double y0[na]             = { Y_HIST_UNNORM };
     const double u0[nb + nk - 1]    = { U_HIST_UNNORM };
     const double uPrev0[NhorU]      = { U_PREV_UNNORM };
@@ -134,34 +138,84 @@ static bool initControllerState()
             const double g = GENERATORS_UNNORM_TABLE[i][j];
             Dg += (g < 0.0) ? -g : g;
         }
-        thetaCenter[k] = 0.0;
+        v.thetaCenter[k] = apq<theta_type>(0.0);
         for (int j = 0; j < nGens; j++)
-            thetaGens[k][j] = GENERATORS_UNNORM_TABLE[i][j] / Dg;
+            v.thetaGens[k][j] = apq<theta_type>(GENERATORS_UNNORM_TABLE[i][j] / Dg);
         #else
-        thetaCenter[k] = THETA_NOMINAL_UNNORM_TABLE[i];
+        v.thetaCenter[k] = apq<theta_type>(THETA_NOMINAL_UNNORM_TABLE[i]);
         for (int j = 0; j < nGens; j++)
-            thetaGens[k][j] = GENERATORS_UNNORM_TABLE[i][j];
+            v.thetaGens[k][j] = apq<theta_type>(GENERATORS_UNNORM_TABLE[i][j]);
         #endif
     }
 
     #ifdef NRMLZ
-    const double yGain = double(yNormGain), yOff = double(yNormOffset);
-    const double uGain = double(uNormGain), uOff = double(uNormOffset);
+    const double yGain = yNormGain_V, yOff = yNormOffset_V;
+    const double uGain = uNormGain_V, uOff = uNormOffset_V;
     #else
     const double yGain = 1.0, yOff = 0.0, uGain = 1.0, uOff = 0.0;
     #endif
-    for (int i = 0; i < na; i++)         yHist[i]    = yGain * y0[i]     + yOff;
-    for (int i = 0; i < nb + nk - 1; i++) uHist[i]    = uGain * u0[i]     + uOff;
-    for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uPrev0[i] + uOff;
-    return true;
+    for (int i = 0; i < na; i++)          v.yHist[i]    = apq<norm_output_type>(yGain * y0[i]     + yOff);
+    for (int i = 0; i < nb + nk - 1; i++) v.uHist[i]    = apq<norm_input_type>(uGain * u0[i]     + uOff);
+    for (int i = 0; i < NhorU; i++)       v.uOptPrev[i] = apq<norm_input_type>(uGain * uPrev0[i] + uOff);
+    return v;
 }
-static const bool controllerStateInitialized = initControllerState();
+constexpr ControllerInitV controllerInitV = computeControllerInit();
+
+static bool stateLoaded = false;
+
+/** Copy the initial values into the state arrays (fully unrolled: every
+ *  source is a compile-time constant). */
+static void loadInitialState()
+{
+    #ifdef PRAGMAS
+    #pragma HLS INLINE
+    #endif
+    for (int k = 0; k < nUnc; k++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        thetaCenter[k] = controllerInitV.thetaCenter[k];
+        for (int j = 0; j < nGens; j++)
+        {
+            #ifdef PRAGMAS
+            #pragma HLS UNROLL
+            #endif
+            thetaGens[k][j] = controllerInitV.thetaGens[k][j];
+        }
+    }
+    for (int i = 0; i < na; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        yHist[i] = controllerInitV.yHist[i];
+    }
+    for (int i = 0; i < nb + nk - 1; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        uHist[i] = controllerInitV.uHist[i];
+    }
+    for (int i = 0; i < NhorU; i++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+        uOptPrev[i] = controllerInitV.uOptPrev[i];
+    }
+}
 
 /* Test-bench support (not called by the synthesized design): put the
- * controller back into its power-on state before a new simulation run. */
+ * controller back into its power-on state before a new simulation run.
+ * It loads the state right away (rather than leaving it to the next
+ * controller() call) so that the test bench, which reads thetaGens before
+ * the first call, sees the initial zonotope. */
 void resetControllerState()
 {
-    initControllerState();
+    loadInitialState();
+    stateLoaded = true;
 }
 
 /* ======================================================================
@@ -199,6 +253,13 @@ digital_input_type controller(const digital_output_type yCurrDig,
 	#pragma HLS ARRAY_PARTITION variable=uHist       complete dim=1
 	#pragma HLS ARRAY_PARTITION variable=uOptPrev    complete dim=1
 	#endif
+    /* Power-on state, on the first call (see loadInitialState) */
+    if (!stateLoaded)
+    {
+        loadInitialState();
+        stateLoaded = true;
+    }
+
     /* ------------------------------------------------------------------ */
     /*  Step 1 - Convert digital inputs to algorithm types                */
     /* ------------------------------------------------------------------ */
@@ -366,7 +427,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
          */
         #pragma HLS UNROLL
         #endif
-        stripCenter -= phi[i] * stripCoeffs.myInvDmc0[i];
+        stripCenter -= phi[i] * STRIP_myInvDmc0(i);
     }
 
     /* Conclude phi computation */
@@ -375,7 +436,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        phi[i] *= stripCoeffs.myInvDmDg[i];
+        phi[i] *= STRIP_myInvDmDg(i);
     }
 
     #else /* Unnormalized case */
