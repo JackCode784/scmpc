@@ -12,6 +12,15 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na],
                                   const arx_coeff_type   offset)
 {
     #ifdef PRAGMAS
+    /*
+     * INLINE, every profile: one call site (costFunctionArx's model loop),
+     * so the datapath merges into that loop and its pipeline.
+     * The nTheta-term loop below (PRAGMA_ARX_TERMS, setup.h) is UNROLLED
+     * in BALANCED and LATENCY (nTheta multipliers working at once, which
+     * the pipelined model loop needs anyway: pipelining a loop unrolls the
+     * loops inside it) and left rolled with PIPELINE off in AREA, where the
+     * nTheta products take turns on ONE multiplier.
+     */
     #pragma HLS INLINE
     #pragma HLS ARRAY_PARTITION variable=coeff dim=1 complete
     #pragma HLS ARRAY_PARTITION variable=yPast dim=1 complete
@@ -25,7 +34,7 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na],
     for(int i = 0; i < nTheta; i++)
     {
         #ifdef PRAGMAS
-        #pragma HLS UNROLL
+        PRAGMA_ARX_TERMS   /* setup.h: UNROLL, or PIPELINE off in AREA */
         #endif
         yRes += ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * coeff[i];
     }
@@ -37,7 +46,7 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na],
     for(int i = 0; i < nTheta; i++)
     {
         #ifdef PRAGMAS
-        #pragma HLS UNROLL
+        PRAGMA_ARX_TERMS   /* setup.h: UNROLL, or PIPELINE off in AREA */
         #endif
         acc += (arx_acc_type)(((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * coeff[i]);
     }
@@ -89,13 +98,18 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
     #endif
 
     /*
-     * Row loop deliberately left rolled: this runs once per controller()
-     * call (vs. 43 costFunctionArx calls), so sharing one row's worth of
-     * multipliers across the Nscen+1 rows costs a few tens of cycles in
-     * total, while unrolling would add (Nscen+1)*2*nTheta = 30 DSPs.
+     * Row loop never unrolled: it runs once per controller() call (vs.
+     * 1 + MADS_ITER*2*nOpt costFunctionArx calls), and unrolling it would
+     * build (Nscen+1)*nTheta multiply-adds. One row's multipliers are
+     * shared by all rows: one row at a time in AREA (PIPELINE off), one
+     * new row per clock cycle in BALANCED and LATENCY (PIPELINE II=1; the
+     * rows are independent).
      */
     for(int l = firstRow; l < Nscen+1; l++)
     {
+        #ifdef PRAGMAS
+        PRAGMA_MODEL_LOOP   /* setup.h: PIPELINE off, or PIPELINE II=1 */
+        #endif
         #ifndef NRMLZ
         for(int i = 0; i < nTheta; i++)
         {

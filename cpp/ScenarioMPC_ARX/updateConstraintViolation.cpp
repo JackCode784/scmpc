@@ -1,23 +1,51 @@
 #include "setup.h"
 
-/** Update output constraint violation. */
-void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr, const norm_output_type yPast)
+/**
+ * Add to acc the output constraint violation of one predicted sample: how
+ * far yCurr is outside [YNORMMIN, YNORMMAX], plus how far the step
+ * yCurr - yPast exceeds +-DELTAYNORM (nothing when both constraints hold).
+ *
+ * FIXED: the two terms are summed first and added to acc ONCE, so that
+ * costFunctionArx's pipelined model loop has a single addition in its
+ * loop-carried accumulator instead of two chained ones (a shorter
+ * critical path for II=1). The result is the same number as two separate
+ * additions: both terms are differences of norm_output_type values, so
+ * they and their sum are exact in cost_type (which has more fractional
+ * bits), and adding non-negative terms into a saturating accumulator
+ * gives min(sum, max) whatever the grouping. Floating point keeps the two
+ * additions (there, regrouping could round differently).
+ */
+void addConstraintViolation(cost_type &acc, const norm_output_type yCurr, const norm_output_type yPast)
 {
     #ifdef PRAGMAS
-    /* Tiny compare-and-accumulate leaf, called up to (Nscen+1)*Nhor times
-     * per costFunctionArx invocation from inside a pipelined loop:
-     * inlining lets it merge into that loop's datapath instead of adding
-     * a call/return boundary at every one of those call sites. */
+    /* Small compare-and-subtract leaf called from inside costFunctionArx's
+     * model loop: inlining merges it into that loop's datapath (and its
+     * pipeline, in the profiles that pipeline that loop) instead of adding
+     * a call boundary there. Same in every profile. */
     #pragma HLS INLINE
     #endif
-    
+
+    #ifdef FIXED
+    cost_type viol = 0;
     if (yCurr > YNORMMAX)
-        cost[1] += (yCurr - YNORMMAX);
+        viol += (yCurr - YNORMMAX);
     else if (yCurr < YNORMMIN)
-        cost[1] += (YNORMMIN - yCurr);
+        viol += (YNORMMIN - yCurr);
 
     if(yCurr - yPast > DELTAYNORM)
-        cost[1] += yCurr - yPast - DELTAYNORM;
+        viol += yCurr - yPast - DELTAYNORM;
     else if(yCurr - yPast < -DELTAYNORM)
-        cost[1] += yPast - yCurr - DELTAYNORM;
+        viol += yPast - yCurr - DELTAYNORM;
+    acc += viol;
+    #else
+    if (yCurr > YNORMMAX)
+        acc += (yCurr - YNORMMAX);
+    else if (yCurr < YNORMMIN)
+        acc += (YNORMMIN - yCurr);
+
+    if(yCurr - yPast > DELTAYNORM)
+        acc += yCurr - yPast - DELTAYNORM;
+    else if(yCurr - yPast < -DELTAYNORM)
+        acc += yPast - yCurr - DELTAYNORM;
+    #endif
 }

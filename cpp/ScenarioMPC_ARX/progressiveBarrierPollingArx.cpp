@@ -15,13 +15,14 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 {
 	#ifdef PRAGMAS
 	/*
-	 * Left OFF deliberately: costFunctionArx is already called from a
-	 * plain (non-unrolled) loop below, so HLS already builds exactly one
-	 * instance of it and reuses it sequentially across all 2*nOpt calls -
-	 * ALLOCATION limit=... only matters when unrolling/pipelining would
-	 * otherwise duplicate the callee, which is not the case here.
+	 * Inlined into MADSARX in every profile, so that both of MADSARX's
+	 * costFunctionArx call sites (the starting point, and the poll points
+	 * here) are in one function, where its ALLOCATION pragma sets how many
+	 * costFunctionArx instances the design gets (see MADSARX.cpp). There is
+	 * one call to this function per MADS iteration, so inlining it does not
+	 * duplicate anything.
 	 */
-	// #pragma HLS ALLOCATION instances=costFunctionArx limit=6 function
+	#pragma HLS INLINE
 	#endif
 
 	#ifdef DEBUG_PRINT
@@ -52,19 +53,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 	bool success = 0;
 	#endif
 
-	// point under test
-	norm_input_type testPoint[nOpt];
-	#ifdef PRAGMAS
-	#pragma HLS ARRAY_PARTITION variable=testPoint dim=1 complete
-	#endif
-
-	// cost function and constraints violation of the test point
-	cost_type costTestPoint[2];
 	const cost_type originalCost = bestCost[0];
-
-	#ifdef PRAGMAS
-	#pragma HLS ARRAY_PARTITION variable=costTestPoint dim=1 complete
-	#endif
 
 	#ifdef DEBUG_PRINT
 	originalCost_f = originalCost.to_double();
@@ -72,28 +61,49 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 	bestCost_f[1] = bestCost[1].to_double();
 	#endif
 
+	/*
+	 * Phase 1: cost and constraint violation of every poll point. The
+	 * evaluations are independent of each other (each reads only its own
+	 * pollMatrix column and the shared, read-only state), so their order
+	 * does not matter; phase 2 then compares them in the original order, so
+	 * the selected point is the same as with the former evaluate-and-compare
+	 * loop.
+	 */
+	cost_type pollCost[2 * nOpt];
+	cost_type pollViol[2 * nOpt];
+	#ifdef PRAGMAS
+	#pragma HLS ARRAY_PARTITION variable=pollCost complete dim=1
+	#pragma HLS ARRAY_PARTITION variable=pollViol complete dim=1
+	#endif
 	for (int i = 0; i < 2 * nOpt; i++)
 	{
 		#ifdef PRAGMAS
+		#ifdef PRAGMA_PARALLEL_POLLS
 		/*
-		 * Deliberately NOT unrolled or pipelined. Unrolling would
-		 * instantiate 2*nOpt physical copies of costFunctionArx's whole
-		 * datapath (itself already Nscen-way parallel inside, see
-		 * costFunctionArx.cpp) - far too much for the XC7Z020's 220
-		 * DSP48E1 slices. This loop also carries a genuine recurrence
-		 * through bestCost/bestPoint (each candidate is compared against
-		 * the best found so far), so poll point i+1 cannot be evaluated
-		 * against a stale "best". Once the design is synthesizing
-		 * cleanly, PIPELINE can be tried here as a later optimisation -
-		 * it only needs costFunctionArx to accept a new call before the
-		 * previous one fully drains - but check the achieved II and DSP
-		 * utilisation in the synthesis report before keeping it, since
-		 * the callee's own pipeline depth sets a floor on how much
-		 * overlap is actually achievable.
+		 * LATENCY: unrolled, the 2*nOpt evaluations run at the same time on
+		 * 2*nOpt costFunctionArx instances (MADSARX's ALLOCATION allows that
+		 * many), so a MADS iteration costs one evaluation's time.
 		 */
+		#pragma HLS UNROLL
+		#else
+		/*
+		 * AREA, BALANCED: one evaluation after the other on a single
+		 * costFunctionArx instance. PIPELINE off: its call is long and
+		 * internally pipelined already, overlapping calls would only add
+		 * control logic.
+		 */
+		#pragma HLS PIPELINE off
+		#endif
 		#endif
 
-		// extract one point from the polling matrix
+		// point under test (a fresh local per evaluation, so unrolled
+		// evaluations do not share it)
+		norm_input_type testPoint[nOpt];
+		cost_type costTestPoint[2];
+		#ifdef PRAGMAS
+		#pragma HLS ARRAY_PARTITION variable=testPoint dim=1 complete
+		#pragma HLS ARRAY_PARTITION variable=costTestPoint dim=1 complete
+		#endif
 		for (int j = 0; j < nOpt; j++)
 		{
 			#ifdef PRAGMAS
@@ -108,51 +118,62 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 
 		// compute the cost function and the constraints violation in a test point
 		costFunctionArx(costTestPoint, yPast, testPoint, uPast, yref, arxCoeff, arxOffset);
+		pollCost[i] = costTestPoint[0];
+		pollViol[i] = costTestPoint[1];
 		#ifdef DEBUG_PRINT
 		costTestPoint_f[0] = costTestPoint[0].to_double();
 		costTestPoint_f[1] = costTestPoint[1].to_double();
 		#endif
+	}
+
+	/* Phase 2: progressive-barrier selection, in poll order (unrolled in
+	 * every profile: 2*nOpt comparisons, no arithmetic worth sharing) */
+	for (int i = 0; i < 2 * nOpt; i++)
+	{
+		#ifdef PRAGMAS
+		#pragma HLS UNROLL
+		#endif
 
 		// if the constraints are violated "more" in the test point than
 		// the current point, skip to the next test point
-		if (bestCost[1] == 0 && costTestPoint[1] == 0 && costTestPoint[0] < bestCost[0])
+		if (bestCost[1] == 0 && pollViol[i] == 0 && pollCost[i] < bestCost[0])
 		{
 			success = 1;
-			for (int i = 0; i < nOpt; i++)
+			for (int j = 0; j < nOpt; j++)
 			{
 				#ifdef PRAGMAS
 				#pragma HLS UNROLL
 				#endif
-				bestPoint[i] = testPoint[i];
-				
+				bestPoint[j] = pollMatrix[j][i];
+
 				#ifdef DEBUG_PRINT
-				bestPoint_f[i] = bestPoint[i].to_double();
+				bestPoint_f[j] = bestPoint[j].to_double();
 				#endif
 			}
-			bestCost[0] = costTestPoint[0];
-			// bestCost[1] = costTestPoint[1];	// possibly useless, bestCost[1] == costTestPoint[1] == 0 already
+			bestCost[0] = pollCost[i];
+			// bestCost[1] = pollViol[i];	// possibly useless, bestCost[1] == pollViol[i] == 0 already
 
 			#ifdef DEBUG_PRINT
 			bestCost_f[0] = bestCost[0].to_double();
 			bestCost_f[1] = bestCost[1].to_double(); // possibly useless, see above
 			#endif
 		}
-		else if ((bestCost[1] > 0 && costTestPoint[1] < bestCost[1]) || (costTestPoint[1] == bestCost[1] && costTestPoint[0] < bestCost[0]))
+		else if ((bestCost[1] > 0 && pollViol[i] < bestCost[1]) || (pollViol[i] == bestCost[1] && pollCost[i] < bestCost[0]))
 		{
 			success = 1;
-			for (int i = 0; i < nOpt; i++)
+			for (int j = 0; j < nOpt; j++)
 			{
 				#ifdef PRAGMAS
 				#pragma HLS UNROLL
 				#endif
-				bestPoint[i] = testPoint[i];
+				bestPoint[j] = pollMatrix[j][i];
 
 				#ifdef DEBUG_PRINT
-				bestPoint_f[i] = bestPoint[i].to_double();
+				bestPoint_f[j] = bestPoint[j].to_double();
 				#endif
 			}
-			bestCost[0] = costTestPoint[0];
-			bestCost[1] = costTestPoint[1];
+			bestCost[0] = pollCost[i];
+			bestCost[1] = pollViol[i];
 
 			#ifdef DEBUG_PRINT
 			bestCost_f[0] = bestCost[0].to_double();

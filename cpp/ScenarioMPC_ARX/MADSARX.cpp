@@ -15,6 +15,17 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 	cost_type cost[2];					   // cost function and constraints violation
 
 	#ifdef PRAGMAS
+	/*
+	 * Number of costFunctionArx RTL instances (the largest block of the
+	 * design), set per profile in setup.h: 1 for AREA and BALANCED, shared
+	 * by the starting-point evaluation below and the sequential poll
+	 * evaluations; 2*nOpt for LATENCY, one per poll point evaluated in
+	 * parallel (the starting-point evaluation reuses one of them).
+	 * progressiveBarrierPollingArx is inlined here, so both call sites are
+	 * in this function, where the pragma applies.
+	 */
+	HLS_PRAGMA(HLS allocation function instances=costFunctionArx limit=PRAGMA_COSTFUNC_INSTANCES)
+
 	/* Read/written elementwise by unrolled logic in generatePollMatrixArx,
 	 * generatePollDirectionsArx and progressiveBarrierPollingArx (all
 	 * called with these exact arrays, no local copy in between): declared
@@ -53,12 +64,16 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nb + nk - 2
 	 * both wrong (each needs the previous one's result) and far too
 	 * large to fit. PIPELINE off documents that this is a deliberate
 	 * choice, not an oversight, matching the convention already used in
-	 * cpp/MADS_ISCAS23/admm.cpp for the same kind of loop.
+	 * cpp/MADS_ISCAS23/admm.cpp for the same kind of loop. Every profile.
+	 * The pragma is inside the loop body: placed before the loop, as it
+	 * used to be, it applies to the enclosing function instead.
 	 */
-	#pragma HLS PIPELINE off
 	#endif
 	for (int iter = 0; iter < MADS_ITER; iter++)
 	{
+		#ifdef PRAGMAS
+		#pragma HLS PIPELINE off
+		#endif
 		// update mesh size
 		for (int i = 0; i < nOpt; i++)
 		{

@@ -111,167 +111,77 @@
 #define CTRL_MODE        CTRL_MODE_SCMPC
 
 /**
- * HLS pragma profile - selects between measured area/latency trade-offs
- * at the few spots in this codebase where synthesis has shown them to be
- * in genuine tension (currently just costFunctionArx's Nhor/Nscen
- * loops). Everything else this design's pragmas do (ARRAY_PARTITION,
- * INLINE on small leaf functions, UNROLL on other na/nb/nTheta/nOpt-
- * sized loops, PIPELINE on the PRNG draws) is unconditionally
- * beneficial - "free" wins with no real trade-off - and is NOT gated by
- * this switch. Numbers below are for CTRL_MODE_SCMPC on xc7z020-clg484-1
- * at a 10 ns target clock; re-measure for other configurations.
+ * HLS pragma profile (Vitis HLS 2026.1, xc7z020-clg484-1, 10 ns clock).
  *
- * Choose one of:
- *   PRAGMA_PROFILE_LATENCY  : unroll BOTH costFunctionArx loops.
- *                             Measured: 4151 cycles (41.51 us, >=20kHz
- *                             margin) but LUT utilisation at ~100.8%
- *                             (53614/53200) - no room left for
- *                             CTRL_MODE_PL's extra logic or for the
- *                             AXI/clock/reset infrastructure needed to
- *                             integrate this IP into a real system.
- *   PRAGMA_PROFILE_BALANCED : unroll the Nscen (scenario) loop fully,
- *                             and PARTIALLY unroll Nhor (the genuine
- *                             k-recurrence) by
- *                             PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR below
- *                             (see costFunctionArx.cpp). Measured with
- *                             factor left at 1 (Nhor fully rolled): 6603
- *                             cycles (66.03 us, ~15.1 kHz - short of a
- *                             20kHz/5000-cycle target) at 39% DSP / 13%
- *                             FF / 50% LUT.
- *                             Confirmed by comparing all three profiles:
- *                             unrolling Nscen (AREA->BALANCED) bought a
- *                             2.83x speedup for +13 LUT points; ADDITIONALLY
- *                             fully unrolling Nhor (BALANCED->LATENCY)
- *                             only bought a further 1.59x speedup for
- *                             +50 LUT points - ~18x worse LUT-per-cycle-
- *                             saved, because Nhor's cross-iteration
- *                             dependency means unrolling it mostly
- *                             removes loop-FSM overhead rather than
- *                             creating genuine parallel work.
+ * Where the time goes. controller() runs MADS: 1 + MADS_ITER*2*nOpt cost
+ * evaluations (61 for the pendulum: Nhor 15, NhorU 3, Nscen 16,
+ * MADS_ITER 10). Each evaluation (costFunctionArx) runs Nhor prediction
+ * steps, a recurrence, and in each step one prediction per model: the
+ * Nscen scenarios plus the nominal model, independent of each other. Every
+ * other part of controller() runs once per call and is small. So the
+ * profiles differ in exactly two places: how the Nscen+1 models of a step
+ * share a prediction datapath, and how the 2*nOpt poll evaluations of a
+ * MADS iteration share costFunctionArx. All three compute the same
+ * numbers (C simulation is identical); only the hardware schedule
+ * differs.
  *
- *                             A partial UNROLL factor on Nhor
- *                             (PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR below)
- *                             was tried as a finer-grained dial between
- *                             fully-rolled and fully-unrolled, and
- *                             MEASURED WORSE ON BOTH AXES: factor=2 gave
- *                             18943-19459 cycles at 65% LUT (worse than
- *                             fully-ROLLED Nhor's 6603 cycles / 50% LUT),
- *                             and factor=3 gave 25780-26124 cycles at 80%
- *                             LUT (worse than even PRAGMA_PROFILE_AREA's
- *                             ~18700-cycle fully-rolled baseline). Do NOT
- *                             raise the factor above 1 for this loop.
- *                             Likely cause: Nhor's body already contains
- *                             Nscen fully unrolled (4 parallel
- *                             computeArxOutput chains); partially
- *                             unrolling Nhor by N fuses N copies of that
- *                             already-4-way-parallel body into one larger
- *                             combinational block (N*4 concurrent
- *                             computeArxOutput instances instead of 4),
- *                             and Vitis's list-scheduler evidently finds
- *                             a WORSE schedule for that bigger, more
- *                             tangled resource-allocation problem, not a
- *                             better one - HLS unrolling is a heuristic,
- *                             not an exact optimizer, and is not always
- *                             monotonically beneficial. The factor is
- *                             left in place (at 1, i.e. disabled) for
- *                             documentation/future reference rather than
- *                             removed outright.
- *   PRAGMA_PROFILE_AREA     : leave both loops rolled (time-multiplexed).
- *                             Measured: ~18700 cycles (187 us, ~5.3 kHz)
- *                             but LUT utilisation back down to ~37%. Use
- *                             this whenever the >=20kHz requirement does
- *                             not apply.
- *   PRAGMA_PROFILE_LATENCY_SHARED : same loop structure as
- *                             PRAGMA_PROFILE_LATENCY (both loops fully
- *                             unrolled), originally intended to add
- *                             #pragma HLS ALLOCATION operation
- *                             instances=mul limit=PRAGMA_LATENCY_MUL_LIMIT
- *                             (below) inside costFunctionArx to cap
- *                             multiplier instances and recover LUT
- *                             margin. MEASURED COUNTERPRODUCTIVE for that
- *                             purpose and left DISABLED by default
- *                             (PRAGMA_LATENCY_MUL_LIMIT's value is
- *                             ignored unless PRAGMA_ENABLE_LATENCY_MUL_LIMIT
- *                             is also defined below, which it is not) -
- *                             at limit=48: 4022 cycles (an improvement -
- *                             latency was never the problem with this
- *                             lever), DSP down to 41% (91, from
- *                             PRAGMA_PROFILE_LATENCY's 151) exactly as
- *                             intended, but LUT went UP to 103%
- *                             (54821/53200), not down.
- *                             Reason (a real architectural point, not
- *                             just an unlucky measurement): a DSP48E1
- *                             slice on this chip is a dedicated hard
- *                             macro that consumes ZERO general-fabric
- *                             LUTs when instantiated - so letting Vitis
- *                             freely build 151 of them (PRAGMA_PROFILE_
- *                             LATENCY) is essentially LUT-free for that
- *                             arithmetic. Forcing those down to a shared
- *                             pool of 48 via ALLOCATION does not make the
- *                             multiply work disappear: it forces excess
- *                             multiplies to time-share far fewer physical
- *                             instances, which needs LUT-built steering
- *                             multiplexers (selecting which operand pair
- *                             feeds each shared multiplier this cycle,
- *                             and where the result goes) - and here that
- *                             routing overhead cost MORE LUTs than the
- *                             saved DSP48 instances were ever costing.
- *                             ALLOCATION-based sharing trades a
- *                             LUT-free resource for a LUT-cost one: the
- *                             wrong direction when LUT specifically is
- *                             the scarce resource and DSP has headroom.
- *                             The corrected direction, not yet
- *                             implemented pending a detailed per-multiply
- *                             report to target it precisely rather than
- *                             guessing: #pragma HLS BIND_OP ... impl=dsp
- *                             on specific multiplies Vitis is currently
- *                             implementing in fabric, to move THAT LUT
- *                             cost onto the spare DSP48 slots instead -
- *                             pushing load onto the free, LUT-free
- *                             resource rather than restricting it.
+ *   PRAGMA_PROFILE_AREA     minimum area. One costFunctionArx instance,
+ *                           models one after the other (model loop
+ *                           PIPELINE off), the nTheta products of a
+ *                           prediction on ONE multiplier (term loop rolled).
+ *                           Estimate: Nhor*(Nscen+1)*L evaluation cycles,
+ *                           L ~ 10-15 cycles per sequential prediction:
+ *                           ~2e5 cycles per call, ~2 ms of the 10 ms period.
+ *   PRAGMA_PROFILE_BALANCED one costFunctionArx instance, model loop
+ *                           PIPELINE II=1: a new model enters the same
+ *                           datapath every cycle, so a step takes about
+ *                           Nscen+1 cycles plus the pipeline depth D (~10).
+ *                           Estimate: 61*Nhor*(Nscen+1+D) ~ 2.5e4 cycles
+ *                           (~0.25 ms), with little more area than AREA:
+ *                           pipeline registers and nTheta multipliers.
+ *   PRAGMA_PROFILE_LATENCY  minimum latency. As BALANCED, plus the 2*nOpt
+ *                           poll evaluations of each MADS iteration run in
+ *                           parallel on 2*nOpt costFunctionArx instances:
+ *                           (1 + MADS_ITER) evaluation times per call.
+ *                           Estimate: ~5e3 cycles (~50 us), with about
+ *                           2*nOpt times BALANCED's cost-function area.
+ * The estimates are mine, from the loop structure; replace them with the
+ * synthesis report's numbers.
+ *
+ * Why not the former profiles. They were measured on the buck converter
+ * (Nhor 5, Nscen 4) with Vitis HLS 2021.1. LATENCY fully unrolled both
+ * cost-function loops: Nhor*(Nscen+1) = 255 predictions for the pendulum,
+ * ~4 DSPs each, against 220 DSPs on this device, so it cannot fit.
+ * BALANCED unrolled the Nscen loop, but its Nscen+1 results are summed
+ * into saturating accumulators one after the other (a saturating add is
+ * not associative, so the tool cannot regroup it into a tree): with 17
+ * models that chain was slower than streaming them through one
+ * pipelined datapath, which is what BALANCED does now.
+ *
+ * Pragmas, everywhere (PRAGMAS is defined with FIXED):
+ *   - profile-dependent, as above: costFunctionArx.cpp (model loop),
+ *     progressiveBarrierPollingArx.cpp (poll evaluations), MADSARX.cpp
+ *     (ALLOCATION: number of costFunctionArx instances),
+ *     computeArxOutput.cpp (ARX term loop; coefficient row loop pipelined
+ *     like the model loop).
+ *   - the same in every profile, each explained where it is: INTERFACE
+ *     (controller.cpp: ap_none scalar ports, ap_ctrl_hs start/done);
+ *     ARRAY_PARTITION complete on every small array that unrolled code
+ *     reads in parallel; UNROLL on loops over na, nb, nk, nTheta, nGens,
+ *     nUnc or nOpt (wiring and a few operators); PIPELINE II=1 on the
+ *     random-number loops (generateScenarios, generatePollMatrixArx,
+ *     pseudoRandArx); INLINE on small leaf functions and INLINE off on
+ *     costFunctionArx (so ALLOCATION, not automatic inlining, sets its
+ *     instance count); PIPELINE off on the loops that are recurrences (the
+ *     MADS iteration loop, the Nhor prediction loop) and LOOP_FLATTEN off
+ *     on the model loop. The explicit "off" forms matter with recent tool
+ *     versions, which pipeline loops and inline small functions on their
+ *     own when nothing says otherwise.
  */
 #define PRAGMA_PROFILE_LATENCY         0
 #define PRAGMA_PROFILE_BALANCED        1
 #define PRAGMA_PROFILE_AREA            2
-#define PRAGMA_PROFILE_LATENCY_SHARED  3
 #define PRAGMA_PROFILE           PRAGMA_PROFILE_BALANCED
-
-/**
- * Kill switch for the ALLOCATION-based multiplier limit under
- * PRAGMA_PROFILE_LATENCY_SHARED (costFunctionArx.cpp), left UNDEFINED
- * (disabled) because that limit measured counterproductive - see
- * PRAGMA_PROFILE_LATENCY_SHARED's comment above for the numbers and the
- * architectural reason (DSP48 is LUT-free hard silicon; ALLOCATION-forced
- * sharing trades it for LUT-cost steering logic). Left as an explicit
- * opt-in rather than deleting the mechanism, in case a future, different
- * bottleneck makes DSP-sharing the right call again.
- */
-// #define PRAGMA_ENABLE_LATENCY_MUL_LIMIT
-
-/**
- * Multiplier instance limit for costFunctionArx under
- * PRAGMA_PROFILE_LATENCY_SHARED, only applied if
- * PRAGMA_ENABLE_LATENCY_MUL_LIMIT above is also defined (currently is
- * not - see that macro's comment). At 48: 91 DSP (41%, down from
- * PRAGMA_PROFILE_LATENCY's 151/68%) but 54821 LUT (103%, UP from
- * PRAGMA_PROFILE_LATENCY's 53614/100.8%) and 4022 cycles (down from
- * 4151). Kept for reference/comparison, not because raising or lowering
- * it further is expected to help the LUT problem.
- */
-#define PRAGMA_LATENCY_MUL_LIMIT  48
-
-/**
- * Partial-unroll factor for costFunctionArx's Nhor loop, used only under
- * PRAGMA_PROFILE_BALANCED (see above and costFunctionArx.cpp). 1 = fully
- * rolled (no UNROLL pragma emitted at all). MEASURED WORSE than 1 for
- * every value tried (2, 3) - see the PRAGMA_PROFILE comment above for
- * the numbers and the likely reason. Left at 1; do not raise it for this
- * particular loop unless costFunctionArx's structure changes enough to
- * revisit the reasoning (e.g. if Nscen's unroll is ever reduced or
- * removed, which would shrink each round back down and might change
- * this conclusion).
- */
-#define PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR  1
 
 /* ======================================================================
    Derived feature flags (do NOT edit)
@@ -283,33 +193,31 @@
     // #define DEBUG_PRINT      /* debug printfs */
 
     /*
-     * Translate the PRAGMA_PROFILE selector above into small,
-     * descriptively-named flags that the algorithm files check
-     * individually. Keeping the translation here, in one place, means
-     * costFunctionArx.cpp never needs to know the numeric profile
-     * values or list every profile that wants a given loop unrolled -
-     * it just checks whether ITS flag is defined.
+     * Translate PRAGMA_PROFILE into the flags and pragma macros the
+     * algorithm files use (see the PRAGMA_PROFILE comment above):
+     *   PRAGMA_PIPELINE_MODEL_LOOPS  model loop and coefficient row loop pipelined
+     *   PRAGMA_PARALLEL_POLLS        poll evaluations unrolled (in parallel)
+     *   PRAGMA_COSTFUNC_INSTANCES    costFunctionArx instances (ALLOCATION limit)
+     *   PRAGMA_MODEL_LOOP            pragma for the coefficient row loop
+     *   PRAGMA_ARX_TERMS             pragma for the ARX nTheta-term loop
+     * PRAGMA_COSTFUNC_INSTANCES is a literal because a pragma option must
+     * be one: static_assert'ed against 2*nOpt further below.
      */
     #if PRAGMA_PROFILE == PRAGMA_PROFILE_LATENCY
-        #define PRAGMA_UNROLL_COSTFUNC_NHOR
-        #define PRAGMA_UNROLL_COSTFUNC_NSCEN
+        #define PRAGMA_PIPELINE_MODEL_LOOPS
+        #define PRAGMA_PARALLEL_POLLS
+        #define PRAGMA_COSTFUNC_INSTANCES  6
+        #define PRAGMA_MODEL_LOOP          HLS_PRAGMA(HLS PIPELINE II=1)
+        #define PRAGMA_ARX_TERMS           HLS_PRAGMA(HLS UNROLL)
     #elif PRAGMA_PROFILE == PRAGMA_PROFILE_BALANCED
-        #define PRAGMA_UNROLL_COSTFUNC_NSCEN
-        /* NHOR: PARTIAL unroll by PRAGMA_COSTFUNC_NHOR_UNROLL_FACTOR,
-         * not left bare - see costFunctionArx.cpp for how factor=1
-         * (the default until this is swept) reduces to no pragma. */
+        #define PRAGMA_PIPELINE_MODEL_LOOPS
+        #define PRAGMA_COSTFUNC_INSTANCES  1
+        #define PRAGMA_MODEL_LOOP          HLS_PRAGMA(HLS PIPELINE II=1)
+        #define PRAGMA_ARX_TERMS           HLS_PRAGMA(HLS UNROLL)
     #elif PRAGMA_PROFILE == PRAGMA_PROFILE_AREA
-        /* Both intentionally left rolled - see PRAGMA_PROFILE comment above. */
-    #elif PRAGMA_PROFILE == PRAGMA_PROFILE_LATENCY_SHARED
-        #define PRAGMA_UNROLL_COSTFUNC_NHOR
-        #define PRAGMA_UNROLL_COSTFUNC_NSCEN
-        #ifdef PRAGMA_ENABLE_LATENCY_MUL_LIMIT
-            #define PRAGMA_LIMIT_COSTFUNC_MUL
-        #endif
-        /* PRAGMA_ENABLE_LATENCY_MUL_LIMIT is NOT defined above by default -
-         * the ALLOCATION limit it would gate measured counterproductive
-         * (see PRAGMA_PROFILE_LATENCY_SHARED's comment). Without it, this
-         * profile is currently identical to PRAGMA_PROFILE_LATENCY. */
+        #define PRAGMA_COSTFUNC_INSTANCES  1
+        #define PRAGMA_MODEL_LOOP          HLS_PRAGMA(HLS PIPELINE off)
+        #define PRAGMA_ARX_TERMS           HLS_PRAGMA(HLS PIPELINE off)
     #else
         #error "Unrecognized PRAGMA_PROFILE!"
     #endif
@@ -520,6 +428,11 @@ static_assert(Nhor - nk >= NhorU - 1,
 
 /** Number of scalar optimisation variables (= Nu for a SISO system). */
 #define nOpt NhorU
+
+#if defined(PRAGMAS) && defined(PRAGMA_PARALLEL_POLLS)
+static_assert(PRAGMA_COSTFUNC_INSTANCES == 2 * nOpt,
+    "PRAGMA_PROFILE_LATENCY: set PRAGMA_COSTFUNC_INSTANCES (setup.h) to 2*NhorU, one costFunctionArx per poll point.");
+#endif
 
 /** MADS warm-start seed - see "CONTROLLER STATE" comment above.
  *  Declared here, rather than alongside thetaCenter/yHist/uHist, because
@@ -921,9 +834,10 @@ void pseudoRandReset();
 
 /* --- Constraint violation --------------------------------------------- */
 
-/** Update cost[1] (the progressive-barrier violation term) given the
- *  current predicted output currY and the bounds YMINPHYS/YMAXPHYS. */
-void updateConstraintViolation(cost_type cost[2], const norm_output_type yCurr, const norm_output_type yPast);
+/** Add to acc the constraint violation of one predicted output yCurr (box and rate
+ *  constraints): costFunctionArx accumulates it into cost[1], the
+ *  progressive-barrier violation term. */
+void addConstraintViolation(cost_type &acc, const norm_output_type yCurr, const norm_output_type yPast);
 
 /* --- ADC / DAC conversions -------------------------------------------- */
 #ifdef CONVERSIONS_MODE
