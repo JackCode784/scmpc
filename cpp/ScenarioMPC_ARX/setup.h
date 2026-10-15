@@ -85,6 +85,7 @@
 // #define NRMLZ               /* normalization */
 #define USE_SCENS_COST      /* Enable scenarios cost contribution */
 #define USE_SCENS_CONSTR    /* Enable scenarios constraints contribution */
+// #define DELAY_COMPENSATION  /* computational delay compensation (see below) */
 // #define PRNG_STDLIB         /* use rand() as prng */
 
 /** Active plant - choose one of:
@@ -426,6 +427,38 @@ static_assert(Nhor >= nk,
 static_assert(Nhor - nk >= NhorU - 1,
     "Control horizon is longer than maximum.");
 
+/*
+ * COMPUTATIONAL DELAY COMPENSATION (DELAY_COMPENSATION, selected above)
+ *
+ * Without it, the call at instant k returns u(k), computed from y(k), and
+ * the model assumes u(k) is applied AT instant k. In real time it only
+ * exists at k*Ts + dt (dt = the controller's latency): until then the DAC
+ * still holds u(k-1), which the model does not know.
+ *
+ * With it, the call at instant k returns u(k+1), to be applied at instant
+ * k+1 (the DAC is written on the next sampling tick, not when the result
+ * is ready: works for any latency dt < Ts). The input applied during the
+ * current interval, u(k), was returned by the previous call and is known:
+ * the prediction uses it, and the decision variables become u(k+1),
+ * u(k+2), ... One extra sample of loop delay, but exact and modelled,
+ * and the input changes exactly at the sampling instants. The test bench
+ * applies each output one sample later (plant.h); without compensation,
+ * TB_COMPUTE_DELAY_FRACTION emulates the latency dt instead.
+ *
+ * DC_STEPS is the number of known future inputs at each call (0 or 1),
+ * nUKnown the length of the known-input array passed to the optimizer:
+ *   without: [u(k-1), ..., u(k-nb-nk+2)]          (nb+nk-2 values)
+ *   with:    [u(k), u(k-1), ..., u(k-nb-nk+2)]    (nb+nk-1 values)
+ */
+#ifdef DELAY_COMPENSATION
+constexpr int DC_STEPS = 1;
+#else
+constexpr int DC_STEPS = 0;
+#endif
+constexpr int nUKnown = nb + nk - 2 + DC_STEPS;
+static_assert(Nhor - nk - DC_STEPS >= NhorU - 1,
+    "With DELAY_COMPENSATION the last decision u(k+NhorU) must still reach the horizon: Nhor >= NhorU + nk.");
+
 /** Number of scalar optimisation variables (= Nu for a SISO system). */
 #define nOpt NhorU
 
@@ -757,7 +790,7 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
 void costFunctionArx(cost_type              cost[2],
                      const norm_output_type yPast          [na],
                      const norm_input_type  currU          [nOpt],
-                     const norm_input_type  uPast          [nb + nk - 2],
+                     const norm_input_type  uPast          [nUKnown],
                      const norm_output_type yref,
                      const arx_coeff_type   arxCoeff       [Nscen+1][nTheta],
                      const arx_coeff_type   arxOffset      [Nscen+1]);
@@ -800,7 +833,7 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
 
 /** Run MADS_ITER iterations and return the optimal input sequence. */
 void MADSARX(norm_input_type uOpt[nOpt], 
-            const norm_input_type uInit[nb + nk - 2], 
+            const norm_input_type uInit[nUKnown], 
             const norm_output_type yInit[na], 
             const norm_output_type yref, 
             const arx_coeff_type arxCoeff[Nscen+1][nTheta],
@@ -811,7 +844,7 @@ void MADSARX(norm_input_type uOpt[nOpt],
 void progressiveBarrierPollingArx(cost_type bestCost[2], 
                                     norm_input_type bestPoint[nOpt], 
                                     const norm_output_type yPast[na], 
-                                    const norm_input_type uPast[nb + nk - 2], 
+                                    const norm_input_type uPast[nUKnown], 
                                     const norm_output_type yref, 
                                     const norm_input_type pollMatrix[nOpt][2 * nOpt], 
                                     mesh_exp_type frameExp[nOpt], 

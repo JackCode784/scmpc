@@ -82,6 +82,25 @@ int main(void)
     printf("\tRuns: %d, true plant: %s, plant model: %s, seed: %u\n",
            N_RUNS, RANDOM_TRUE_PLANT ? "random" : "THETA_TRUE_INIT",
            PLANT_TAG, (unsigned)TB_SEED);
+    #ifdef DELAY_COMPENSATION
+    printf("\tTiming: delay compensation (each input applied at the next sampling instant)\n");
+    #else
+    printf("\tTiming: no delay compensation, controller latency %.3g of the sampling period%s\n",
+           TB_COMPUTE_DELAY_FRACTION, TB_COMPUTE_DELAY_FRACTION == 0.0 ? " (ideal)" : "");
+    #endif
+
+    /* File tag: TB_CTRL_TAG plus the timing case - "" (ideal), "_latNN" (no
+     * compensation, latency NN% of the period) or "_dc" (compensation) - so
+     * that the three cases' files sit side by side. */
+    char ctrlTag[48];
+    #ifdef DELAY_COMPENSATION
+    snprintf(ctrlTag, sizeof ctrlTag, "%s_dc", TB_CTRL_TAG);
+    #else
+    if (TB_COMPUTE_DELAY_FRACTION == 0.0)
+        snprintf(ctrlTag, sizeof ctrlTag, "%s", TB_CTRL_TAG);
+    else
+        snprintf(ctrlTag, sizeof ctrlTag, "%s_lat%d", TB_CTRL_TAG, int(TB_COMPUTE_DELAY_FRACTION * 100.0 + 0.5));
+    #endif
     printf("\n\n");
 
     /* ------------------------------------------------------------------ */
@@ -110,7 +129,7 @@ int main(void)
     char fileName[128];
     if (N_RUNS > 1)
     {
-        snprintf(fileName, sizeof fileName, "runs_%s_%s_summary.txt", TB_CTRL_TAG, PLANT_TAG);
+        snprintf(fileName, sizeof fileName, "runs_%s_%s_summary.txt", ctrlTag, PLANT_TAG);
         summary = fopen(fileName, "w");
         if (!summary) { printf("ERROR: could not open %s for writing.\n", fileName); return 1; }
     }
@@ -127,6 +146,14 @@ int main(void)
     plantReset(plant);
     resetControllerState();
     pseudoRandReset();
+
+    /* Input on the DAC when the interval starts (physical units, and its
+     * digital code): initially the operating point of U_HIST_UNNORM. */
+    const double uInit0[nb + nk - 1] = { U_HIST_UNNORM };
+    input_type uDac = uInit0[0];
+    #if defined(CONVERSIONS_MODE) && defined(DELAY_COMPENSATION)
+    digital_input_type uDacDig = UADCGain * uDac + UBias;
+    #endif
 
     /* Measurement noise, uniform in [-SIGMA_UNNORM, SIGMA_UNNORM] */
     for (int i = 0; i < nSim; i++) noise[i] = rng.uniform() * double(SIGMA_UNNORM);
@@ -182,20 +209,42 @@ int main(void)
          */
         digital_input_type uOptDig = controller(yCurrDig, yrefDig);
 
-        /* Receding-horizon: only u(k) = uOpt[0] is applied. */
+        /* Receding-horizon: only the first input of the solution is applied. */
+        #ifdef CONVERSIONS_MODE
+        const input_type uOut = DAConvertU(uOptDig);
+        #else
+        const input_type uOut = uOptDig;
+        #endif
+
+        /*
+         * --- Input of the interval [k*Ts, (k+1)*Ts) --------------------
+         * uSim[k] / uSimDig[k] log the input in force for (most of) it.
+         * With DELAY_COMPENSATION this call returned u(k+1), applied at the
+         * NEXT instant: the interval runs on the previous call's result,
+         * already on the DAC. Without it, the result takes effect after the
+         * latency TB_COMPUTE_DELAY_FRACTION*Ts, the previous input before
+         * that (no latency: the original test bench).
+         */
+        #ifdef DELAY_COMPENSATION
+        uSim[k] = uDac;
+        #ifdef CONVERSIONS_MODE
+        uSimDig[k] = uDacDig;
+        uDacDig = uOptDig;
+        #endif
+        plantPush(plant, double(ySim[k]), double(uDac), double(uDac), 0.0);
+        uDac = uOut;
+        #else
+        uSim[k] = uOut;
         #ifdef CONVERSIONS_MODE
         uSimDig[k] = uOptDig;
-        uSim[k] = DAConvertU(uOptDig);
-        #else
-        uSim[k] = uOptDig;
+        #endif
+        plantPush(plant, double(ySim[k]), double(uDac), double(uOut), TB_COMPUTE_DELAY_FRACTION);
+        uDac = uOut;
         #endif
 
         #ifdef DEBUG_PRINT
-        uOpt_f = uSim[k].to_double();
+        uOpt_f = uOut.to_double();
         #endif
-
-        /* --- The plant records the measured y(k) and the applied u(k) --- */
-        plantPush(plant, double(ySim[k]), double(uSim[k]));
     }
 
     /* ------------------------------------------------------------------ */
@@ -204,7 +253,7 @@ int main(void)
     if (N_RUNS == 1)
         snprintf(fileName, sizeof fileName, "output.txt");
     else
-        snprintf(fileName, sizeof fileName, "runs_%s_%s_%03d.txt", TB_CTRL_TAG, PLANT_TAG, run);
+        snprintf(fileName, sizeof fileName, "runs_%s_%s_%03d.txt", ctrlTag, PLANT_TAG, run);
     FILE* fp = fopen(fileName, "w");
     if (!fp) {
         printf("ERROR: could not open %s for writing.\n", fileName);

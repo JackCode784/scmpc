@@ -6,7 +6,7 @@
 void progressiveBarrierPollingArx(cost_type bestCost[2], 
 								norm_input_type bestPoint[nOpt], 
 								const norm_output_type yPast[na], 
-								const norm_input_type uPast[nb + nk - 2], 
+								const norm_input_type uPast[nUKnown], 
 								const norm_output_type yref, 
 								const norm_input_type pollMatrix[nOpt][2 * nOpt], 
 								mesh_exp_type frameExp[nOpt], 
@@ -32,7 +32,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 	double pollMatrix_f[nOpt][2*nOpt];
 	double frameExp_f[nOpt];
 	double yref_f = yref.to_double();
-	double yPast_f[na], uPast_f[nb+nk-2];
+	double yPast_f[na], uPast_f[nUKnown];
 	double arxCoeff_f[Nscen+1][nTheta], arxOffset_f[Nscen+1];
 
 	for(int i = 0; i < nOpt; i++) 
@@ -43,7 +43,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 
 	for(int i = 0; i < Nscen+1; i++) { arxOffset_f[i] = arxOffset[i].to_double(); for(int j = 0; j < nTheta; j++) arxCoeff_f[i][j] = arxCoeff[i][j].to_double(); }
 	for(int i = 0; i < na; i++) yPast_f[i] = yPast[i].to_double();
-	for(int i = 0; i < nb+nk-2; i++) uPast_f[i] = uPast[i].to_double();
+	for(int i = 0; i < nUKnown; i++) uPast_f[i] = uPast[i].to_double();
 	#endif
 
 	// is there a better poll point than the current?

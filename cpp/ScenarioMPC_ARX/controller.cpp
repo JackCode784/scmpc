@@ -81,6 +81,15 @@ norm_input_type  uHist[nb + nk - 1];
  */
 norm_input_type  uOptPrev[NhorU];
 
+#ifdef DELAY_COMPENSATION
+/*
+ * Input applied during the current sampling interval, u(k): returned by
+ * the PREVIOUS call and applied at instant k (see DELAY_COMPENSATION in
+ * setup.h). Initially the same operating point as U_HIST_UNNORM.
+ */
+norm_input_type  uNow;
+#endif
+
 /*
  * Initial values of the five arrays above, derived from the PHYSICAL
  * values in system_configs.h (THETA_NOMINAL_UNNORM, GENERATORS_UNNORM,
@@ -153,6 +162,9 @@ static bool initControllerState()
     for (int i = 0; i < na; i++)         yHist[i]    = yGain * y0[i]     + yOff;
     for (int i = 0; i < nb + nk - 1; i++) uHist[i]    = uGain * u0[i]     + uOff;
     for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uPrev0[i] + uOff;
+    #ifdef DELAY_COMPENSATION
+    uNow = uGain * u0[0] + uOff;
+    #endif
     return true;
 }
 static const bool controllerStateInitialized = initControllerState();
@@ -531,9 +543,17 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * roll out predictions for y(k+1), ..., y(k+N) alongside uOpt.
      * Must be taken BEFORE uHist is updated with uOpt[0] in step 9.
      */
-    norm_input_type uPast[nb + nk - 2];
+    /* With DELAY_COMPENSATION, u(k) = uNow is known too and comes first:
+     * uPast = [u(k), u(k-1), ...] (nUKnown values, setup.h). */
+    norm_input_type uPast[nUKnown];
+    #ifdef DELAY_COMPENSATION
+    uPast[0] = uNow;
+    for (int i = 0; i < nb + nk - 2; i++)
+        uPast[i + 1] = uHist[i];
+    #else
     for (int i = 0; i < nb + nk - 2; i++)
         uPast[i] = uHist[i];
+    #endif
 
     /* ------------------------------------------------------------------ */
     /*  Step 7 - Run MADS optimisation                                    */
@@ -556,7 +576,15 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* ------------------------------------------------------------------ */
     for (int i = nb + nk - 2; i > 0; i--)
         uHist[i] = uHist[i - 1];
+    #ifdef DELAY_COMPENSATION
+    /* u(k), applied during this interval, becomes the most recent past
+     * input; this call's result u(k+1) = uOptNorm[0] is applied at the next
+     * instant and is the next call's known input. */
+    uHist[0] = uNow;
+    uNow = uOptNorm[0];
+    #else
     uHist[0] = uOptNorm[0];   /* receding horizon: only u(k) is applied */
+    #endif
  
     uOptDig = ctrlU2dig(uOptNorm[0]);
     

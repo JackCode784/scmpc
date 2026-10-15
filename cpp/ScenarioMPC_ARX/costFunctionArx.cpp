@@ -91,7 +91,7 @@
 void costFunctionArx(cost_type              cost[2],
                      const norm_output_type yPast          [na],
                      const norm_input_type  currU          [nOpt],
-                     const norm_input_type  uPast          [nb + nk - 2],
+                     const norm_input_type  uPast          [nUKnown],
                      const norm_output_type yref,
                      const arx_coeff_type   arxCoeff       [Nscen+1][nTheta],
                      const arx_coeff_type   arxOffset      [Nscen+1])
@@ -149,12 +149,16 @@ void costFunctionArx(cost_type              cost[2],
         }
     }
 
-    for (int i = 0; i < nb + nk - 2; i++)
+    /* Known inputs: uPast = [u(k-1), ...] without delay compensation, so
+     * uSamples[0] = u(k) comes from currU at step 0; with it (DC_STEPS = 1,
+     * setup.h) uPast = [u(k), u(k-1), ...] and u(k) is known: the decision
+     * variables start at step DC_STEPS. */
+    for (int i = 0; i < nUKnown; i++)
     {
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        uSamples[i + 1] = uPast[i];
+        uSamples[i + 1 - DC_STEPS] = uPast[i];
     }
 
     /* --- Input bound check (cheap, done once) ------------------------ */
@@ -181,9 +185,12 @@ void costFunctionArx(cost_type              cost[2],
     /*  Prediction loop  k = 0, 1, ..., Nhor - 1                           */
     /* ------------------------------------------------------------------ */
     /*
-     *   * k < NhorU   : uSamples[0] = currU[k]  (within control horizon)
-     *   * k >= NhorU  : uSamples[0] unchanged    (zero-order hold)
+     * With j = k - DC_STEPS (DC_STEPS = 1 with DELAY_COMPENSATION, whose
+     * first step uses the known input u(k) already in uSamples[0]):
+     *   * 0 <= j < NhorU : uSamples[0] = currU[j] (within control horizon)
+     *   * j >= NhorU     : uSamples[0] unchanged  (zero-order hold)
      *   * k < Nhor-1  : stage weight outputWeight, plus the input cost
+     *                   (not for a known input: k < DC_STEPS)
      *   * k = Nhor-1  : terminal weight terminalOutputWeight, no input cost
      */
     for (int k = 0; k < Nhor; k++)
@@ -194,8 +201,8 @@ void costFunctionArx(cost_type              cost[2],
         #endif
 
         /* --- Set current input ---------------------------------------- */
-        if (k < NhorU)
-            uSamples[0] = currU[k];
+        if (k >= DC_STEPS && k - DC_STEPS < NhorU)
+            uSamples[0] = currU[k - DC_STEPS];
 
         #ifdef DEBUG_PRINT
         for(int i = 0; i < Nscen+1; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = yPastCurr[i][j].to_double();
@@ -205,7 +212,7 @@ void costFunctionArx(cost_type              cost[2],
 
         /* --- Input cost term (all steps except the terminal one) ------- */
         /* --- Input term is difference with respect to previous sample -- */
-        if (k < Nhor - 1){
+        if (k >= DC_STEPS && k < Nhor - 1){
             #ifndef FIXED
             costTrack += (uSamples[0] - uSamples[1]) * R * (uSamples[0] - uSamples[1]);
             #else

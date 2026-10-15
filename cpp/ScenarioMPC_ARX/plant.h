@@ -61,6 +61,20 @@
  *  same plants and noise to every controller configuration. */
 #define TB_SEED             1u
 
+/** Controller latency dt emulated by the test bench, as a fraction of the
+ *  sampling period (0 <= dt/Ts < 1). Without DELAY_COMPENSATION (setup.h)
+ *  the input computed at instant k takes effect at k*Ts + dt: the plant
+ *  keeps the previous input for the first dt of the interval, as a real
+ *  DAC would. 0 is the ideal, instantaneous controller (the original test
+ *  bench). With DELAY_COMPENSATION every input is applied at the sampling
+ *  instant after the one it was computed at, so dt plays no role as long
+ *  as it is below Ts. The inverted pendulum's nonlinear plant applies the
+ *  switch inside its Euler sub-steps; ARX plants, which only know one input
+ *  per interval, get the interval's average, (dt/Ts)*u_old + (1-dt/Ts)*u_new. */
+#define TB_COMPUTE_DELAY_FRACTION  0.0
+static_assert(TB_COMPUTE_DELAY_FRACTION >= 0.0 && TB_COMPUTE_DELAY_FRACTION < 1.0,
+    "TB_COMPUTE_DELAY_FRACTION must be in [0, 1): a latency of a full period or more misses the next sample.");
+
 /* ======================================================================
    Test-bench random generator
    ======================================================================
@@ -127,6 +141,8 @@ struct Plant
     double y[na];             /* y(k-1), ..., y(k-na)   (measured)          */
     double u[nb + nk - 1];    /* u(k-1), ..., u(k-nb-nk+1)                  */
     double x[2];              /* nonlinear state: angle, angular velocity   */
+    double uEarly;            /* input held during the first fEarly of the  */
+    double fEarly;            /* last interval, before u[0] took effect     */
 };
 
 inline void pendulumThetaFromPhys(double l, double m, double theta[nTheta])
@@ -172,15 +188,20 @@ inline void plantReset(Plant &p)
      * from the last two samples. */
     p.x[0] = y0[0];
     p.x[1] = (y0[0] - y0[1]) / PEND_TS;
+    p.uEarly = u0[0];
+    p.fEarly = 0.0;
 }
 
 inline double plantNextOutput(Plant &p)
 {
     #if PENDULUM_NONLINEAR
     const double h = PEND_TS / PENDULUM_EULER_SUBSTEPS;
-    const double uHold = p.u[0];                      /* u(k-1), zero-order hold */
+    /* Zero-order hold of u(k-1) = u[0], after uEarly for the first fEarly
+     * of the interval (controller latency, TB_COMPUTE_DELAY_FRACTION) */
+    const int nEarly = int(std::lround(p.fEarly * PENDULUM_EULER_SUBSTEPS));
     for (int s = 0; s < PENDULUM_EULER_SUBSTEPS; s++)
     {
+        const double uHold = (s < nEarly) ? p.uEarly : p.u[0];
         const double angle = p.x[0], vel = p.x[1];
         p.x[0] = angle + h * vel;
         p.x[1] = vel + h * (PEND_G / p.l * std::sin(angle) + uHold / (p.m * p.l * p.l));
@@ -262,13 +283,22 @@ inline void plantPrintParams(const Plant &p, FILE *f, bool header)
 }
 #endif
 
-/** Common to every plant: shift in the measured output y(k) and the
- *  applied input u(k) once the controller has run. The ARX regression uses
- *  the MEASURED (noisy) past outputs - an equation-error model, as before. */
-inline void plantPush(Plant &p, double yMeas, double u)
+/** Common to every plant: shift in the measured output y(k) and the input
+ *  of the interval [k*Ts, (k+1)*Ts) once the controller has run: uEarly for
+ *  its first fraction fEarly, then u (fEarly = 0: u for the whole interval,
+ *  the original test bench). The ARX regression uses the MEASURED (noisy)
+ *  past outputs - an equation-error model, as before. */
+inline void plantPush(Plant &p, double yMeas, double uEarly, double u, double fEarly)
 {
     for (int i = na - 1; i > 0; i--)          p.y[i] = p.y[i - 1];
     p.y[0] = yMeas;
     for (int i = nb + nk - 2; i > 0; i--)     p.u[i] = p.u[i - 1];
-    p.u[0] = u;
+    #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM && PENDULUM_NONLINEAR
+    p.u[0] = u;               /* the Euler sub-steps apply the switch */
+    p.uEarly = uEarly;
+    p.fEarly = fEarly;
+    #else
+    /* one input per interval: its average */
+    p.u[0] = (fEarly == 0.0) ? u : fEarly * uEarly + (1.0 - fEarly) * u;
+    #endif
 }
