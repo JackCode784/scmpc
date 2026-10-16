@@ -106,7 +106,7 @@ int main(void)
     /* ------------------------------------------------------------------ */
     /*  Simulation parameters                                              */
     /* ------------------------------------------------------------------ */
-    constexpr int nSim = 300;
+    constexpr int nSim = 500;
 
     /* Arrays to log one run's trajectory (reused by every run). */
     output_type ySim[nSim];
@@ -129,7 +129,7 @@ int main(void)
     char fileName[128];
     if (N_RUNS > 1)
     {
-        snprintf(fileName, sizeof fileName, "runs_%s_%s_summary.txt", ctrlTag, PLANT_TAG);
+        snprintf(fileName, sizeof fileName, "FloatSimulations/runs_%s_%s_summary.txt", ctrlTag, PLANT_TAG);
         summary = fopen(fileName, "w");
         if (!summary) { printf("ERROR: could not open %s for writing.\n", fileName); return 1; }
     }
@@ -251,9 +251,9 @@ int main(void)
     /*  Write this run's trajectory to file                               */
     /* ------------------------------------------------------------------ */
     if (N_RUNS == 1)
-        snprintf(fileName, sizeof fileName, "output.txt");
+        snprintf(fileName, sizeof fileName, "FloatSimulations/output.txt");
     else
-        snprintf(fileName, sizeof fileName, "runs_%s_%s_%03d.txt", ctrlTag, PLANT_TAG, run);
+        snprintf(fileName, sizeof fileName, "FloatSimulations/runs_%s_%s_%03d.txt", ctrlTag, PLANT_TAG, run);
     FILE* fp = fopen(fileName, "w");
     if (!fp) {
         printf("ERROR: could not open %s for writing.\n", fileName);
@@ -375,7 +375,7 @@ int main(void)
     if (run == 0)
     {
         #ifndef __RTL_SIMULATION__
-        FILE* g = fopen("golden_u.txt", "w");
+        FILE* g = fopen("FloatSimulations/golden_u.txt", "w");
         if (g)
         {
             for (int k = 0; k < nSim; k++) fprintf(g, "%.17g\n", double(uSim[k]));

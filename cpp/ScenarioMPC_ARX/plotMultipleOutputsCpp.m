@@ -18,9 +18,10 @@ function plotMultipleOutputsCpp(opts)
 clc;
 
 if opts.isVitisSim
-    d = "..\..\vitis\scmpc-arx\solution1\csim\build\";
+    % d = "..\..\vitis\scmpc-arx\solution1\csim\build\";
+    d = "..\..\vitis\scmpc-controller2026\scmpc-controller2026\hls\csim\build";
 else
-    d = pwd;
+    d = append(pwd, "\FloatSimulations\");
 end
 
 if isfield(opts, 'tags') && ~isempty(opts.tags)
