@@ -102,10 +102,16 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
          * NOT unrolled: pseudoRandArx(coeffs) advances the single shared
          * xorshift32 state (see pseudoRand.cpp), so scenario i+1's random
          * draw genuinely depends on scenario i's - the Nscen iterations
-         * cannot be computed in parallel. PIPELINE still overlaps the
-         * dot-product arithmetic of one scenario with the next draw.
+         * cannot be computed in parallel.
+         * NOT pipelined either: at II=1, all nGens xorshift steps of one
+         * scenario (3 shift-XOR layers each) form the loop-carried path
+         * of a single clock cycle - 8.9 ns estimated for the pendulum's
+         * nGens = 3, against 7.3 ns available at 10 ns (Vitis HLS 2026.1).
+         * Sequential, the draw loop inside pseudoRandArx pipelines at one
+         * xorshift step per cycle; this runs once per controller() call,
+         * so the extra ~Nscen*nGens cycles are ~0.3% of its latency.
          */
-        #pragma HLS PIPELINE
+        #pragma HLS PIPELINE off
         #endif
 
         /* Draw nGens independent random coefficients ξ₀, …, ξ_{nGens−1}. */

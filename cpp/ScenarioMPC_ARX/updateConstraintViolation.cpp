@@ -15,6 +15,32 @@
  * gives min(sum, max) whatever the grouping. Floating point keeps the two
  * additions (there, regrouping could round differently).
  */
+#ifdef FIXED
+/**
+ * The violation term addConstraintViolation adds: >= 0, and exact in
+ * cost_type (both parts are differences of norm_output_type values, which
+ * has fewer fractional bits). costFunctionArx's model loop adds it to its
+ * own exact accumulator (ViolAcc there) instead of a cost_type one.
+ */
+cost_type constraintViolation(const norm_output_type yCurr, const norm_output_type yPast)
+{
+    #ifdef PRAGMAS
+    #pragma HLS INLINE
+    #endif
+    cost_type viol = 0;
+    if (yCurr > YNORMMAX)
+        viol += (yCurr - YNORMMAX);
+    else if (yCurr < YNORMMIN)
+        viol += (YNORMMIN - yCurr);
+
+    if(yCurr - yPast > DELTAYNORM)
+        viol += yCurr - yPast - DELTAYNORM;
+    else if(yCurr - yPast < -DELTAYNORM)
+        viol += yPast - yCurr - DELTAYNORM;
+    return viol;
+}
+#endif
+
 void addConstraintViolation(cost_type &acc, const norm_output_type yCurr, const norm_output_type yPast)
 {
     #ifdef PRAGMAS
@@ -26,17 +52,7 @@ void addConstraintViolation(cost_type &acc, const norm_output_type yCurr, const 
     #endif
 
     #ifdef FIXED
-    cost_type viol = 0;
-    if (yCurr > YNORMMAX)
-        viol += (yCurr - YNORMMAX);
-    else if (yCurr < YNORMMIN)
-        viol += (YNORMMIN - yCurr);
-
-    if(yCurr - yPast > DELTAYNORM)
-        viol += yCurr - yPast - DELTAYNORM;
-    else if(yCurr - yPast < -DELTAYNORM)
-        viol += yPast - yCurr - DELTAYNORM;
-    acc += viol;
+    acc += constraintViolation(yCurr, yPast);
     #else
     if (yCurr > YNORMMAX)
         acc += (yCurr - YNORMMAX);

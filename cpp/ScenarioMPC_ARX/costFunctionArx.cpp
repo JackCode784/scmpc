@@ -55,9 +55,21 @@
  * - INLINE off on the function, every profile: it stays one RTL module,
  *   so the number of instances is set by MADSARX's ALLOCATION pragma (and
  *   not by automatic inlining, which would copy it into each call site).
- * - ARRAY_PARTITION complete on yPastCurr and uSamples, every profile:
- *   (Nscen+1)*na + nb+nk-1 registers, read and written by the unrolled
- *   shift loops and, in the model loop, one row per iteration.
+ * - uSamples: ARRAY_PARTITION complete, every profile (nb+nk-1
+ *   registers, shifted by an unrolled loop).
+ * - yPastCurr: ARRAY_PARTITION complete on dim 2 only, plus BIND_STORAGE
+ *   LUTRAM, every profile: na small RAMs (one per past sample) of Nscen+1
+ *   words (one per model), so the model loop reads row l through a RAM
+ *   address, not a multiplexer over registers. This is what lets the
+ *   model loop pipeline: on registers, the tool cannot tell that
+ *   iteration l+1 does not read the register iteration l just wrote, so
+ *   it treated the whole prediction (row mux, ARX products, adder tree,
+ *   error, accumulation) as a one-cycle recurrence - 21 ns on a 10 ns
+ *   clock with Vitis HLS 2026.1 - and DEPENDENCE cannot override that for
+ *   scalars. On a RAM it can (below). Each RAM sees one read and one write
+ *   per iteration (ram_2p). The rows are not initialized: at k = 0 every
+ *   model reads the measured history yPast instead (same values as the
+ *   former copy loop, without Nscen+1 RAM writes).
  * - UNROLL on the small na/nb/nOpt/Nscen+1 copy and shift loops, every
  *   profile: they are wiring and registers, not arithmetic.
  * - k loop: PIPELINE off, every profile. Its recurrence (k+1 needs k)
@@ -76,17 +88,86 @@
  *                        datapath is not duplicated. DEPENDENCE ... false
  *                        on yPastCurr tells the tool what is true here:
  *                        iterations of this loop never touch the same row.
- *                        The only loop-carried values are the two
- *                        accumulators, one addition each per iteration
- *                        (see addConstraintViolation); if a 10 ns clock
- *                        cannot fit that addition, the tool reports it and
- *                        uses II=2.
+ *                        The only loop-carried values are then the two
+ *                        accumulators, written so that each is ONE plain
+ *                        addition per iteration (FIXED; see
+ *                        ScenAcc and ViolAcc below), with results
+ *                        bit-identical to the saturating, rounding
+ *                        cost_type additions they replace.
  * The poll evaluations that call this function, and therefore how many
  * copies of it run in parallel, are set in progressiveBarrierPollingArx.cpp
  * and MADSARX.cpp.
  */
 
 #include "setup.h"
+
+#ifdef FIXED
+/*
+ * Accumulators of the model loop (FIXED). A cost_type addition rounds
+ * (AP_RND_CONV) and saturates (AP_SAT): an adder, a rounding incrementer
+ * and a clamp in series. In the pipelined model loop that whole chain is
+ * the loop-carried path, so it must fit one clock cycle for II=1. These
+ * two accumulators give the same numbers with one plain adder in the loop.
+ */
+
+/* Constraint violation: costViol = (512 if an input is out of bounds) +
+ * one constraintViolation() per model and step. Every term is >= 0 and
+ * exact in cost_type, so the saturating running sum equals the exact sum
+ * clamped once at the end, min(sum, cost_type max), whatever the order.
+ * ViolAcc holds the exact sum: no clamp in the loop. Its integer bits
+ * cover the largest possible sum - a term is below 2 * 2^iwidth of
+ * norm_output_type (two differences of norm_output_type values). */
+cost_type constraintViolation(const norm_output_type yCurr, const norm_output_type yPast);   /* updateConstraintViolation.cpp */
+constexpr int ceilLog2(long long v) { return (v <= 1) ? 0 : 1 + ceilLog2((v + 1) / 2); }
+constexpr long long VIOL_SUM_MAX = 512 + (long long)(Nscen + 1) * Nhor * (2LL << norm_output_type::iwidth);
+constexpr int VIOL_ACC_I = ceilLog2(VIOL_SUM_MAX + 1);
+typedef ap_ufixed<VIOL_ACC_I + cost_type::width - cost_type::iwidth, VIOL_ACC_I, AP_TRN, AP_WRAP> ViolAcc;
+
+/* Scenario tracking error: scenariosContrib += err_s*err_s, rounded
+ * (round half to even) to cost_type's grid at every addition. With the
+ * running sum s on that grid, write the square as P + f: P its value
+ * truncated to the grid and f in [0, 1 LSB) the dropped part. Then
+ *   round(s + P + f) = s + P + inc,
+ *   inc = 1 if f > LSB/2, or if f == LSB/2 and s + P is odd, else 0,
+ * and the parity of s + P is lsb(s) XOR lsb(P). So P, P + 1 and the two
+ * comparisons are computed from the square alone, outside the
+ * recurrence; the loop keeps lsb(s) -> select -> one addition. No clamp:
+ * the sum is below Nscen * (2^iwidth of err_type)^2 (static_assert). */
+constexpr int SQ_FRAC   = 2 * (err_type::width - err_type::iwidth);
+constexpr int COST_FRAC = cost_type::width - cost_type::iwidth;
+constexpr int SQ_DROP   = SQ_FRAC - COST_FRAC;   /* bits rounded off per addition */
+static_assert(SQ_DROP > 0, "ScenAcc assumes err_type^2 has more fractional bits than cost_type.");
+static_assert((long long)Nscen << (2 * err_type::iwidth) < (1LL << cost_type::iwidth),
+    "ScenAcc assumes the scenario error sum cannot saturate cost_type.");
+struct ScenAcc
+{
+    ap_uint<cost_type::width> s = 0;   /* cost_type's bits */
+
+    void add(const err_type err)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS INLINE
+        #endif
+        const ap_fixed<2 * err_type::width, 2 * err_type::iwidth> sq = err * err;   /* exact, >= 0 */
+        const ap_uint<2 * err_type::width> raw = sq.range();
+        const ap_uint<SQ_DROP> f = raw.range(SQ_DROP - 1, 0);
+        const ap_uint<SQ_DROP> half = ap_uint<SQ_DROP>(1) << (SQ_DROP - 1);
+        const ap_uint<cost_type::width> P  = raw >> SQ_DROP;
+        const ap_uint<cost_type::width> P1 = P + 1;
+        const bool gt = f > half, eq = f == half;
+        /* loop-carried part */
+        const bool inc = gt || (eq && (s[0] != P[0]));
+        s += inc ? P1 : P;
+    }
+
+    cost_type value() const
+    {
+        cost_type v;
+        v.range() = s;
+        return v;
+    }
+};
+#endif
 
 void costFunctionArx(cost_type              cost[2],
                      const norm_output_type yPast          [na],
@@ -118,7 +199,11 @@ void costFunctionArx(cost_type              cost[2],
      * then accumulates into registers rather than through the cost[]
      * argument. */
     cost_type costTrack = 0;
+    #ifdef FIXED
+    ViolAcc   costViol  = 0;   /* exact sum, clamped to cost_type at the end */
+    #else
     cost_type costViol  = 0;
+    #endif
 
     /*
      * Per-model output history: yPastCurr[l] = [y_l(k-1), ..., y_l(k-na)]
@@ -131,23 +216,12 @@ void costFunctionArx(cost_type              cost[2],
     norm_output_type yPastCurr[Nscen+1][na];
     norm_input_type  uSamples [nb + nk - 1];
     #ifdef PRAGMAS
-    #pragma HLS ARRAY_PARTITION variable=yPastCurr complete dim=0
+    /* yPastCurr: na RAMs of Nscen+1 words, rows not initialized - the
+     * first step reads yPast instead (HLS NOTES) */
+    #pragma HLS ARRAY_PARTITION variable=yPastCurr complete dim=2
+    #pragma HLS BIND_STORAGE    variable=yPastCurr type=ram_2p impl=lutram
     #pragma HLS ARRAY_PARTITION variable=uSamples  complete dim=1
     #endif
-
-    for (int i = 0; i < Nscen+1; i++)
-    {
-        #ifdef PRAGMAS
-        #pragma HLS UNROLL
-        #endif
-        for(int j = 0; j < na; j++)
-        {
-            #ifdef PRAGMAS
-            #pragma HLS UNROLL
-            #endif
-            yPastCurr[i][j] = yPast[j];
-        }
-    }
 
     /* Known inputs: uPast = [u(k-1), ...] without delay compensation, so
      * uSamples[0] = u(k) comes from currU at step 0; with it (DC_STEPS = 1,
@@ -205,7 +279,7 @@ void costFunctionArx(cost_type              cost[2],
             uSamples[0] = currU[k - DC_STEPS];
 
         #ifdef DEBUG_PRINT
-        for(int i = 0; i < Nscen+1; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = yPastCurr[i][j].to_double();
+        for(int i = 0; i < Nscen+1; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = (k == 0) ? yPast[j].to_double() : yPastCurr[i][j].to_double();
         for(int i = 0; i < nb+nk-1; i++) uSamples_f[i] = uSamples[i].to_double();
         input_cost_term_f = (uSamples_f[0] - uSamples_f[1]) * (uSamples_f[0] - uSamples_f[1]) * R.to_double();
         #endif
@@ -231,6 +305,9 @@ void costFunctionArx(cost_type              cost[2],
         }
 
         /* --- Model loop: the scenarios, then the nominal model ---------- */
+        #ifdef FIXED
+        ScenAcc          scenAcc;
+        #endif
         cost_type        scenariosContrib = 0;
         norm_output_type yNext_nom        = 0;
         for (int l = firstRow; l < Nscen + 1; l++)
@@ -246,7 +323,21 @@ void costFunctionArx(cost_type              cost[2],
             #pragma HLS PIPELINE off
             #endif
             #endif
-            norm_output_type yNext = computeArxOutput(yPastCurr[l], uSamples,
+            /* This model's past outputs: the measured ones at the first
+             * step (every model starts from them), its own row after. */
+            norm_output_type yRow[na];
+            #ifdef PRAGMAS
+            #pragma HLS ARRAY_PARTITION variable=yRow complete dim=1
+            #endif
+            for (int i = 0; i < na; i++)
+            {
+                #ifdef PRAGMAS
+                #pragma HLS UNROLL
+                #endif
+                yRow[i] = (k == 0) ? yPast[i] : yPastCurr[l][i];
+            }
+
+            norm_output_type yNext = computeArxOutput(yRow, uSamples,
                                                       arxCoeff[l], arxOffset[l]);
 
             #ifdef DEBUG_PRINT
@@ -257,21 +348,33 @@ void costFunctionArx(cost_type              cost[2],
             {
                 #ifdef USE_SCENS_COST
                 err_type err_s = yNext - yref;
+                #ifdef FIXED
+                scenAcc.add(err_s);
+                #else
                 scenariosContrib += (err_s * err_s);
+                #endif
                 #ifdef DEBUG_PRINT
                 err_s_f = err_s.to_double();
-                scenariosContrib_f = scenariosContrib.to_double();
+                scenariosContrib_f = scenAcc.value().to_double();
                 #endif
                 #endif
 
                 #ifdef USE_SCENS_CONSTR
-                addConstraintViolation(costViol, yNext, yPastCurr[l][0]);
+                #ifdef FIXED
+                costViol += constraintViolation(yNext, yRow[0]);
+                #else
+                addConstraintViolation(costViol, yNext, yRow[0]);
+                #endif
                 #endif
             }
             else
             {
                 /* Nominal model: always constrained */
-                addConstraintViolation(costViol, yNext, yPastCurr[l][0]);
+                #ifdef FIXED
+                costViol += constraintViolation(yNext, yRow[0]);
+                #else
+                addConstraintViolation(costViol, yNext, yRow[0]);
+                #endif
                 yNext_nom = yNext;
             }
 
@@ -279,13 +382,17 @@ void costFunctionArx(cost_type              cost[2],
             for(int i = na - 1; i > 0; i--)
             {
                 #ifdef PRAGMAS
-                /* register copies only - see init loops above */
+                /* one write per column RAM (HLS NOTES) */
                 #pragma HLS UNROLL
                 #endif
-                yPastCurr[l][i] = yPastCurr[l][i-1];
+                yPastCurr[l][i] = yRow[i-1];
             }
             yPastCurr[l][0] = yNext;
         }
+
+        #if defined(FIXED) && defined(USE_SCENS_COST)
+        scenariosContrib = scenAcc.value();
+        #endif
 
         #ifdef USE_SCENS_COST
         /* Divide by Nscen to get the mean squared error across scenarios.
@@ -332,5 +439,5 @@ void costFunctionArx(cost_type              cost[2],
     }
 
     cost[0] = costTrack;
-    cost[1] = costViol;
+    cost[1] = costViol;   /* FIXED: clamps the exact sum to cost_type (AP_SAT) */
 }
