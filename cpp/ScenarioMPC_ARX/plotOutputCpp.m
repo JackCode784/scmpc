@@ -5,19 +5,20 @@ clc;
 
 if opts.isVitisSim
     titleStr = 'Fixed point';
-    d = "..\..\vitis\scmpc-arx\solution1\csim\build\";
+    % d = "..\..\vitis\scmpc-arx\solution1\csim\build\";
+    d = "..\..\vitis\scmpc-controller2026\scmpc-controller2026\hls\csim\build";
     % d = dir(fullfile(cd, '**', 'output.txt'));
     % d = d(1).folder;
 else
     titleStr = 'Floating point';
-    d = "";
+    d = fullfile(pwd, "FloatSimulations");
 end
 
 % Save data as table instead of matrix
 % opts.fileName (optional): plot one run of a multi-run experiment in
 % detail, e.g. "runs_scen_nl_007.txt"; default "output.txt"
 if isfield(opts, 'fileName'), fileName = opts.fileName; else, fileName = "output.txt"; end
-data = readtable(append(d, fileName), VariableNamingRule="preserve");
+data = readtable(fullfile(d, fileName), VariableNamingRule="preserve");
 
 % Tracking error
 data.err = data.yref - data.ySim;

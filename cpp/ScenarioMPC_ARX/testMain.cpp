@@ -24,6 +24,10 @@
  *
  * OUTPUT FILES
  * ------------
+ * Floating-point builds write into FloatSimulations/ (created if missing),
+ * relative to the working directory; fixed-point builds into the working
+ * directory itself, i.e. Vitis' csim/build folder, where plot*Cpp.m with
+ * isVitisSim and the co-simulation check below look for them (TB_OUT_DIR).
  * N_RUNS == 1: "output.txt", one row per step (format unchanged; the
  *              columns depend on the compilation mode) - plotOutputCpp.m.
  * N_RUNS  > 1: "runs_<ctrl>_<plant>_<run>.txt", same format, one per run,
@@ -45,6 +49,21 @@
 #include "setup.h"
 #include "plant.h"
 #include <stdio.h>
+#ifdef _WIN32
+  #include <direct.h>
+  #define TB_MKDIR(dir) _mkdir(dir)
+#else
+  #include <sys/stat.h>
+  #define TB_MKDIR(dir) mkdir(dir, 0777)
+#endif
+
+/* Folder for every file the test bench writes (see OUTPUT FILES above) */
+#ifdef FIXED
+  #define TB_OUT_DIR ""
+#else
+  #define TB_OUT_DIR_NAME "FloatSimulations"
+  #define TB_OUT_DIR TB_OUT_DIR_NAME "/"
+#endif
 
 #if defined(USE_SCENS_COST) && defined(USE_SCENS_CONSTR)
   #define TB_CTRL_TAG "scen"
@@ -125,11 +144,14 @@ int main(void)
 
     TbRng rng(TB_SEED);
 
+    #ifdef TB_OUT_DIR_NAME
+    (void)TB_MKDIR(TB_OUT_DIR_NAME);   /* fails harmlessly if it already exists */
+    #endif
     FILE* summary = nullptr;
     char fileName[128];
     if (N_RUNS > 1)
     {
-        snprintf(fileName, sizeof fileName, "FloatSimulations/runs_%s_%s_summary.txt", ctrlTag, PLANT_TAG);
+        snprintf(fileName, sizeof fileName, TB_OUT_DIR "runs_%s_%s_summary.txt", ctrlTag, PLANT_TAG);
         summary = fopen(fileName, "w");
         if (!summary) { printf("ERROR: could not open %s for writing.\n", fileName); return 1; }
     }
@@ -251,9 +273,9 @@ int main(void)
     /*  Write this run's trajectory to file                               */
     /* ------------------------------------------------------------------ */
     if (N_RUNS == 1)
-        snprintf(fileName, sizeof fileName, "FloatSimulations/output.txt");
+        snprintf(fileName, sizeof fileName, TB_OUT_DIR "output.txt");
     else
-        snprintf(fileName, sizeof fileName, "FloatSimulations/runs_%s_%s_%03d.txt", ctrlTag, PLANT_TAG, run);
+        snprintf(fileName, sizeof fileName, TB_OUT_DIR "runs_%s_%s_%03d.txt", ctrlTag, PLANT_TAG, run);
     FILE* fp = fopen(fileName, "w");
     if (!fp) {
         printf("ERROR: could not open %s for writing.\n", fileName);
@@ -375,7 +397,7 @@ int main(void)
     if (run == 0)
     {
         #ifndef __RTL_SIMULATION__
-        FILE* g = fopen("FloatSimulations/golden_u.txt", "w");
+        FILE* g = fopen(TB_OUT_DIR "golden_u.txt", "w");
         if (g)
         {
             for (int k = 0; k < nSim; k++) fprintf(g, "%.17g\n", double(uSim[k]));
@@ -387,9 +409,9 @@ int main(void)
         #ifdef GOLDEN_U_PATH
         FILE* g = fopen(GOLDEN_U_PATH, "r");
         #else
-        FILE* g = fopen("../../csim/build/golden_u.txt", "r");
+        FILE* g = fopen("../../csim/build/" TB_OUT_DIR "golden_u.txt", "r");
         #endif
-        if (!g) g = fopen("golden_u.txt", "r");
+        if (!g) g = fopen(TB_OUT_DIR "golden_u.txt", "r");
         if (!g)
         {
             printf("CO-SIM CHECK FAILED: golden_u.txt not found - run C simulation first.\n");
