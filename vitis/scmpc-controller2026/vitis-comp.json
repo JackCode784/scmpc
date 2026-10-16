@@ -1,0 +1,15 @@
+{
+  "name": "scmpc-controller2026",
+  "type": "HLS",
+  "configuration": {
+    "componentType": "HLS",
+    "configFiles": [
+      "hls_config.cfg"
+    ],
+    "work_dir": "scmpc-controller2026",
+    "package_args": ""
+  },
+  "useSysrootToolchain": false,
+  "template": "empty_hls_component",
+  "templateFlow": "VITIS"
+}
