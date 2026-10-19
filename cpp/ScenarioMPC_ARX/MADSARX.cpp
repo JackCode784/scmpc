@@ -17,12 +17,21 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], c
 	#ifdef PRAGMAS
 	/*
 	 * Number of costFunctionArx RTL instances (the largest block of the
-	 * design), set per profile in setup.h: 1 for AREA and BALANCED, shared
-	 * by the starting-point evaluation below and the sequential poll
+	 * design), set per profile in setup.h: 1 for AREA and BALANCED, used
+	 * by the starting-point evaluation and the sequential poll
 	 * evaluations; 2*nOpt for LATENCY, one per poll point evaluated in
-	 * parallel (the starting-point evaluation reuses one of them).
-	 * progressiveBarrierPollingArx is inlined here, so both call sites are
+	 * parallel (the starting-point evaluation uses the first of them).
+	 * progressiveBarrierPollingArx is inlined here, so its call site is
 	 * in this function, where the pragma applies.
+	 *
+	 * The pragma only takes effect if every call is to the same function:
+	 * Vitis HLS ignores it, with WARNING [HLS 214-300], when costFunctionArx
+	 * is cloned. It was, while the starting point had its own call here:
+	 * the warm start (controller.cpp) repeats the last input, so that call
+	 * always received [u1, u2, u2], and the tool built a specialized copy
+	 * for it - and then chose the instance counts itself (2 in AREA and
+	 * BALANCED, 3 to 7 in LATENCY). The starting point is therefore
+	 * evaluated through the poll call site instead (iteration -1 below).
 	 */
 	HLS_PRAGMA(HLS allocation function instances=costFunctionArx limit=PRAGMA_COSTFUNC_INSTANCES)
 
@@ -44,15 +53,14 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], c
 	for(int i = 0; i < nOpt; i++) uOpt_f[i] = uOpt[i].to_double();
 	#endif
 
-	// Compute the cost function and the constraints violation in the initial point
-	costFunctionArx(cost, yInit, uOpt, uInit, yref, arxCoeff, arxOffset);
-
-	#ifdef DEBUG_PRINT
-	cost_f[0] = cost[0].to_double();
-	cost_f[1] = cost[1].to_double();
-	#endif
-
-	// MADS alg iterates K times
+	/*
+	 * MADS iterates MADS_ITER times, after an iteration -1 that only
+	 * evaluates the starting point uOpt: it is placed in pollMatrix column
+	 * 0 and evaluated, alone, by the same costFunctionArx call as the poll
+	 * points (startOnly), which sets cost[] - the same numbers as calling
+	 * costFunctionArx(cost, yInit, uOpt, ...) directly, without a second
+	 * call site (see the ALLOCATION pragma above).
+	 */
 	#ifdef PRAGMAS
 	/*
 	 * Deliberately no UNROLL/PIPELINE here: this is the direct-search
@@ -69,56 +77,71 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], c
 	 * used to be, it applies to the enclosing function instead.
 	 */
 	#endif
-	for (int iter = 0; iter < MADS_ITER; iter++)
+	for (int iter = -1; iter < MADS_ITER; iter++)
 	{
 		#ifdef PRAGMAS
 		#pragma HLS PIPELINE off
 		#endif
-		// update mesh size
-		for (int i = 0; i < nOpt; i++)
-		{
-			#ifdef PRAGMAS
-			/*
-			 * Loop is now safe to fully unroll: the data-dependent break that
-			 * used to make its trip count variable has been replaced below
-			 * with a per-dimension guard, so every iteration is independent
-			 * and bounded by the compile-time constant nOpt.
-			 */
-			#pragma HLS UNROLL
-			#endif
-			/* Old method: HLS unfriendly because of break */
-			// if (frameExp[i] < FRAME_EXP_MIN)
-			// {
-			// 	break;
-			// }
-			// else if (frameExp[i] < 0)
-			// {
-			// 	meshExp[i] = frameExp[i] + frameExp[i];
-			// }
-			// else
-			// {
-			// 	meshExp[i] = frameExp[i];
-			// }
+		const bool startOnly = (iter < 0);
 
-			/* Alternative to break statement */
-			if(frameExp[i] >= FRAME_EXP_MIN) meshExp[i] = (frameExp[i] < 0) ? (frameExp[i] << 1) : frameExp[i];
+		if (startOnly)
+		{
+			for (int i = 0; i < nOpt; i++)
+			{
+				#ifdef PRAGMAS
+				#pragma HLS UNROLL
+				#endif
+				pollMatrix[i][0] = uOpt[i];
+			}
+		}
+		else
+		{
+			// update mesh size
+			for (int i = 0; i < nOpt; i++)
+			{
+				#ifdef PRAGMAS
+				/*
+				 * Loop is now safe to fully unroll: the data-dependent break that
+				 * used to make its trip count variable has been replaced below
+				 * with a per-dimension guard, so every iteration is independent
+				 * and bounded by the compile-time constant nOpt.
+				 */
+				#pragma HLS UNROLL
+				#endif
+				/* Old method: HLS unfriendly because of break */
+				// if (frameExp[i] < FRAME_EXP_MIN)
+				// {
+				// 	break;
+				// }
+				// else if (frameExp[i] < 0)
+				// {
+				// 	meshExp[i] = frameExp[i] + frameExp[i];
+				// }
+				// else
+				// {
+				// 	meshExp[i] = frameExp[i];
+				// }
+
+				/* Alternative to break statement */
+				if(frameExp[i] >= FRAME_EXP_MIN) meshExp[i] = (frameExp[i] < 0) ? (frameExp[i] << 1) : frameExp[i];
+
+				#ifdef DEBUG_PRINT
+				frameExp_f[i] = frameExp[i].to_double();
+				meshExp_f[i] = meshExp[i].to_double();
+				#endif
+			}
+
+			generatePollMatrixArx(uOpt, frameExp, meshExp, pollMatrix);
 
 			#ifdef DEBUG_PRINT
-			frameExp_f[i] = frameExp[i].to_double();
-			meshExp_f[i] = meshExp[i].to_double();
+			for(int i = 0; i < nOpt; i++) {
+				for(int j = 0; j < 2*nOpt; j++) pollMatrix_f[i][j] = pollMatrix[i][j].to_double();
+			}
 			#endif
 		}
 
-		generatePollMatrixArx(uOpt, frameExp, meshExp, pollMatrix);
-
-		#ifdef DEBUG_PRINT
-		for(int i = 0; i < nOpt; i++) {
-			for(int j = 0; j < 2*nOpt; j++) pollMatrix_f[i][j] = pollMatrix[i][j].to_double();
-		}
-		#endif
-
 		/* BUG: success == 0 always, input never changes wrt original value [-1...,-1] <-> [0,...,0] */
-		progressiveBarrierPollingArx(cost, uOpt, yInit, uInit, yref, pollMatrix, frameExp, arxCoeff, arxOffset);
+		progressiveBarrierPollingArx(cost, uOpt, yInit, uInit, yref, pollMatrix, frameExp, arxCoeff, arxOffset, startOnly);
 
 		#ifdef DEBUG_PRINT
 		for(int i = 0; i < nOpt; i++) uOpt_f[i] = uOpt[i].to_double();

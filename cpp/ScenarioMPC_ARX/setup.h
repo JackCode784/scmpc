@@ -840,7 +840,9 @@ void MADSARX(norm_input_type uOpt[nOpt],
             const arx_coeff_type arxOffset[Nscen+1]);
 
 /** Evaluate all 2*nOpt poll candidates; update the best feasible point
- *  via the progressive barrier strategy. */
+ *  via the progressive barrier strategy. startOnly: evaluate only
+ *  pollMatrix column 0 (MADSARX's starting point) into bestCost, and
+ *  return - see MADSARX.cpp. */
 void progressiveBarrierPollingArx(cost_type bestCost[2], 
                                     norm_input_type bestPoint[nOpt], 
                                     const norm_output_type yPast[na], 
@@ -849,7 +851,8 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
                                     const norm_input_type pollMatrix[nOpt][2 * nOpt], 
                                     mesh_exp_type frameExp[nOpt], 
                                     const arx_coeff_type arxCoeff[Nscen+1][nTheta],
-                                    const arx_coeff_type arxOffset[Nscen+1]);
+                                    const arx_coeff_type arxOffset[Nscen+1],
+                                    const bool startOnly);
 
 /* --- Pseudo-random generation (three overloads) ----------------------- */
 /** Random number in [-1, 1] */

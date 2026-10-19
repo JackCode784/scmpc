@@ -11,16 +11,17 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 								const norm_input_type pollMatrix[nOpt][2 * nOpt], 
 								mesh_exp_type frameExp[nOpt], 
 								const arx_coeff_type arxCoeff[Nscen+1][nTheta],
-								const arx_coeff_type arxOffset[Nscen+1])
+								const arx_coeff_type arxOffset[Nscen+1],
+								const bool startOnly)
 {
 	#ifdef PRAGMAS
 	/*
-	 * Inlined into MADSARX in every profile, so that both of MADSARX's
-	 * costFunctionArx call sites (the starting point, and the poll points
-	 * here) are in one function, where its ALLOCATION pragma sets how many
-	 * costFunctionArx instances the design gets (see MADSARX.cpp). There is
-	 * one call to this function per MADS iteration, so inlining it does not
-	 * duplicate anything.
+	 * Inlined into MADSARX in every profile, so that the costFunctionArx
+	 * call below - the design's only one: MADSARX's starting point goes
+	 * through it too (startOnly) - is in MADSARX, where its ALLOCATION
+	 * pragma sets how many costFunctionArx instances the design gets (see
+	 * MADSARX.cpp). There is one call to this function per MADS iteration,
+	 * so inlining it does not duplicate anything.
 	 */
 	#pragma HLS INLINE
 	#endif
@@ -53,21 +54,14 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 	bool success = 0;
 	#endif
 
-	const cost_type originalCost = bestCost[0];
-
-	#ifdef DEBUG_PRINT
-	originalCost_f = originalCost.to_double();
-	bestCost_f[0] = bestCost[0].to_double();
-	bestCost_f[1] = bestCost[1].to_double();
-	#endif
-
 	/*
 	 * Phase 1: cost and constraint violation of every poll point. The
 	 * evaluations are independent of each other (each reads only its own
 	 * pollMatrix column and the shared, read-only state), so their order
 	 * does not matter; phase 2 then compares them in the original order, so
 	 * the selected point is the same as with the former evaluate-and-compare
-	 * loop.
+	 * loop. startOnly (MADSARX's iteration -1): column 0 only, which holds
+	 * the starting point, and its result becomes bestCost - nothing else.
 	 */
 	cost_type pollCost[2 * nOpt];
 	cost_type pollViol[2 * nOpt];
@@ -95,6 +89,9 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 		#pragma HLS PIPELINE off
 		#endif
 		#endif
+
+		if (startOnly && i > 0)
+			continue;
 
 		// point under test (a fresh local per evaluation, so unrolled
 		// evaluations do not share it)
@@ -125,6 +122,21 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 		costTestPoint_f[1] = costTestPoint[1].to_double();
 		#endif
 	}
+
+	if (startOnly)
+	{
+		bestCost[0] = pollCost[0];
+		bestCost[1] = pollViol[0];
+		return;
+	}
+
+	const cost_type originalCost = bestCost[0];
+
+	#ifdef DEBUG_PRINT
+	originalCost_f = originalCost.to_double();
+	bestCost_f[0] = bestCost[0].to_double();
+	bestCost_f[1] = bestCost[1].to_double();
+	#endif
 
 	/* Phase 2: progressive-barrier selection, in poll order (unrolled in
 	 * every profile: 2*nOpt comparisons, no arithmetic worth sharing) */
