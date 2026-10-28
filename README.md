@@ -82,6 +82,68 @@ $J_A(u_k, \dots, u_{k+N_u-1}) \coloneqq J_P(u_k, \dots, u_{k+N_u-1}) + \alpha V(
 
 where $V(\hat{\mathcal{Z}}_{k+1})$ is the volume of the zonotope $\hat{\mathcal{Z}}_{k+1}$, i.e. the zonotope which would result from the prediction of $y_{k+1}$ computed inside the cost function.
 
+# Getting started
+
+## Repository structure
+| Path | Content |
+|---|---|
+| `cpp/ScenarioMPC_ARX/` | The controller (active project). The same C++ sources are the PC simulation (floating point) and the Vitis HLS design (fixed point). |
+| `vitis/scmpc-controller2026/` | Vitis 2026.1 HLS component: `hls_config.cfg` (part, clock, top function `controller`, source files) and `vitis-comp.json`. Build outputs are not tracked. |
+| `cpp/MADS_ISCAS23/` | Earlier, separate MADS-based MPC HLS design. |
+| `matlab/` | Reference and prototype implementations (zonotopes, passive learning, SCMPC). They need the CORA toolbox, YALMIP and `quadprog`. |
+
+Main files in `cpp/ScenarioMPC_ARX/`:
+- `setup.h`: experiment configuration and algorithm parameters.
+- `system_configs.h`: the controller's model of each system (nominal parameters, uncertainty zonotope, constraints).
+- `types.h`: fixed-point data types, per system.
+- `controller.cpp`: the top-level function synthesized to hardware.
+- `costFunctionArx.cpp`, `MADSARX.cpp`, `progressiveBarrierPollingArx.cpp`: cost evaluation and the MADS optimizer.
+- `testMain.cpp` and `plant.h`: test bench only; `plant.h` holds the *true* plant the controller is tested against (e.g. the nonlinear inverted pendulum).
+
+## Configuring an experiment
+Experiments are configured by editing `#define`s; no compiler flags are needed.
+
+| File | Setting | Meaning |
+|---|---|---|
+| `setup.h` | `FIXED` | fixed point (hardware) instead of floating point |
+| | `CONVERSIONS_MODE`, `NRMLZ` | ADC/DAC conversions, normalization (the usual hardware configuration is `FIXED` + `CONVERSIONS_MODE` + `NRMLZ`; the inverted pendulum in fixed point requires `NRMLZ`) |
+| | `USE_SCENS_COST`, `USE_SCENS_CONSTR` | scenarios in the cost and in the constraints (both off: nominal MPC) |
+| | `DELAY_COMPENSATION` | the input computed at step $k$ is applied at $k+1$ |
+| | `ACTIVE_SYSTEM`, `CTRL_MODE` | system; SCMPC, passive or active learning |
+| | `PRAGMA_PROFILE` | hardware profile: `AREA`, `BALANCED` or `LATENCY` |
+| | `Nhor`, `NhorU`, `Nscen`, `MADS_ITER` | $N_y$, $N_u$, $S$ (a power of 2, with `LOG2NSCEN`), $I$ |
+| `plant.h` | `N_RUNS`, `RANDOM_TRUE_PLANT`, `TB_SEED` | number of closed-loop runs, a new random true plant per run, test-bench seed |
+| | `TB_COMPUTE_DELAY_FRACTION` | controller latency emulated by the test bench, as a fraction of the sampling period |
+
+## Running a simulation
+Any C++14 compiler works. From `cpp/ScenarioMPC_ARX/`:
+```bash
+# floating point
+g++ -std=c++14 -O2 -I . -o sim $(ls *.cpp | grep -v intervalHull.cpp) && ./sim
+# fixed point: also needs the Xilinx ap_types headers (shipped with Vitis, or
+# github.com/Xilinx/HLS_arbitrary_Precision_Types) and Vitis's hls_math.h
+g++ -std=c++14 -O2 -I <vitis_include_dir> -I . -o sim $(ls *.cpp | grep -v intervalHull.cpp) && ./sim
+```
+`intervalHull.cpp` is unused and must be left out (it does not compile in fixed point).
+
+The test bench simulates the controller in closed loop and prints, for each run, the constraint violations and the tracking RMSE. Outputs:
+- floating point: in `FloatSimulations/`; fixed point: in the working directory (in Vitis, `.../hls/csim/build`);
+- `N_RUNS = 1`: `output.txt`, plotted by `plotOutputCpp.m`;
+- `N_RUNS > 1`: one `runs_<ctrl>_<plant>_<run>.txt` per run plus `runs_<ctrl>_<plant>_summary.txt`, plotted by `plotMultipleOutputsCpp.m`. `<ctrl>` tells the controller configuration (e.g. `scen`, `noscen`, with `_dc` for delay compensation) and `<plant>` the true plant (`nl` nonlinear, `arx`).
+
+In both MATLAB scripts, `opts.isVitisSim = true` reads the Vitis C-simulation folder instead of `FloatSimulations/`.
+
+## Hardware synthesis with Vitis
+1. Open the component `vitis/scmpc-controller2026` in Vitis 2026.1. `hls_config.cfg` lists the source files by absolute path: adjust them to your clone.
+2. Set `FIXED` (and the other hardware options) in `setup.h`.
+3. **C simulation**: runs the test bench in fixed point and writes `golden_u.txt`, the inputs applied in the first run.
+4. **Synthesis**: `csynth.rpt` reports latency, resources and the estimated clock period. The estimate must stay within the clock period minus the uncertainty margin (7.3 ns for a 10 ns clock with the default 27 % uncertainty).
+5. **C/RTL co-simulation**, with `N_RUNS 1` in `plant.h`: the test bench compares the RTL's inputs with `golden_u.txt`, so run C simulation first. Vitis's "Pass" only means that `main()` returned 0; the log line `CO-SIM CHECK PASSED` confirms that the RTL matches C simulation.
+6. **Implementation**: post-route timing and resources, the final word on whether the design meets the clock.
+
+## Checking a change
+There is no unit-test suite. A change that should not alter the algorithm (a refactor, a pragma, a hardware optimization) must leave the C simulation output **byte-identical**: run the test bench before and after the change, with the same configuration, and compare the output files. Pragmas never affect C simulation.
+
 # Past, present, future
 This section keeps track of the project's past progress, current state and future work.
 
