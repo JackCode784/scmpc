@@ -15,6 +15,26 @@ Scenario-based MPC (SCMPC) for ARX systems with a zonotopic parameter-uncertaint
 - `cpp/MADS_ISCAS23/`: an earlier, separate MADS-MPC HLS design, built on its own.
 - `matlab/`: reference and prototype implementations (zonotopes, passive learning, SCMPC). They need the CORA toolbox (gitignored), YALMIP and quadprog.
 
+`README.md` (on `main`) states the control problems in mathematical form (MPC, SCMPC, passive and active learning) and keeps the roadmap ("Past, present, future"). Read it for the theory and the planned work.
+
+## Notation: README/paper ↔ code
+
+| README / paper | Code |
+|---|---|
+| $N_y$ (prediction horizon), $N_u$ (control horizon) | `Nhor`, `NhorU` (= `nOpt`) |
+| $S$ scenarios, $I$ MADS iterations | `Nscen` (power of 2, `LOG2NSCEN`), `MADS_ITER` |
+| $n_a$, $n_b$, $n_d$ (input delay) | `na`, `nb`, `nk` |
+| zonotope centre $c$ (= $\theta^{(0)}$, nominal model), generators $G$, $n_g$ | `thetaCenter`, `thetaGens`, `nGens`; only the `nUnc` uncertain parameters have rows (`UNC_MAP`) |
+| $\xi$ | `coeffs` (`generateScenarios`, `pseudoRandArx`) |
+| $Q$, $R$ | `outputWeight` (applied as a shift by `log2Q` in fixed point), `R` |
+| cost and constraint violation | `cost[0]`, `cost[1]` of `costFunctionArx` |
+
+Where the code differs from the README's formulation:
+- The last prediction step has its own weight, `terminalOutputWeight` (`log2P`).
+- The reference is held constant over the horizon: every error is against the current `yref`.
+- Constraints are not hard: MADS's progressive barrier ranks candidates by a violation measure, and the nominal model is always constrained.
+- With `DELAY_COMPENSATION`, the decision variables are $u_{k+1}..u_{k+N_u}$ and $u_k$ is known; without it they are $u_k..u_{k+N_u-1}$.
+
 ## Building and running the simulation
 
 There is no build system and no unit-test framework. The closed-loop test bench `testMain.cpp` is the test: it simulates the controller against a plant, reports constraint violations and RMSE, and writes trajectories.
@@ -107,4 +127,4 @@ With `DELAY_COMPENSATION`, a call at k computes u(k+1) and treats u(k) as known 
 ## Conventions
 
 - Commit subjects use prefixes like `feat:`, `fix:`, `refactor:`, `perf:`, `chore:`, `wip:`.
-- Development happens on feature branches. `vitis2026-pragmas` carries the Vitis 2026.1 work.
+- Development happens on feature branches. `vitis2026-pragmas` carries the Vitis 2026.1 work; `main` holds `README.md`.
