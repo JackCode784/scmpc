@@ -13,19 +13,19 @@ The next sections contain brief summaries about the employed algorithms.
 
 ## No learning
 ### MPC
-Nominal MPC uses a model for the system under control to compute $N_y$ (*prediction horizon*) predictions of the output's future behavior. Based on those, a - constrained - optimization problem is solved to optimize the sequence of future $N_u$ (*control horizon*) input samples $u_k, u_{k+1}, \dots, u_{k+N_u-1}$. Define:
+Nominal MPC uses a model for the system under control to compute $N_y$ (*prediction horizon*) predictions of the output's future behavior. Based on those, a - constrained - optimization problem is solved to optimize the sequence of future $N_u$ (*control horizon*) input samples $u_k, u_{k+1}, \dots, u_{k+N_u-1}$. Define, at instant $k$:
 
 $\Delta u_k \coloneqq u_k - u_{k-1}$
 
 $\Delta y_k \coloneqq y_k - y_{k-1}$
 
-$e_k \coloneqq \hat{y}_k - y_k^*$
+$e_{k+i|k} \coloneqq \hat{y}_{k+i} - y_k^*$
 
 then the optimization problem solved at each time instant $k$ by MPC is:
 
 $
 \begin{aligned}
-    \min_{u_{k+1}, \dots, u_{k+N_u}} & \sum_{i=1}^{N_u} R \left(\Delta u_{k+i}\right)^2 +\sum_{i=0}^{N_y-1} Q\,e_{k+1+i}^2 \\
+    \min_{u_{k}, \dots, u_{k+N_u-1}} & \sum_{i=1}^{N_u} R \left(\Delta u_{k+i}\right)^2 +\sum_{i=0}^{N_y-1} Q\,e_{k+1+i}^2 \\
     \text{s.t.} \; & y_{k+i+1} = \varphi_{k+i+1}^{\top} \theta, \ i \in \{0,\dots, N_y-1\} \\
     & \underline{y} \leq y_{k+i+1} \leq \overline{y}, \ i \in \{0, \dots, N_y-1\} \\
     & \underline{u} \leq u_{k+i} \leq \overline{u}, \ i \in \{1,\dots, N_u\} \\
@@ -38,13 +38,13 @@ where $R, Q$ are appropriate weight matrices (scalars in this ARX case) - the va
 
 From optimal control sequence $u_k^*, \dots, u_{k+N_u-1}^*$, only the first input sample ($u_k^*$) is actually applied to the system. At instant $k+1$, the system will output a new sample $y_{k+1}$ which will be recorded by the controller and used to solve the previous optimization all over again.
 
-The optimization is solved through a *mesh adaptive direct search* (MADS) algorithm, using a *progressive barrier polling* approach to manage constraints.
+The optimization is solved through a *mesh adaptive direct search* (MADS) algorithm, using a *progressive barrier polling* approach to manage constraints without enforcing them as hard ones.
 
 ### SCMPC
 SCMPC is a form of **robust optimal control** which stems from MPC. It solves a similar optimization problem as before, but also considers different *scenarios*, i.e. realizations of the system's parameters ($\theta$) uncertainty, to impose constraints on. This helps the controller choose a control action that is more likely to produce a contraint-compliant output.
 
 #### Zonotopes
-To this end, ***zonotopes*** (a particular class of convex polytopes) are employed as sets for uncertainty representation. They are described by a *center* $\theta^{(0)}\in\mathbb{R}^{n_a+n_b}$ and a *generator matrix* $G\in\mathbb{R}^{(n_a+n_b)\times n_g}$ whose $n_g$ columns are the *generators*. By definition,
+To this end, ***zonotopes*** (a particular class of convex polytopes) are employed as sets for uncertainty representation. They are described by a *center* $c\in\mathbb{R}^{n_a+n_b}$ and a *generator matrix* $G\in\mathbb{R}^{(n_a+n_b)\times n_g}$ whose $n_g$ columns are the *generators*. By definition,
 
 $
 \mathcal{Z} = \left\{ \theta \in\mathbb{R}^{n_a + n_b} : \theta = c + G \xi, \, \xi \in [-1, 1]^{n_g} \right\}.
@@ -54,12 +54,12 @@ These sets make the sampling of scenarios easy and inexpensive: it's sufficient 
 
 ---
 
-Then, at instant $k$, after sampling $S$ scenarios $\theta^{(j)}, j = 1,\dots,S$ from $\mathcal{Z}$, SCMPC solves the following, new version of the optimization problem:
+Then, at instant $k$, after sampling $S$ scenarios $\theta^{(j)}, j = 1,\dots,S$ from $\mathcal{Z}$ and defining $\theta^{(0)} \coloneqq c \in \mathcal{Z}$, SCMPC solves the following, new version of the optimization problem:
 
 $
 \begin{aligned}
-    \min_{u_{k+1}, \dots, u_{k+N_u}} & \sum_{i=1}^{N_u} R \left(\Delta u_{k+i}\right)^2 + \sum_{i=0}^{N_y-1} Q \left(e^{(0)}_{k+1+i}\right)^2 + \sum_{j=1}^S \sum_{i=0}^{N_y-1} \frac{Q}{S} \left(e^{(j)}_{k+1+i}\right)^2  \\
-    \textrm{s.t.} \ & y^{(j)}_{k-i} = y_{k-i}, \ i \in \{0,\dots, N_y-1\}\\
+    \min_{u_{k}, \dots, u_{k+N_u-1}} & \sum_{i=1}^{N_u} R \left(\Delta u_{k+i}\right)^2 + \sum_{i=0}^{N_y-1} Q \left(e^{(0)}_{k+1+i}\right)^2 + \sum_{j=1}^S \sum_{i=0}^{N_y-1} \frac{Q}{S} \left(e^{(j)}_{k+1+i}\right)^2  \\
+    \textrm{s.t.} \ & y^{(j)}_{k-i} = y_{k-i}, \ i \in \{0,\dots, n_a-1\}\\
     & y^{(j)}_{k+i+1} = \left(\varphi_{k+i+1}^{(j)}\right)^{\top} \theta^{(j)}, \ i \in \{0,\dots, N_y-1\} \\
     & \underline{y} \leq y^{(j)}_{k+i+1} \leq \overline{y}, \ i \in \{0, \dots, N_y-1\} \\
     & \underline{u} \leq u_{k+i} \leq \overline{u}, \ i \in \{1,\dots, N_u\} \\
@@ -68,7 +68,7 @@ $
 \end{aligned}
 $
 
-with trivial meaning for the $(\cdot)^{(j)}$ quantities. Notice that constraints are imposed on all scenarios, making the optimal control sequence more conservative, resulting in a possibly slower tracking performance.
+for all $j=0,\dots,S$ ($j=0$ corresponding to the nominal system) with trivial meaning for the $(\cdot)^{(j)}$ quantities. Notice that constraints are imposed on all scenarios, making the optimal control sequence more conservative, resulting in a possibly slower tracking performance.
 
 ## Passive Learning
 Passive learning (PL) consists in using the system's current output sample to *passively* shrink the size of a system's parameters uncertainty. [Algorithms](https://ieeexplore.ieee.org/abstract/document/1652874) that decrease a zonotope's size (in terms of **volume**) exist and are suitable in system control and for hardware implementation.
@@ -80,7 +80,7 @@ While in passive learning zonotopes are only used to sample scenarios that will 
 
 $J_A(u_k, \dots, u_{k+N_u-1}) \coloneqq J_P(u_k, \dots, u_{k+N_u-1}) + \alpha V(\hat{\mathcal{Z}}_{k+1})$
 
-where $V(\hat{\mathcal{Z}}_{k+1})$ is the volume of the zonotope $\hat{\mathcal{Z}}_{k+1}$, i.e. the zonotope which would result from the prediction of $y_{k+1}$ computed inside the cost function.
+where $J_P$ is the cost function optimized for SCMPC and $V(\hat{\mathcal{Z}}_{k+1})$ is the volume of the zonotope $\hat{\mathcal{Z}}_{k+1}$, i.e. the zonotope which would result from the prediction of $y_{k+1}$ computed inside the cost function.
 
 # Past, present, future
 This section keeps track of the project's past progress, current state and future work.
