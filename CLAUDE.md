@@ -22,15 +22,15 @@ Scenario-based MPC (SCMPC) for ARX systems with a zonotopic parameter-uncertaint
 | README / paper | Code |
 |---|---|
 | $N_y$ (prediction horizon), $N_u$ (control horizon) | `Nhor`, `NhorU` (= `nOpt`) |
-| $S$ scenarios, $I$ MADS iterations | `Nscen` (power of 2, `LOG2NSCEN`), `MADS_ITER` |
+| $S$ scenarios, $I$ MADS iterations | `Nscen` (= `1 << log2Nscen`), `MADS_ITER` |
 | $n_a$, $n_b$, $n_d$ (input delay) | `na`, `nb`, `nk` |
 | zonotope centre $c$ (= $\theta^{(0)}$, nominal model), generators $G$, $n_g$ | `thetaCenter`, `thetaGens`, `nGens`; only the `nUnc` uncertain parameters have rows (`UNC_MAP`) |
 | $\xi$ | `coeffs` (`generateScenarios`, `pseudoRandArx`) |
-| $Q$, $R$ | `outputWeight` (applied as a shift by `log2Q` in fixed point), `R` |
+| $Q$, $R$ | `weightQ`, `weightR` (= 2^`log2Q`, 2^`log2R` in normalized units; see "Cost weights" below) |
 | cost and constraint violation | `cost[0]`, `cost[1]` of `costFunctionArx` |
 
 Where the code differs from the README's formulation:
-- The last prediction step has its own weight, `terminalOutputWeight` (`log2P`).
+- The last prediction step has its own weight, `weightP` (= 2^`log2P`).
 - The reference is held constant over the horizon: every error is against the current `yref`.
 - Constraints are not hard: MADS's progressive barrier ranks candidates by a violation measure, and the nominal model is always constrained.
 - With `DELAY_COMPENSATION`, the decision variables are $u_{k+1}..u_{k+N_u}$ and $u_k$ is known; without it they are $u_k..u_{k+N_u-1}$.
@@ -41,7 +41,7 @@ There is no build system and no unit-test framework. The closed-loop test bench 
 
 ```bash
 cd cpp/ScenarioMPC_ARX
-# floating point (default setup.h): plain g++
+# default setup.h (float + CONVERSIONS_MODE + NRMLZ): plain g++
 g++ -std=c++14 -O2 -I . -o sim $(ls *.cpp | grep -v intervalHull.cpp) && ./sim
 # fixed point (FIXED in setup.h): needs the Xilinx ap_types headers
 # (github.com/Xilinx/HLS_arbitrary_Precision_Types, include/) and a stub
@@ -51,7 +51,8 @@ g++ -std=c++14 -O2 -I <stub_dir> -I <ap_types>/include -I . -o sim $(ls *.cpp | 
 ```
 
 - Always leave out `intervalHull.cpp`. It is unused, it is not in the Vitis source list, and it does not compile in fixed point. `passiveLearning/` is not part of the build either.
-- The pendulum in fixed point requires `NRMLZ` (there is an `#error` otherwise). The usual hardware configuration is `FIXED` + `CONVERSIONS_MODE` + `NRMLZ`.
+- The default `setup.h` is floating point with `CONVERSIONS_MODE`, `NRMLZ`, `USE_SCENS_COST` and `USE_SCENS_CONSTR`. For hardware, also uncomment `FIXED`.
+- The pendulum in fixed point requires `NRMLZ` (there is an `#error` otherwise).
 - **Output location.** Floating-point builds write into `FloatSimulations/` (created if missing). Fixed-point builds write into the working directory, which in Vitis is `.../hls/csim/build`.
   - `N_RUNS == 1` writes `output.txt` (plotted by `plotOutputCpp.m`).
   - `N_RUNS > 1` writes `runs_<ctrl>_<plant>_<NNN>.txt` plus `..._summary.txt` (plotted by `plotMultipleOutputsCpp.m`; `opts.isVitisSim` selects the Vitis folder).
@@ -62,7 +63,7 @@ g++ -std=c++14 -O2 -I <stub_dir> -I <ap_types>/include -I . -o sim $(ls *.cpp | 
 - `setup.h`, the "TARGET SELECTION" block and below:
   - mode flags: `FIXED`, `CONVERSIONS_MODE`, `NRMLZ`, `USE_SCENS_COST`, `USE_SCENS_CONSTR`, `DELAY_COMPENSATION`;
   - selectors: `ACTIVE_SYSTEM`, `CTRL_MODE` (SCMPC / passive learning / active-learning stub), `PRAGMA_PROFILE`;
-  - algorithm constants: `Nhor`, `NhorU`, `Nscen` (a power of 2, with `LOG2NSCEN`), `MADS_ITER`, weights.
+  - algorithm constants: `Nhor`, `NhorU`, `log2Nscen`, `MADS_ITER`, and the weight exponents `log2Q`, `log2P`, `log2R`. These are global for now, shared by every system.
 - `plant.h` (test bench only): `N_RUNS`, `RANDOM_TRUE_PLANT`, `TB_SEED`, `TB_COMPUTE_DELAY_FRACTION`.
 
 ### Vitis flow (on the author's machine; not available in this environment)
@@ -78,7 +79,7 @@ So run C simulation first, and set `N_RUNS 1` for co-simulation: only run 0 is c
 
 The established check for refactors and pragma changes is that **C simulation output is byte-identical to the previous commit**:
 
-1. Build the old tree (`git archive <rev> cpp/ScenarioMPC_ARX`) and the new tree with the same configuration (`N_RUNS` reduced, e.g. 3).
+1. Build the old tree (`git archive <rev> cpp/ScenarioMPC_ARX`) and the new tree with the same configuration (`N_RUNS` reduced, e.g. 3). Set every mode flag explicitly in both trees: the committed defaults have changed over time (before `qol/log2-weights`, `CONVERSIONS_MODE` and `NRMLZ` were off).
 2. Run both and `cmp` every output file.
 3. Do this across a matrix of configurations: systems (pendulum, buck converters), fixed and float, the three pragma profiles, with and without scenarios, delay compensation, passive learning.
 
@@ -122,6 +123,11 @@ With `DELAY_COMPENSATION`, a call at k computes u(k+1) and treats u(k) as known 
   - The model-loop accumulators `ScenAcc` and `ViolAcc` are single additions, bit-identical to the rounding, saturating `cost_type` sums they replace. Don't revert them to `cost_type +=`.
 - **Single call site.** `costFunctionArx` must keep a single call site. Otherwise HLS clones it (`costFunctionArx_1`) and ignores the `ALLOCATION` pragma (warning HLS 214-300).
 - **Bit-exactness.** Fixed-point changes must keep C simulation bit-exact, or be deliberately validated. Types use `AP_RND_CONV`/`AP_SAT`, so regrouping additions is not free.
+- **Cost weights are powers of two, defined by their exponents** (`log2Q`, `log2P`, `log2R` in `setup.h`; `pow2()` also handles negative exponents).
+  - Fixed point applies `weightQ`/`weightP` as left shifts. It multiplies by `weightR`: a constant power-of-two multiply is only wiring, whereas an `ap_fixed` right shift keeps the operand's format and drops bits.
+  - With `NRMLZ`, `weightR = 2^log2R` is in normalized units. Without it, `weightR` is the equivalent physical weight, 2^`log2R` · ((`YMAXPHYS`−`YMINPHYS`)/(`UMAXPHYS`−`UMINPHYS`))², which makes the two problems differ only by the positive factor g_y² (same minimizer). Use the `*PHYS` (normalization) ranges, not the constraint bounds `YMAX`/`UMAX`.
+  - `static_assert`s on `width`/`iwidth` check that each 2^e fits its type (`output_weight_type`, the per-system `input_weight_type`). Without them an out-of-range weight would silently become 0: before the exponents were introduced, the buck converters had `weightR` = 0 in fixed point.
+  - **Current state:** `log2R = 2` is the pendulum's value. The buck converters need −3, so their fixed-point build fails that assert until the exponents become per system.
 - **`static const ap_fixed` constants** are initialized dynamically. Vitis HLS 2026.1 co-simulation matched C simulation with them. The older toolchain produced constant-zero RTL, fixed on branch `fix/hw-constants-on-e6e7d01`.
 
 ## Conventions
