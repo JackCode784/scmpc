@@ -6,10 +6,10 @@
  * --------------
  * The MPC objective over a prediction horizon of N steps is:
  *
- *   J = sum_{k=0}^{N-2} [ u(k)*R*u(k)  +  outputWeight*(ypred_nom(k+1) - y_ref)^2
- *                                      +  outputWeight * scenariosContrib(k+1) ]
- *     +                  terminalOutputWeight*(ypred_nom(N) - y_ref)^2
- *     +                  outputWeight * scenariosContrib(N)
+ *   J = sum_{k=0}^{N-2} [ u(k)*R*u(k)  +  Q*(ypred_nom(k+1) - y_ref)^2
+ *                                      +  Q * scenariosContrib(k+1) ]
+ *     +                  P*(ypred_nom(N) - y_ref)^2
+ *     +                  Q * scenariosContrib(N)
  *
  * where:
  *   ypred_nom(k+1)       - one-step prediction using the nominal parameter
@@ -23,7 +23,7 @@
  *
  * The input cost term u*R*u is included for steps k = 0 ... N-2 (i.e. the
  * last input u(k = N-1) is not penalised separately because the terminal
- * cost terminalOutputWeight already handles the final output).
+ * cost P already handles the final output).
  *
  * CONTROL vs PREDICTION HORIZON
  * ------------------------------
@@ -188,8 +188,8 @@ void costFunctionArx(cost_type              cost[2],
     double currU_f[nOpt], yNext_f;
     double input_cost_term_f, output_cost_term_f, scenariosContrib_f;
     double err_nom_f, err_s_f;
-    double outputWeight_f = outputWeight.to_double();
-    double terminalOutputWeight_f = terminalOutputWeight.to_double();
+    double outputWeight_f = Q.to_double();
+    double terminalOutputWeight_f = P.to_double();
     double yref_f = yref.to_double();
     for(int i = 0; i < nOpt; i++) currU_f[i] = currU[i].to_double();
     #endif
@@ -263,9 +263,9 @@ void costFunctionArx(cost_type              cost[2],
      * first step uses the known input u(k) already in uSamples[0]):
      *   * 0 <= j < NhorU : uSamples[0] = currU[j] (within control horizon)
      *   * j >= NhorU     : uSamples[0] unchanged  (zero-order hold)
-     *   * k < Nhor-1  : stage weight outputWeight, plus the input cost
+     *   * k < Nhor-1  : stage weight Q, plus the input cost
      *                   (not for a known input: k < DC_STEPS)
-     *   * k = Nhor-1  : terminal weight terminalOutputWeight, no input cost
+     *   * k = Nhor-1  : terminal weight P, no input cost
      */
     for (int k = 0; k < Nhor; k++)
     {
@@ -287,21 +287,7 @@ void costFunctionArx(cost_type              cost[2],
         /* --- Input cost term (all steps except the terminal one) ------- */
         /* --- Input term is difference with respect to previous sample -- */
         if (k >= DC_STEPS && k < Nhor - 1){
-            #ifndef FIXED
-            costTrack += (uSamples[0] - uSamples[1]) * R * (uSamples[0] - uSamples[1]);
-            #else
-            /* Multiplied by R, not shifted by a log2R: R is a power of two
-             * only for some systems (0.125 for the buck converters, where a
-             * constant power-of-two multiply is a shift in hardware), but
-             * 5.5556 for the inverted pendulum, where a shift would have
-             * silently used a different weight than floating point. Also
-             * exact where the former "<< -3" was not: an ap_fixed shift
-             * keeps the operand's format, so shifting right dropped its 3
-             * lowest bits (~1e-10, below cost_type's resolution, but enough
-             * to flip rare roundings - BUCK_LOSS FIXED output is therefore
-             * not bit-identical to before, with equivalent behavior). */
             costTrack += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) * R;
-            #endif
         }
 
         /* --- Model loop: the scenarios, then the nominal model ---------- */
@@ -397,12 +383,12 @@ void costFunctionArx(cost_type              cost[2],
         #ifdef USE_SCENS_COST
         /* Divide by Nscen to get the mean squared error across scenarios.
          * In software: floating-point division.
-         * In hardware: right-shift by LOG2NSCEN (exact only if Nscen is a
+         * In hardware: right-shift by log2Nscen (exact only if Nscen is a
          * power of 2, which is enforced by the static_assert in setup.h). */
         #ifndef FIXED
         scenariosContrib /= Nscen;
         #else
-        scenariosContrib >>= LOG2NSCEN;
+        scenariosContrib >>= log2Nscen;
         #endif
         #endif
 
@@ -413,12 +399,12 @@ void costFunctionArx(cost_type              cost[2],
         scenariosContrib_f = scenariosContrib.to_double();
         err_nom_f = err_nom.to_double();
         output_cost_term_f = (err_nom_f * err_nom_f + scenariosContrib_f);
-        output_cost_term_f *= (k < Nhor - 1) ? outputWeight.to_double() : terminalOutputWeight.to_double();
+        output_cost_term_f *= (k < Nhor - 1) ? Q.to_double() : P.to_double();
         #endif
 
-        /* Select stage weight outputWeight or terminal weight terminalOutputWeight. */
+        /* Select stage weight Q or terminal weight P. */
         #ifndef FIXED
-        costTrack += (((k < Nhor - 1) ? outputWeight : terminalOutputWeight) * (err_nom * err_nom + scenariosContrib));
+        costTrack += (((k < Nhor - 1) ? Q : P) * (err_nom * err_nom + scenariosContrib));
         #else
         costTrack += (err_nom * err_nom + scenariosContrib) << ((k < Nhor - 1) ? log2Q : log2P);
         #endif

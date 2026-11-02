@@ -211,7 +211,7 @@ typedef ap_ufixed<16,0>                         frac_type;
 // typedef ap_ufixed<32,32> u16_type;
 typedef ap_uint<16>                         u16_type;
 
-/* Data type for outputWeight, terminalOutputWeight. FIXED applies them as
+/* Data type for Q, P. FIXED applies them as
  * shifts by log2Q/log2P (costFunctionArx), so they must be powers of two -
  * testMain checks it. 8 bits so that the value itself (e.g. 16) is held
  * and can be checked: the former ap_ufixed<3,3> wrapped 16 around to 0. */
