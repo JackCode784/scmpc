@@ -128,7 +128,7 @@ Experiments are configured by editing `#define`s; no compiler flags are needed.
 | | `DELAY_COMPENSATION` | the input computed at step $k$ is applied at $k+1$ |
 | | `ACTIVE_SYSTEM`, `CTRL_MODE` | system; SCMPC, passive or active learning |
 | | `PRAGMA_PROFILE` | hardware profile: `AREA`, `BALANCED` or `LATENCY` |
-| | `Nhor`, `NhorU`, `Nscen`, `MADS_ITER` | $N_y$, $N_u$, $S$ (a power of 2, with `LOG2NSCEN`), $I$ |
+| | `Nhor`, `NhorU`, `Nscen`, `MADS_ITER` | $N_y$, $N_u$, $S$ (a power of 2, with `log2Nscen`), $I$ |
 | `plant.h` | `N_RUNS`, `RANDOM_TRUE_PLANT`, `TB_SEED` | number of closed-loop runs, a new random true plant per run, test-bench seed |
 | | `TB_COMPUTE_DELAY_FRACTION` | controller latency emulated by the test bench, as a fraction of the sampling period |
 

@@ -80,7 +80,7 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-  #define FIXED            /* fixed point representation */
+//   #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 #define USE_SCENS_COST      /* Enable scenarios cost contribution */
@@ -417,8 +417,10 @@ constexpr int NhorU = 3;
  */
 constexpr double pow2(int e) { return e >= 0 ? double(1LL << e) : 1.0 / double(1LL << -e); }
 constexpr int log2Nscen = 4;
-constexpr int Nscen = pow2(log2Nscen);
+constexpr int Nscen = 1 << log2Nscen;
 
+static_assert(log2Nscen >= 0,
+    "Number of scenarios must be a positive integer.");
 static_assert(NhorU <= Nhor,
     "Control horizon NhorU must not exceed prediction horizon Nhor.");
 static_assert(Nhor >= nk, 
@@ -474,20 +476,19 @@ extern norm_input_type uOptPrev[NhorU];
 /* ======================================================================
    MPC COST-FUNCTION WEIGHTS
    ======================================================================
-   Stage cost per step:  l(y, u) = Q*(y - y_ref)^2 + R*u^2
-   Terminal cost:        V_f(y)   = P*(y(k+N) - y_ref)^2
+   Stage cost per step:  l(y, u) = weightQ*(y - y_ref)^2 + weightR*u^2
+   Terminal cost:        V_f(y)   = weightP*(y(k+N) - y_ref)^2
    ====================================================================== */
 constexpr int log2Q = 4;
 constexpr int log2P = 4;
 constexpr int log2R = 2;
 
-static const output_weight_type Q = pow2(log2Q);   /* stage   output weight  */
-static const output_weight_type P = pow2(log2P);   /* terminal output weight */
+static const output_weight_type weightQ = pow2(log2Q);   /* stage   output weight  */
+static const output_weight_type weightP = pow2(log2P);   /* terminal output weight */
 
 #ifdef FIXED
-static_assert(log2Q < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= log2Q, "Q weight matrix does not fit fixed point type.");
-static_assert(log2P < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= log2P, "P weight matrix does not fit fixed point type.");
-static_assert(log2R < input_weight_type::iwidth && input_weight_type::iwidth - input_weight_type::width <= log2R, "R weight matrix does not fit fixed point type.");
+static_assert(log2Q < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= log2Q, "weightQ weight matrix does not fit fixed point type.");
+static_assert(log2P < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= log2P, "weightP weight matrix does not fit fixed point type.");
 #endif
 
 /* ======================================================================
@@ -573,7 +574,10 @@ static const norm_output_type YNORMMIN = double(yNormGain)*double(YMIN) + double
 static const norm_input_type UNORMMAX = double(uNormGain)*double(UMAX) + double(uNormOffset);
 static const norm_input_type UNORMMIN = double(uNormGain)*double(UMIN) + double(uNormOffset);
 
-static const input_weight_type R = pow2(log2R);
+static const input_weight_type weightR = pow2(log2R);
+#ifdef FIXED
+static_assert(log2R < input_weight_type::iwidth && input_weight_type::iwidth - input_weight_type::width <= log2R, "weightR weight matrix does not fit fixed point type.");
+#endif
 
 /* Normalization, use "normalized" noise in output strip */
 const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
@@ -657,7 +661,7 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  * environment) - accessing the struct directly removes the need to
  * rely on that reasoning at all, leaving only the same "static const
  * computed via a non-constexpr function" mechanism this file's
- * existing scalar constants (yNormGain, uNormGain, R, DELTAYNORM, ...)
+ * existing scalar constants (yNormGain, uNormGain, weightR, DELTAYNORM, ...)
  * already depend on successfully.
  */
 struct StripCoeffs
@@ -705,7 +709,7 @@ static StripCoeffs computeStripCoeffs()
 static const StripCoeffs stripCoeffs = computeStripCoeffs();
 #else
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
-static const input_weight_type R = pow2(log2R) * ((double(YMAXPHYS) - double(YMINPHYS)) * (double(YMAXPHYS) - double(YMINPHYS))) / ((double(UMAXPHYS) - double(UMINPHYS)) * (double(UMAX) - double(UMIN))); /* unnormalized stage input weight */
+static const input_weight_type weightR = pow2(log2R) * ((double(YMAXPHYS) - double(YMINPHYS)) * (double(YMAXPHYS) - double(YMINPHYS))) / ((double(UMAXPHYS) - double(UMINPHYS)) * (double(UMAXPHYS) - double(UMINPHYS))); /* unnormalized stage input weight */
 static const norm_output_type YNORMMAXPHYS = YMAXPHYS;
 static const norm_output_type YNORMMINPHYS = YMINPHYS;
 static const norm_input_type UNORMMAXPHYS = UMAXPHYS;

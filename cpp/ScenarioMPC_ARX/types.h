@@ -211,9 +211,9 @@ typedef ap_ufixed<16,0>                         frac_type;
 // typedef ap_ufixed<32,32> u16_type;
 typedef ap_uint<16>                         u16_type;
 
-/* Data type for Q, P. FIXED applies them as
- * shifts by log2Q/log2P (costFunctionArx), so they must be powers of two -
- * testMain checks it. 8 bits so that the value itself (e.g. 16) is held
+/* Data type for weightQ, weightP. FIXED applies them as
+ * shifts by log2Q/log2P (costFunctionArx), so they must be powers of two. 
+ * 8 bits so that the value itself (e.g. 16) is held
  * and can be checked: the former ap_ufixed<3,3> wrapped 16 around to 0. */
 typedef ap_ufixed<8,8> output_weight_type;
 #else
@@ -300,12 +300,12 @@ typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_output_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_input_type;
 typedef ap_fixed<WORD_LENGTH,1,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> strip_center_type;
-/* Input weight R in normalized units, R = RBaseLine*(yNormGain/uNormGain)^2.
+/* Input weight weightR in normalized units, weightR = RBaseLine*(yNormGain/uNormGain)^2.
  * FIXED multiplies by it (costFunctionArx), like floating point does. */
 #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* R = 0.5*(1.1111/0.3333)^2 = 5.5556 */
+typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* weightR = 0.5*(1.1111/0.3333)^2 = 5.5556 */
 #else
-typedef ap_ufixed<3,0> input_weight_type; /* R = 0.125 = 2^(-3) */
+typedef ap_ufixed<3,0> input_weight_type; /* weightR = 0.125 = 2^(-3) */
 #endif
 
 /**
@@ -355,7 +355,7 @@ typedef output_type strip_center_type; // output_type likely "larger" than input
 /* Without NRMLZ the effective coefficients ARE theta and the offset is 0 */
 typedef theta_type arx_coeff_type;
 #ifdef FIXED
-typedef ap_ufixed<5,4> input_weight_type; /* R = RBaseline = 12.5 */
+typedef ap_ufixed<5,4> input_weight_type; /* weightR = RBaseline = 12.5 */
 #endif
 #endif
 

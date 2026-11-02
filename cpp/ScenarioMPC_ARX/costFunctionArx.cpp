@@ -6,10 +6,10 @@
  * --------------
  * The MPC objective over a prediction horizon of N steps is:
  *
- *   J = sum_{k=0}^{N-2} [ u(k)*R*u(k)  +  Q*(ypred_nom(k+1) - y_ref)^2
- *                                      +  Q * scenariosContrib(k+1) ]
- *     +                  P*(ypred_nom(N) - y_ref)^2
- *     +                  Q * scenariosContrib(N)
+ *   J = sum_{k=0}^{N-2} [ u(k)*weightR*u(k)  +  weightQ*(ypred_nom(k+1) - y_ref)^2
+ *                                      +  weightQ * scenariosContrib(k+1) ]
+ *     +                  weightP*(ypred_nom(N) - y_ref)^2
+ *     +                  weightQ * scenariosContrib(N)
  *
  * where:
  *   ypred_nom(k+1)       - one-step prediction using the nominal parameter
@@ -21,9 +21,9 @@
  *                       scenarios, included only in PL/AL modes to penalise
  *                       poor performance across the uncertainty set
  *
- * The input cost term u*R*u is included for steps k = 0 ... N-2 (i.e. the
+ * The input cost term u*weightR*u is included for steps k = 0 ... N-2 (i.e. the
  * last input u(k = N-1) is not penalised separately because the terminal
- * cost P already handles the final output).
+ * cost weightP already handles the final output).
  *
  * CONTROL vs PREDICTION HORIZON
  * ------------------------------
@@ -188,8 +188,8 @@ void costFunctionArx(cost_type              cost[2],
     double currU_f[nOpt], yNext_f;
     double input_cost_term_f, output_cost_term_f, scenariosContrib_f;
     double err_nom_f, err_s_f;
-    double outputWeight_f = Q.to_double();
-    double terminalOutputWeight_f = P.to_double();
+    double outputWeight_f = weightQ.to_double();
+    double terminalOutputWeight_f = weightP.to_double();
     double yref_f = yref.to_double();
     for(int i = 0; i < nOpt; i++) currU_f[i] = currU[i].to_double();
     #endif
@@ -263,9 +263,9 @@ void costFunctionArx(cost_type              cost[2],
      * first step uses the known input u(k) already in uSamples[0]):
      *   * 0 <= j < NhorU : uSamples[0] = currU[j] (within control horizon)
      *   * j >= NhorU     : uSamples[0] unchanged  (zero-order hold)
-     *   * k < Nhor-1  : stage weight Q, plus the input cost
+     *   * k < Nhor-1  : stage weight weightQ, plus the input cost
      *                   (not for a known input: k < DC_STEPS)
-     *   * k = Nhor-1  : terminal weight P, no input cost
+     *   * k = Nhor-1  : terminal weight weightP, no input cost
      */
     for (int k = 0; k < Nhor; k++)
     {
@@ -281,13 +281,16 @@ void costFunctionArx(cost_type              cost[2],
         #ifdef DEBUG_PRINT
         for(int i = 0; i < Nscen+1; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = (k == 0) ? yPast[j].to_double() : yPastCurr[i][j].to_double();
         for(int i = 0; i < nb+nk-1; i++) uSamples_f[i] = uSamples[i].to_double();
-        input_cost_term_f = (uSamples_f[0] - uSamples_f[1]) * (uSamples_f[0] - uSamples_f[1]) * R.to_double();
+        input_cost_term_f = (uSamples_f[0] - uSamples_f[1]) * (uSamples_f[0] - uSamples_f[1]) * weightR.to_double();
         #endif
 
         /* --- Input cost term (all steps except the terminal one) ------- */
         /* --- Input term is difference with respect to previous sample -- */
         if (k >= DC_STEPS && k < Nhor - 1){
-            costTrack += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) * R;
+            /* Multiply by R rather than shift, because a constant power-of-two 
+            multiply is only wiring in hardware, while an ap_fixed right shift 
+            keeps the operand’s format and drops its low bits. */
+            costTrack += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) * weightR;
         }
 
         /* --- Model loop: the scenarios, then the nominal model ---------- */
@@ -384,7 +387,7 @@ void costFunctionArx(cost_type              cost[2],
         /* Divide by Nscen to get the mean squared error across scenarios.
          * In software: floating-point division.
          * In hardware: right-shift by log2Nscen (exact only if Nscen is a
-         * power of 2, which is enforced by the static_assert in setup.h). */
+         * power of 2). */
         #ifndef FIXED
         scenariosContrib /= Nscen;
         #else
@@ -399,12 +402,12 @@ void costFunctionArx(cost_type              cost[2],
         scenariosContrib_f = scenariosContrib.to_double();
         err_nom_f = err_nom.to_double();
         output_cost_term_f = (err_nom_f * err_nom_f + scenariosContrib_f);
-        output_cost_term_f *= (k < Nhor - 1) ? Q.to_double() : P.to_double();
+        output_cost_term_f *= (k < Nhor - 1) ? weightQ.to_double() : weightP.to_double();
         #endif
 
-        /* Select stage weight Q or terminal weight P. */
+        /* Select stage weight weightQ or terminal weight weightP. */
         #ifndef FIXED
-        costTrack += (((k < Nhor - 1) ? Q : P) * (err_nom * err_nom + scenariosContrib));
+        costTrack += (((k < Nhor - 1) ? weightQ : weightP) * (err_nom * err_nom + scenariosContrib));
         #else
         costTrack += (err_nom * err_nom + scenariosContrib) << ((k < Nhor - 1) ? log2Q : log2P);
         #endif
