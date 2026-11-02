@@ -2,11 +2,9 @@
 This repository contains the work for my PhD programme, revolving around ***Scenario-based Model Predictive Control*** without (with ***passive*** and ***active***) learning. In particular, using Vitis 2026.1, this project's aim is to successfully implement the aforementioned algorithms on FPGA, working in *fixed point* arithmetic (target: xc7z020-clg484-1, `10ns` clock period).
 
 A *controller* implementing MPC strategies generates appropriate inputs for a system - described via an ***AutoRegressive with eXogenous inputs*** (ARX) model - to follow a given reference output trajectory $y_k^*$. The ARX equation describing the system is:
-
+****
+$$y_k = a_1\ y_{k-1} + \dots + a_{n_a}\ y_{k-n_a} + b_1\ u_{k-n_d}+\dots+b_{n_b}\ u_{k-n_d-n_b+1} = \varphi_k^\top\ \theta
 $$
-y_k = a_1\ y_{k-1} + \dots + a_{n_a}\ y_{k-n_a} + b_1\ u_{k-n_d}+\dots+b_{n_b}\ u_{k-n_d-n_b+1} = \varphi_k^\top\ \theta
-$$
-
 where $\varphi_k = [y_{k-1}\ \dots\  y_{k-n_a} \  u_{k-n_d} \  \dots \  u_{k-n_d-n_b+1}]^\top$ and $\theta = [a_1 \  \dots \  a_{n_a} \  b_1 \  \dots \  b_{n_b}]^\top$. Notice $n_d$ is a *delay* between the input and output samples, in this project constrained to be $n_d \geq 1$ - meaning the most "recent" input sample that could contribute to the sample $y_k$ is $u_{k-n_d}$. $n_a, n_b$ are the number of output and input samples needed to compute the next output sample, respectively.
 
 Due to system's parameters uncertainty, the control through nominal MPC could result in suboptimal tracking performance, because the nominal model of the system - known to the controller - could differ from the **true** - or *closest* - one. SCMPC is a form of *robust* MPC which can cope with such uncertainties.
@@ -18,14 +16,10 @@ The next sections contain brief summaries about the employed algorithms.
 Nominal MPC uses a model for the system under control to compute $N_y$ (*prediction horizon*) predictions of the output's future behavior. Based on those, a - constrained - optimization problem is solved to optimize the sequence of future $N_u$ (*control horizon*) input samples $u_k, u_{k+1}, \dots, u_{k+N_u-1}$. Define, at instant $k$:
 
 $$\Delta u_k \coloneqq u_k - u_{k-1}$$
-
 $$\Delta y_k \coloneqq y_k - y_{k-1}$$
-
 $$e_{k+i|k} \coloneqq \hat{y}_{k+i} - y_k^*$$
-
 then the optimization problem solved at each time instant $k$ by MPC is:
-$$
-\begin{aligned}
+$$\begin{aligned}
     \min_{u_{k}, \dots, u_{k+N_u-1}} & \sum_{i=0}^{N_u-1} R \left(\Delta u_{k+i}\right)^2 +\sum_{i=1}^{N_y} Q\ e_{k+i|k}^2 \\
     \text{s.t.} \ & \hat{y}_{k+i} = \varphi_{k+i}^{\top} \theta, \ i \in \{1,\dots, N_y\} \\
     & \underline{y} \leq \hat{y}_{k+i} \leq \overline{y}, \ i \in \{1, \dots, N_y\} \\
@@ -34,7 +28,6 @@ $$
     & u_{k+i} = u_{k+i-1}, \ i \in \{N_u, \ldots, N_y-1\}
 \end{aligned}
 $$
-
 where $R, Q$ are appropriate weight matrices (scalars in this ARX case) - the values don't have a theoretical optimum -, $\underline{(\cdot)}, \overline{(\cdot)}$ are the lower and upper constraints on the relevant variables. Last equation in the problem means input samples are kept unchanged after the control horizon.
 
 From optimal control sequence $u_k^*, \dots, u_{k+N_u-1}^*$, only the first input sample ($u_k^*$) is actually applied to the system. At instant $k+1$, the system will output a new sample $y_{k+1}$ which will be recorded by the controller and used to solve the previous optimization all over again.
@@ -47,18 +40,15 @@ SCMPC is a form of **robust optimal control** which stems from MPC. It solves a 
 #### Zonotopes
 To this end, ***zonotopes*** (a particular class of convex polytopes) are employed as sets for uncertainty representation. They are described by a *center* $c\in\mathbb{R}^{n_a+n_b}$ and a *generator matrix* $G\in\mathbb{R}^{(n_a+n_b)\times n_g}$ whose $n_g$ columns are the *generators*. By definition,
 
+$$\mathcal{Z} = \left\{ \theta \in\mathbb{R}^{n_a + n_b} : \theta = c + G \xi, \  \xi \in [-1, 1]^{n_g} \right\}.
 $$
-\mathcal{Z} = \left\{ \theta \in\mathbb{R}^{n_a + n_b} : \theta = c + G \xi, \  \xi \in [-1, 1]^{n_g} \right\}.
-$$
-
 These sets make the sampling of scenarios easy and inexpensive: it's sufficient to randomly pick $n_g$ numbers in $[-1, 1]$ and use the zonotope's definition to find a point (i.e. a scenario) inside it.
 
 ---
 
 Then, at instant $k$, after sampling $S$ scenarios $\theta^{(j)}, j = 1,\dots,S$ from $\mathcal{Z}$ and defining $\theta^{(0)} \coloneqq c \in \mathcal{Z}$, SCMPC solves the following, new version of the optimization problem:
 
-$$
-\begin{aligned}
+$$\begin{aligned}
     \min_{u_{k}, \dots, u_{k+N_u-1}} & \sum_{i=0}^{N_u-1} R \left(\Delta u_{k+i}\right)^2 + \sum_{i=1}^{N_y} Q \left(e^{(0)}_{k+i|k}\right)^2 + \sum_{j=1}^S \sum_{i=1}^{N_y} \frac{Q}{S} \left(e^{(j)}_{k+i|k}\right)^2  \\
     \textrm{s.t.} \ & y^{(j)}_{k-i} = y_{k-i}, \ i \in \{0,\dots, n_a-1\}\\
     & y^{(j)}_{k+i} = \left(\varphi_{k+i}^{(j)}\right)^{\top} \theta^{(j)}, \ i \in \{1,\dots, N_y\} \\
@@ -68,7 +58,6 @@ $$
     & u_{k+i} = u_{k+i-1}, \ i \in \{N_u, \ldots, N_y-1\}
 \end{aligned}
 $$
-
 for all $j=0,\dots,S$ ($j=0$ corresponding to the nominal system) with trivial meaning for the $(\cdot)^{(j)}$ quantities. Notice that constraints are imposed on all scenarios, making the optimal control sequence more conservative, resulting in a possibly slower tracking performance.
 
 ### Delay compensation
@@ -86,10 +75,8 @@ The optimization problem is exactly the same as in the SCMPC case.
 ## Active learning
 While in passive learning zonotopes are only used to sample scenarios that will be used for the optimization of the control input $u^*_k$, with ***active learning*** (AL) the optimization directly takes into account the volume of the future zonotope - resulting from the use of a certain control action $u_k$ at the current step. In formulas:
 
+$$J_A(u_k, \dots, u_{k+N_u-1}) \coloneqq J_P(u_k, \dots, u_{k+N_u-1}) + \alpha V(\hat{\mathcal{Z}}_{k+1})
 $$
-J_A(u_k, \dots, u_{k+N_u-1}) \coloneqq J_P(u_k, \dots, u_{k+N_u-1}) + \alpha V(\hat{\mathcal{Z}}_{k+1})
-$$
-
 where $J_P$ is the cost function optimized for SCMPC and $V(\hat{\mathcal{Z}}_{k+1})$ is the volume of the zonotope $\hat{\mathcal{Z}}_{k+1}$, i.e. the zonotope which would result from the prediction of $y_{k+1}$ computed inside the cost function.
 
 # Getting started
@@ -167,48 +154,40 @@ In time, some experiments and tests have also been run in MATLAB to check some p
 After that, a new algorithm for the zonotope update was found [here](https://ieeexplore.ieee.org/abstract/document/1652874), surpassing the need to use any reduction technique at all. This is the algorithm implemented both in MATLAB and C.
 
 Another experiment has been made to find the *radius* $r(\mathcal{Z})$ of a zonotope, i.e. the maximum distance between a point in the zonotope and its center:
-$$
-r(\mathcal{Z}) \coloneqq \max_{z\in\mathcal{Z}} ||z-c||^2_2.
-$$
-An algorithm was proposed and tested in MATLAB, but it was not successful, but some more work could head in that direction if the active learning implementation using the predicted zonotope's volume $V(\hat{\mathcal{Z}}_{k+1})$ proved computationally expensive.
+$$r(\mathcal{Z}) \coloneqq \max_{z\in\mathcal{Z}} ||z-c||^2_2.
+$$An algorithm was proposed and tested in MATLAB, but it was not successful, but some more work could head in that direction if the active learning implementation using the predicted zonotope's volume $V(\hat{\mathcal{Z}}_{k+1})$ proved computationally expensive.
 
 Some research has been developed on [*constrained zonotopes*](https://www.sciencedirect.com/science/article/pii/S0005109816300772), [*zonotope bundles*](https://ieeexplore.ieee.org/iel5/6149620/6159299/06160872.pdf) and other polytopic sets as more versatile substitutes for zonotopes, but they have not been considered nor used yet.
 
 Afterwards, two *normalization* processes have been implemented both in MATLAB and C code to manage system-specific fixed point bit widths assertions. In particular, one normalization was performed on input/output samples such that they always fall in the interval $[-1, 1]$:
 
+$$N_y : [\underline{y}, \overline{y}] \leftrightarrow [-1, 1], \quad \tilde{y}=N_y(y) = m_y \ y + q_y
 $$
-N_y : [\underline{y}, \overline{y}] \leftrightarrow [-1, 1], \quad \tilde{y}=N_y(y) = m_y \ y + q_y
-$$
-$$
-N_u : [\underline{u}, \overline{u}] \leftrightarrow [-1, 1], \quad \tilde{u}=N_u(u) = m_u \ u + q_u
-$$
+
+$$N_u : [\underline{u}, \overline{u}] \leftrightarrow [-1, 1], \quad \tilde{u}=N_u(u) = m_u \ u + q_u$$
+
 where $m_y, m_u, q_y, q_u$ are appropriate coefficients computed directly from the input/output constraints:
-$$
-m_x \coloneqq \frac{\overline{\tilde{x}}-\underline{\tilde{x}}}{\overline{x}-\underline{x}}
-$$
-$$
-q_x \coloneqq \frac{\underline{\tilde{x}}\ \overline{x} - \overline{\tilde{x}}\ \underline{x}}{\overline{x}-\underline{x}}
-$$
+
+$$m_x \coloneqq \frac{\overline{\tilde{x}}-\underline{\tilde{x}}}{\overline{x}-\underline{x}}$$
+
+$$q_x \coloneqq \frac{\underline{\tilde{x}}\ \overline{x} - \overline{\tilde{x}}\ \underline{x}}{\overline{x}-\underline{x}}$$
+
 where $\underline{\tilde{x}}, \overline{\tilde{x}}$ are the interval extremes of the normalized interval, in this case $-1, 1$ respectively. Using these the code employs 
 
-$$
-\tilde{\varphi}_k \coloneqq [\tilde{y}_{k-1} \dots \tilde{u}_{k-n_d-n_b+1}]^\top = \left( D_m^{-1}(\varphi_k - q) \right)^\top
-$$
-$$
-D_m \coloneqq \begin{bmatrix} m_y I_{n_a} & 0\\ 0 & m_u I_{n_b} \end{bmatrix}, \quad q \coloneqq \begin{bmatrix}
+$$\tilde{\varphi}_k \coloneqq [\tilde{y}_{k-1} \dots \tilde{u}_{k-n_d-n_b+1}]^\top = \left( D_m^{-1}(\varphi_k - q) \right)^\top$$
+
+$$D_m \coloneqq \begin{bmatrix} m_y I_{n_a} & 0\\ 0 & m_u I_{n_b} \end{bmatrix}, \quad q \coloneqq \begin{bmatrix}
     q_y \bm{1}_{n_a} \\ q_u \bm{1}_{n_b}
-\end{bmatrix}
-$$
+\end{bmatrix}$$
 for output predictions in the optimization problem.
 
 To get a similar result for the zonotopes, some of their properties have been researched and used so that the normalized zonotope $\tilde{\mathcal{Z}} = N_\theta(\mathcal{Z})$ is contained in the hypercube $[-1, 1]^n$. In particular, one can define the *interval hull* of a zonotope $\mathcal{Z} = (c | G)$ as
-$$
-\text{IH}(\mathcal{Z}) = (c | D_G), \quad D_G \coloneqq \text{diag}(d_1, \dots, d_n), \quad d_i = \sum_{j=1}^{n_g} |G_{ij}|
-$$
+
+$$\text{IH}(\mathcal{Z}) = (c | D_G), \quad D_G \coloneqq \text{diag}(d_1, \dots, d_n), \quad d_i = \sum_{j=1}^{n_g} |G_{ij}|$$
+
 which is the smallest parallelotope containing $\mathcal{Z}$. Then we define
-$$
-\tilde{\mathcal{Z}} \coloneqq D_G^{-1}(\mathcal{Z} - c) = (0 | D_G^{-1}G)
-$$
+
+$$\tilde{\mathcal{Z}} \coloneqq D_G^{-1}(\mathcal{Z} - c) = (0 | D_G^{-1}G)$$
 which is the *normalized* zonotope, contained by construction in $[-1,1]^n$.
 
 It has been proved that the zonotope normalization policy and the update algorithm currently used in the codebase *commute*, i.e. the update of the normalized zonotope *is* the normalization of the updated non-normalized one. This means that the controller can make all computations on the normalized zonotope, update it, and still get a new normalized zonotope which is exactly the normalized version of the zonotope it would have got if the algorithm was run on the unnormalized one.
