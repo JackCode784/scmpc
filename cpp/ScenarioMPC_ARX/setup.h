@@ -415,13 +415,11 @@ constexpr int NhorU = 3;
  * The cost is evaluated on Nscen + 1 models simultaneously.
  * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
  */
-constexpr int Nscen      = 16;   /* should always be a power of 2 */
-constexpr int LOG2NSCEN  = 4;   /* must satisfy (1 << LOG2NSCEN) == Nscen */
+constexpr int log2Scen  = 4;   /* must satisfy (1 << LOG2NSCEN) == Nscen */
+constexpr int Nscen = (1 << log2Scen);
 
 static_assert(NhorU <= Nhor,
     "Control horizon NhorU must not exceed prediction horizon Nhor.");
-static_assert((1 << LOG2NSCEN) == Nscen,
-    "LOG2NSCEN must equal log2(Nscen).  Update both consistently.");
 static_assert(Nhor >= nk, 
     "Prediction horizon must be at least system delay.");
 static_assert(Nhor - nk >= NhorU - 1,
@@ -478,17 +476,18 @@ extern norm_input_type uOptPrev[NhorU];
    Stage cost per step:  l(y, u) = outputWeight*(y - y_ref)^2 + R*u^2
    Terminal cost:        V_f(y)   = terminalOutputWeight*(y(k+N) - y_ref)^2
    ====================================================================== */
-static const output_weight_type terminalOutputWeight =  16.0;   /* terminal output weight */
-static const output_weight_type outputWeight =  16.0;   /* stage   output weight  */
-static const input_weight_type RBaseLine = 0.36; /* so that R = 0.125 = 2^(-3) in NRMLZ */
+constexpr int log2Q = 4;
+constexpr int log2P = 4;
+constexpr int log2R = 2;
+
+static const output_weight_type outputWeight =  ((int)1 << log2Q);   /* stage   output weight  */
+static const output_weight_type terminalOutputWeight =  ((int)1 << log2P);   /* terminal output weight */
 /* 
     log2Q/log2P are used for shift operations instead of multiplications in
     the FIXED cost function computation, so outputWeight/terminalOutputWeight
     must equal 2^log2Q / 2^log2P (testMain.cpp warns otherwise). R is
     multiplied, not shifted, so it can be any value.
 */
-constexpr int log2Q = 4;
-constexpr int log2P = 4;
 
 /* ======================================================================
    MADS SOLVER PARAMETERS
@@ -573,7 +572,7 @@ static const norm_output_type YNORMMIN = double(yNormGain)*double(YMIN) + double
 static const norm_input_type UNORMMAX = double(uNormGain)*double(UMAX) + double(uNormOffset);
 static const norm_input_type UNORMMIN = double(uNormGain)*double(UMIN) + double(uNormOffset);
 
-static const input_weight_type R = double(RBaseLine) * double(yNormGain) * double(yNormGain) / (double(uNormGain) * double(uNormGain)); // 2^(-3) for the buck converters
+static const input_weight_type R = ((int)1 << log2R);
 
 /* Normalization, use "normalized" noise in output strip */
 const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
@@ -705,7 +704,7 @@ static StripCoeffs computeStripCoeffs()
 static const StripCoeffs stripCoeffs = computeStripCoeffs();
 #else
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
-static const input_weight_type R = RBaseLine;   /* stage   input  weight  */
+static const input_weight_type R = ((int)1 << log2R) * ((double(YMAX) - double(YMIN)) * (double(YMAX) - double(YMIN))) / ((double(UMAX) - double(UMIN)) * (double(UMAX) - double(UMIN))); /* unnormalized stage input weight */
 static const norm_output_type YNORMMAXPHYS = YMAXPHYS;
 static const norm_output_type YNORMMINPHYS = YMINPHYS;
 static const norm_input_type UNORMMAXPHYS = UMAXPHYS;
