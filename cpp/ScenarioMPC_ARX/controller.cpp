@@ -234,25 +234,6 @@ digital_input_type controller(const digital_output_type yCurrDig,
     yCurrNorm_f = yCurrNorm.to_double();
     yrefNorm_f = yrefNorm.to_double();
     #endif
-
-    // #ifdef CONVERSIONS_MODE
-    // output_type yCurr;
-    // output_type yref;
-    // yCurr = DAConvertY(yCurrDig);
-    // yref  = DAConvertY(yrefDig);
-    // #else 
-    // yCurr = yCurrDig;
-    // yref = yrefDig;
-    // #endif
-
-    // /* Normalize output samples if needed */
-    // #ifdef NRMLZ
-    // yCurrNorm = normalizeY(yCurr);
-    // yrefNorm = normalizeY(yref);
-    // #else
-    // yCurrNorm = yCurr;
-    // yrefNorm = yref;
-    // #endif
     
     /* ------------------------------------------------------------------ */
     /*  Step 1b - Warm-start uOptNorm by shifting the previous solution   */
@@ -596,23 +577,6 @@ digital_input_type controller(const digital_output_type yCurrDig,
     for(int i = 0; i < na; i++) yHist_f[i] = yHist[i].to_double();
     for(int i = 0; i < nb+nk-1; i++) uHist_f[i] = uHist[i].to_double();
     #endif
-
-    /* Denormalize output if NRMLZ is defined */
-    // input_type uOpt;
-    // #ifdef NRMLZ
-    // uOpt = denormalizeU(uOptNorm[0]);
-    // #else
-    // uOpt = uOptNorm[0];
-    // #endif
-    
-    /* ------------------------------------------------------------------ */
-    /*  Step 9 - Convert uOpt back to digital                             */
-    /* ------------------------------------------------------------------ */
-    // #ifdef CONVERSIONS_MODE
-    // uOptDig = ADConvertU(uOpt);
-    // #else
-    // uOptDig = uOpt;
-    // #endif
 
     return uOptDig;
 }

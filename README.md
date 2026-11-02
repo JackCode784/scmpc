@@ -165,7 +165,7 @@ There is no unit-test suite. A change that should not alter the algorithm (a ref
 This section keeps track of the project's past progress, current state and future work.
 
 ## Work history
-The project started from the work already done and kept inside the `MADS_ISCAS2023` directory. The MADS algorithm, cost, and progressive barrier polling functions were already available for use but have been adapted for ARX models.
+The project started from the work already done and kept inside the `MADS_ISCAS23` directory. The MADS algorithm, cost, and progressive barrier polling functions were already available for use but have been adapted for ARX models.
 
 MATLAB code has been developed to test the algorithm (no learning and passive learning) in a high-level and versatile environment. After that, C/C++ code has been developed starting from the MATLAB one. 
 
@@ -176,7 +176,7 @@ After that, a new algorithm for the zonotope update was found [here](https://iee
 Another experiment has been made to find the *radius* $r(\mathcal{Z})$ of a zonotope, i.e. the maximum distance between a point in the zonotope and its center:
 
 ```math
-r(\mathcal{Z}) := \max_{z\in\mathcal{Z}} ||z-c||^2_2.
+r(\mathcal{Z}) := \max_{z\in\mathcal{Z}} ||z-c||_2.
 ```
 
 An algorithm was proposed and tested in MATLAB, but it was not successful, but some more work could head in that direction if the active learning implementation using the predicted zonotope's volume $V(\hat{\mathcal{Z}}_{k+1})$ proved computationally expensive.
@@ -206,7 +206,7 @@ q_x := \frac{\underline{\tilde{x}}\ \overline{x} - \overline{\tilde{x}}\ \underl
 where $\underline{\tilde{x}}, \overline{\tilde{x}}$ are the interval extremes of the normalized interval, in this case $-1, 1$ respectively. Using these the code employs 
 
 ```math
-\tilde{\varphi}_k := [\tilde{y}_{k-1} \dots \tilde{u}_{k-n_d-n_b+1}]^\top = \left( D_m^{-1}(\varphi_k - q) \right)^\top
+\tilde{\varphi}_k := [\tilde{y}_{k-1} \dots \tilde{u}_{k-n_d-n_b+1}]^\top = D_m \ \varphi_k + q
 ```
 
 ```math
@@ -223,7 +223,7 @@ To get a similar result for the zonotopes, some of their properties have been re
 \text{IH}(\mathcal{Z}) = (c | D_G), \quad D_G := \text{diag}(d_1, \dots, d_n), \quad d_i = \sum_{j=1}^{n_g} |G_{ij}|
 ```
 
-which is the smallest parallelotope containing $\mathcal{Z}$. Then we define
+which is the smallest hyperrectangle containing $\mathcal{Z}$. Then we define
 
 ```math
 \tilde{\mathcal{Z}} := D_G^{-1}(\mathcal{Z} - c) = (0 | D_G^{-1}G)
