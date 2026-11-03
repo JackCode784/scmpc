@@ -267,6 +267,29 @@ void costFunctionArx(cost_type              cost[2],
      *                   (not for a known input: k < DC_STEPS)
      *   * k = Nhor-1  : terminal weight weightP, no input cost
      */
+
+    /* Input cost contribution computed separately. */
+    /* Samples after NhorU-1 have zero cost contribution.
+       uPast[0] always contains the last known input sample (either u_{k-1} or u_k), which
+       should is subtracted from currU[0] (either u_k or u_{k+1}). Then only
+       currU must be considered for cost contribution. */
+    costTrack += ((currU[0] - uPast[0]) * (currU[0] - uPast[0])) * weightR; // separately: it uses uSamples
+    #ifdef DEBUG_PRINT
+    input_cost_term_f = ((currU_f[0] - uPast[0].to_double()) * (currU_f[0] - uPast[0].to_double())) * weightR.to_double();
+    #endif
+    for(int k = 1; k < NhorU; k++)
+    {
+        #ifdef PRAGMAS
+        #pragma HLS UNROLL
+        #endif
+
+        #ifdef DEBUG_PRINT
+        input_cost_term_f = (currU_f[k] - currU_f[k-1]) * (currU_f[k] - currU_f[k-1]) * weightR.to_double();
+        #endif
+        costTrack += ((currU[k] - currU[k-1]) * (currU[k] - currU[k-1])) * weightR;
+    }
+
+    /* Output (scenarios) predictions and cost contributions. */
     for (int k = 0; k < Nhor; k++)
     {
         #ifdef PRAGMAS
@@ -281,17 +304,7 @@ void costFunctionArx(cost_type              cost[2],
         #ifdef DEBUG_PRINT
         for(int i = 0; i < Nscen+1; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = (k == 0) ? yPast[j].to_double() : yPastCurr[i][j].to_double();
         for(int i = 0; i < nb+nk-1; i++) uSamples_f[i] = uSamples[i].to_double();
-        input_cost_term_f = (uSamples_f[0] - uSamples_f[1]) * (uSamples_f[0] - uSamples_f[1]) * weightR.to_double();
         #endif
-
-        /* --- Input cost term (all steps except the terminal one) ------- */
-        /* --- Input term is difference with respect to previous sample -- */
-        if (k >= DC_STEPS && k < Nhor - 1){
-            /* Multiply by R rather than shift, because a constant power-of-two 
-            multiply is only wiring in hardware, while an ap_fixed right shift 
-            keeps the operand's format and drops its low bits. */
-            costTrack += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) * weightR;
-        }
 
         /* --- Model loop: the scenarios, then the nominal model ---------- */
         #ifdef FIXED
