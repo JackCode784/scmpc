@@ -51,33 +51,34 @@ for t = 1:nTags
         % files from an earlier experiment with more runs are never read.
         f = fullfile(d, sprintf('runs_%s_%03d.txt', tag, S.run(r)));
         data = readtable(f, VariableNamingRule="preserve");
+        absTime = data.Ts .* (1:height(data))';
         c = okColor; if violating(r), c = badColor; end
 
         subplot(3,1,1); hold on;
-        plot(data.ySim, Color=c, LineWidth=1);
+        plot(absTime, data.ySim, Color=c, LineWidth=1);
         subplot(3,1,2); hold on;
-        plot(diff(data.ySim), Color=c, LineWidth=1);
+        plot(absTime(2:end), diff(data.ySim), Color=c, LineWidth=1);
         subplot(3,1,3); hold on;
-        plot(data.uSim, Color=c, LineWidth=1);
+        plot(absTime, data.uSim, Color=c, LineWidth=1);
     end
 
     % Reference and bounds (identical in every run)
     subplot(3,1,1);
-    plot(data.yref, 'k--', LineWidth=1.5);
+    plot(absTime, data.yref, 'k--', LineWidth=1.5);
     yline(data.yMin(1), 'k:', num2str(data.yMin(1)), LineWidth=1.5);
     yline(data.yMax(1), 'k:', num2str(data.yMax(1)), LineWidth=1.5);
-    hold off; grid on; xlabel('k'); ylabel('y_k');
+    hold off; grid on; xlabel('t [s]'); ylabel('y_k');
     title(sprintf('%s: %d runs, %d leave [y_{min}, y_{max}], %d exceed \\Deltay (red: any violation)', ...
         strrep(tag, '_', ' '), height(S), sum(S.nViolY > 0), sum(S.nViolDy > 0)), Interpreter="tex");
 
     subplot(3,1,2);
     yline(data.deltaY(1)*[-1, 1], 'k:', {num2str(-data.deltaY(1)), num2str(data.deltaY(1))}, LineWidth=1.5);
-    hold off; grid on; xlabel('k'); ylabel('y_k - y_{k-1}'); title('\Deltay');
+    hold off; grid on; xlabel('time [s]'); ylabel('y_k - y_{k-1}'); title('\Deltay');
 
     subplot(3,1,3);
-    plot(data.uMax, 'k:', LineWidth=1.5);
-    plot(data.uMin, 'k:', LineWidth=1.5);
-    hold off; grid on; xlabel('k'); ylabel('u^*_k'); title('Applied input');
+    yline(data.uMax(1), 'k:', num2str(data.uMax(1)), LineWidth=1.5);
+    yline(data.uMin(1), 'k:', num2str(data.uMin(1)), LineWidth=1.5);
+    hold off; grid on; xlabel('time [s]'); ylabel('u^*_k'); title('Applied input');
 end
 
 % Paired comparison across experiments (same run index = same true plant)
