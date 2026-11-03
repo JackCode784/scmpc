@@ -21,9 +21,9 @@
  *                       scenarios, included only in PL/AL modes to penalise
  *                       poor performance across the uncertainty set
  *
- * The input cost term u*weightR*u is included for steps k = 0 ... N-2 (i.e. the
- * last input u(k = N-1) is not penalised separately because the terminal
- * cost weightP already handles the final output).
+ * The input cost term \DeltaU^2*weightR is included for steps k = 0 ... NhorU-1,
+ * based on the use of delay compensation the considered inputs for the cost
+ * contribution change (starting from u_k without DC, from u_{k+1} with DC).
  *
  * CONTROL vs PREDICTION HORIZON
  * ------------------------------
@@ -270,7 +270,7 @@ void costFunctionArx(cost_type              cost[2],
     /* Input cost contribution computed separately. */
     /* Samples after NhorU-1 have zero cost contribution.
        uPast[0] always contains the last known input sample (either u_{k-1} or u_k), which
-       should is subtracted from currU[0] (either u_k or u_{k+1}). Then only
+       should be subtracted from currU[0] (either u_k or u_{k+1}). Then only
        currU must be considered for cost contribution. */
     costTrack += ((currU[0] - uPast[0]) * (currU[0] - uPast[0])) * weightR; // separately: it uses uPast
     #ifdef DEBUG_PRINT
