@@ -6,7 +6,7 @@
  * --------------
  * The MPC objective over a prediction horizon of N steps is:
  *
- *   J = sum_{k=0}^{N-2} [ u(k)*weightR*u(k)  +  weightQ*(ypred_nom(k+1) - y_ref)^2
+ *   J = sum_{k=0}^{N-2} [ (u(k)-u(k-1))^2 * weightR  +  weightQ*(ypred_nom(k+1) - y_ref)^2
  *                                      +  weightQ * scenariosContrib(k+1) ]
  *     +                  weightP*(ypred_nom(N) - y_ref)^2
  *     +                  weightQ * scenariosContrib(N)
@@ -21,9 +21,9 @@
  *                       scenarios, included only in PL/AL modes to penalise
  *                       poor performance across the uncertainty set
  *
- * The input cost term u*weightR*u is included for steps k = 0 ... N-2 (i.e. the
- * last input u(k = N-1) is not penalised separately because the terminal
- * cost weightP already handles the final output).
+ * The input cost term \DeltaU^2*weightR is included for steps k = 0 ... NhorU-1,
+ * based on the use of delay compensation the considered inputs for the cost
+ * contribution change (starting from u_k without DC, from u_{k+1} with DC).
  *
  * CONTROL vs PREDICTION HORIZON
  * ------------------------------
@@ -263,10 +263,36 @@ void costFunctionArx(cost_type              cost[2],
      * first step uses the known input u(k) already in uSamples[0]):
      *   * 0 <= j < NhorU : uSamples[0] = currU[j] (within control horizon)
      *   * j >= NhorU     : uSamples[0] unchanged  (zero-order hold)
-     *   * k < Nhor-1  : stage weight weightQ, plus the input cost
-     *                   (not for a known input: k < DC_STEPS)
+     *   * k < Nhor-1  : stage weight weightQ
      *   * k = Nhor-1  : terminal weight weightP, no input cost
      */
+
+    /* Input cost contribution computed separately. */
+    /* Samples after NhorU-1 have zero cost contribution.
+       uPast[0] always contains the last known input sample (either u_{k-1} or u_k), which
+       should be subtracted from currU[0] (either u_k or u_{k+1}). Then only
+       currU must be considered for cost contribution. */
+    costTrack += ((currU[0] - uPast[0]) * (currU[0] - uPast[0])) * weightR; // separately: it uses uPast
+    #ifdef DEBUG_PRINT
+    input_cost_term_f = ((currU_f[0] - uPast[0].to_double()) * (currU_f[0] - uPast[0].to_double())) * weightR.to_double();
+    #endif
+    for(int j = 1; j < NhorU; j++)
+    {
+        #ifdef PRAGMAS
+        /* nOpt terms, independent: wiring and multipliers, not a loop */
+        #pragma HLS UNROLL
+        #endif
+
+        #ifdef DEBUG_PRINT
+        input_cost_term_f = (currU_f[j] - currU_f[j-1]) * (currU_f[j] - currU_f[j-1]) * weightR.to_double();
+        #endif
+        /* Multiply by R rather than shift, because a constant power-of-two 
+            multiply is only wiring in hardware, while an ap_fixed right shift 
+            keeps the operand's format and drops its low bits. */
+        costTrack += ((currU[j] - currU[j-1]) * (currU[j] - currU[j-1])) * weightR;
+    }
+
+    /* Output (scenarios) predictions and cost contributions. */
     for (int k = 0; k < Nhor; k++)
     {
         #ifdef PRAGMAS
@@ -281,17 +307,7 @@ void costFunctionArx(cost_type              cost[2],
         #ifdef DEBUG_PRINT
         for(int i = 0; i < Nscen+1; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = (k == 0) ? yPast[j].to_double() : yPastCurr[i][j].to_double();
         for(int i = 0; i < nb+nk-1; i++) uSamples_f[i] = uSamples[i].to_double();
-        input_cost_term_f = (uSamples_f[0] - uSamples_f[1]) * (uSamples_f[0] - uSamples_f[1]) * weightR.to_double();
         #endif
-
-        /* --- Input cost term (all steps except the terminal one) ------- */
-        /* --- Input term is difference with respect to previous sample -- */
-        if (k >= DC_STEPS && k < Nhor - 1){
-            /* Multiply by R rather than shift, because a constant power-of-two 
-            multiply is only wiring in hardware, while an ap_fixed right shift 
-            keeps the operand's format and drops its low bits. */
-            costTrack += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) * weightR;
-        }
 
         /* --- Model loop: the scenarios, then the nominal model ---------- */
         #ifdef FIXED
