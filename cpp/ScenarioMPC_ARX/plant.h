@@ -121,7 +121,6 @@ struct TbRng
 #define PENDULUM_NONLINEAR  1
 
 constexpr double PEND_G     = 9.81;   /* [m/s^2]                               */
-constexpr double PEND_TS    = 0.01;   /* sampling period [s], as used to build THETA_NOMINAL_UNNORM */
 constexpr double PEND_REL_UNC = 0.2;  /* l, m drawn in nominal*(1 +- 0.2)      */
 constexpr int    PENDULUM_EULER_SUBSTEPS = 100;
 
@@ -148,14 +147,14 @@ struct Plant
 inline void pendulumThetaFromPhys(double l, double m, double theta[nTheta])
 {
     theta[0] = 2.0;
-    theta[1] = -1.0 + PEND_TS * PEND_TS * PEND_G / l;
-    theta[2] = PEND_TS * PEND_TS / (m * l * l);
+    theta[1] = -1.0 + Ts * Ts * PEND_G / l;
+    theta[2] = Ts * Ts / (m * l * l);
 }
 
 inline void pendulumPhysFromTheta(const double theta[nTheta], double &l, double &m)
 {
-    l = PEND_TS * PEND_TS * PEND_G / (theta[1] + 1.0);
-    m = PEND_TS * PEND_TS / (theta[2] * l * l);
+    l = Ts * Ts * PEND_G / (theta[1] + 1.0);
+    m = Ts * Ts / (theta[2] * l * l);
 }
 
 inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
@@ -187,7 +186,7 @@ inline void plantReset(Plant &p)
     /* State consistent with the output history: angle y(-1), velocity
      * from the last two samples. */
     p.x[0] = y0[0];
-    p.x[1] = (y0[0] - y0[1]) / PEND_TS;
+    p.x[1] = (y0[0] - y0[1]) / Ts;
     p.uEarly = u0[0];
     p.fEarly = 0.0;
 }
@@ -195,7 +194,7 @@ inline void plantReset(Plant &p)
 inline double plantNextOutput(Plant &p)
 {
     #if PENDULUM_NONLINEAR
-    const double h = PEND_TS / PENDULUM_EULER_SUBSTEPS;
+    const double h = Ts / PENDULUM_EULER_SUBSTEPS;
     /* Zero-order hold of u(k-1) = u[0], after uEarly for the first fEarly
      * of the interval (controller latency, TB_COMPUTE_DELAY_FRACTION) */
     const int nEarly = int(std::lround(p.fEarly * PENDULUM_EULER_SUBSTEPS));

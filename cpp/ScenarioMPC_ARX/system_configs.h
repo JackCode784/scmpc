@@ -123,7 +123,11 @@ static const input_type  UMIN = UMINPHYS;
 static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM` = 0.0;
+static const noise_type SIGMA_UNNORM = 0.0;
+
+/* Sampling time, logged in output files for printing time in seconds.
+    This is just a conventional value, no sampling time was specified. */
+constexpr double Ts = 10e-3;
 
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
 static const input_type UMINPHYS = -1.9;
@@ -136,6 +140,10 @@ static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
 static const noise_type SIGMA_UNNORM = 0.20;
 
+/* Sampling time, logged in output files for printing time in seconds.
+    This is just a conventional value, no sampling time was specified. */
+constexpr double Ts = 10e-3;
+
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
 static const input_type  UMINPHYS = -200.0;
 static const input_type  UMAXPHYS =  200.0;
@@ -147,6 +155,10 @@ static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
 static const noise_type SIGMA_UNNORM = 4.4655;
 
+/* Sampling time, logged in output files for printing time in seconds.
+    This is just a conventional value, no sampling time was specified. */
+constexpr double Ts = 10e-3;
+
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
 static const input_type  UMINPHYS = 0;
 static const input_type  UMAXPHYS = 1;
@@ -157,6 +169,7 @@ static const input_type  UMAX = UMAXPHYS;
 static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
 static const noise_type SIGMA_UNNORM = 0.2;
+constexpr double Ts = 1e-5;    // Sampling time, logged in output files for printing time in seconds
 
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
 static const input_type  UMINPHYS = 0;
@@ -169,6 +182,7 @@ static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
 static const output_type DELTAY = 0.1;
 static const noise_type SIGMA_UNNORM = 0.02;
+constexpr double Ts = 1e-5;    // Sampling time, logged in output files for printing time in seconds
 
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
 static const input_type  UMINPHYS = 0;
@@ -182,6 +196,10 @@ static const output_type YMAX = 5;
 static const output_type DELTAY = 100; /* effectively unconstrained: this demo is about the static YMAX bound, not the rate limit */
 static const noise_type SIGMA_UNNORM = 0.02;
 
+/* Sampling time, logged in output files for printing time in seconds.
+    This is just a conventional value, no sampling time was specified. */
+constexpr double Ts = 10e-3;
+
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
 static const input_type  UMINPHYS = 0;
 static const input_type  UMAXPHYS = 1;
@@ -193,6 +211,7 @@ static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = 85;
 static const output_type DELTAY = 5;
 static const noise_type SIGMA_UNNORM = 0.2;
+constexpr double Ts = 10e-3;    // Sampling time, logged in output files for printing time in seconds. Conventional value
 
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
 static const input_type UMINPHYS = -3;
@@ -205,6 +224,10 @@ static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = YMAXPHYS;
 static const output_type DELTAY = 10e-3;
 static const noise_type SIGMA_UNNORM = 0.00;
+
+/* The plant derives l, m from Ts, changing it silently changes
+    since they are derived from theta params and Ts (l = Ts^2 * g / (theta[1] + 1)) */
+constexpr double Ts = 10e-3;    // Sampling time, logged in output files for printing time in seconds
 
 #endif
 

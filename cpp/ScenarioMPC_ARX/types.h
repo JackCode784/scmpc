@@ -305,7 +305,7 @@ typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> strip_center_type;
 #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
 typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* weightR = 2^log2R */
 #else
-typedef ap_ufixed<3,0> input_weight_type; /* weightR = 2^log2R, log2R is per-system */
+typedef ap_ufixed<3,0> input_weight_type; /* weightR = 2^log2R */
 #endif
 
 /**

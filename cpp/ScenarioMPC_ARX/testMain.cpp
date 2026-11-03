@@ -277,47 +277,47 @@ int main(void)
      * CONVERSIONS_MODE used to print uSimDig/ySimDig, which are not
      * declared in that mode, and failed to compile) */
     #if defined(CONVERSIONS_MODE)
-        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY uSimDig ySimDig vol\n");
+        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY uSimDig ySimDig vol Ts\n");
     #else
-        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY vol\n");
+        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY vol Ts\n");
     #endif
 
     for (int k = 0; k < nSim; k++)
     {
 #if defined(FIXED) && defined(CONVERSIONS_MODE)
-        fprintf(fp, "%f %f %f %f %f %f %f %f %f %f %e\n",
+        fprintf(fp, "%f %f %f %f %f %f %f %f %f %f %e %e\n",
                 uSim[k].to_float(), ySim[k].to_float(),
                 yref[k].to_float(),
                 UMIN.to_float(), UMAX.to_float(),
                 YMIN.to_float(), YMAX.to_float(),
                 DELTAY.to_float(),
                 uSimDig[k].to_float(), ySimDig[k].to_float(),
-                volumes[k].to_float()/volumes[0].to_float());
+                volumes[k].to_float()/volumes[0].to_float(), Ts);
 #elif defined(FIXED)
-        fprintf(fp, "%f %f %f %f %f %f %f %f %e\n",
+        fprintf(fp, "%f %f %f %f %f %f %f %f %e %e\n",
                 uSim[k].to_float(), ySim[k].to_float(),
                 yref[k].to_float(),
                 UMIN.to_float(), UMAX.to_float(),
                 YMIN.to_float(), YMAX.to_float(),
                 DELTAY.to_float(),
-                volumes[k].to_float()/volumes[0].to_float());
+                volumes[k].to_float()/volumes[0].to_float(), Ts);
 #elif defined(CONVERSIONS_MODE)
-        fprintf(fp, "%f %f %f %f %f %f %f %f %d %d %e\n",
+        fprintf(fp, "%f %f %f %f %f %f %f %f %d %d %e %e\n",
                 (double)uSim[k], (double)ySim[k],
                 (double)yref[k],
                 (double)UMIN, (double)UMAX,
                 (double)YMIN, (double)YMAX,
                 (double)DELTAY,
                 (int)uSimDig[k], (int)ySimDig[k],
-                (double)volumes[k]/(double)volumes[0]);
+                (double)volumes[k]/(double)volumes[0], Ts);
 #else
-        fprintf(fp, "%f %f %f %f %f %f %f %f %e\n",
+        fprintf(fp, "%f %f %f %f %f %f %f %f %e %e\n",
                 (double)uSim[k], (double)ySim[k],
                 (double)yref[k],
                 (double)UMIN, (double)UMAX,
                 (double)YMIN, (double)YMAX,
                 (double)DELTAY,
-                (double)volumes[k]/(double)volumes[0]);
+                (double)volumes[k]/(double)volumes[0], Ts);
 #endif
     }
 

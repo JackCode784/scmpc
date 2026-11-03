@@ -29,12 +29,13 @@ errRMSE = sqrt(mean(data.err.^2));
 yDer = diff(data.ySim);
 
 % Plots
+t = data.Ts .* (0:height(data)-1)';
 % Output simulations
 figure(Name=titleStr); subplot(3,1,1);
 hold on;
 yyaxis left;
-plot(data.ySim, 'LineWidth', 1.5); grid on;xlabel('k');
-plot(data.yref, 'r--', 'LineWidth', 1.5);
+plot(t, data.ySim, 'LineWidth', 1.5); grid on;xlabel('time [s]');
+plot(t, data.yref, 'r--', 'LineWidth', 1.5);
 yline(data.yMin(1), 'k--', num2str(data.yMin(1)), 'LineWidth',1.5);
 yline(data.yMax(1), 'k--', num2str(data.yMax(1)), 'LineWidth',1.5);
 hold off;
@@ -48,7 +49,7 @@ if ismember('ySimDig', data.Properties.VariableNames)
     % subplot(2,1,1);
     yyaxis right;
     hold on;
-    stairs(data.ySimDig, 'LineWidth', 1.5); grid on; ylabel('Simulated digital output');
+    stairs(t, data.ySimDig, 'LineWidth', 1.5); grid on; ylabel('Simulated digital output');
     hold off;
     legend('off');
 end
@@ -57,26 +58,27 @@ title('Output simulation');
 % y_k - y_{k-1} plot
 subplot(3,1,2);
 hold on;
-plot(yDer, LineWidth=1.5);
+plot(t(2:end), yDer, LineWidth=1.5);
 yline(data.deltaY(1)*[-1, 1], 'k--', {num2str(-data.deltaY(1)),num2str(data.deltaY(1))}, LineWidth=1.5);
 hold off;
 grid on;
-xlabel('k');
+xlabel('time [s]');
 ylabel('y_k - y_{k-1}');
 title('\Deltay');
 
 % Optimal input
 subplot(3,1,3);
 hold on;
-plot(data.uSim, 'LineWidth', 1.5); grid on;xlabel('k');
-plot(data.uMax,'k--', 'LineWidth',1.5);
-plot(data.uMin,'k--', 'LineWidth',1.5);
+plot(t, data.uSim, 'LineWidth', 1.5); grid on;xlabel('time [s]');
+yline(data.uMax(1),'k--', num2str(data.uMax(1)), 'LineWidth',1.5);
+yline(data.uMin(1),'k--', num2str(data.uMin(1)), 'LineWidth',1.5);
 hold off;
 ylabel('u^*_k');
 if ismember('uSimDig', data.Properties.VariableNames)
     yyaxis right;
     hold on;
-    stairs(data.uSimDig, 'LineWidth', 1.5); grid on;xlabel('k');ylabel('Optimized digital input');title('Optimal input');
+    stairs(t, data.uSimDig, 'LineWidth', 1.5); grid on;
+    ylabel('Optimized digital input');title('Optimal input');
 end
 
 % Tracking error plot
@@ -86,13 +88,13 @@ hold on;
 % boxplot(err, Orientation="horizontal");
 % xline(errMean, 'r--', LineWidth=1.5);
 % xline(errRMSE, 'k:', LineWidth=1.5);
-plot(data.err, LineWidth=1.5);
+plot(t, data.err, LineWidth=1.5);
 yline(errMean, 'r--', num2str(errMean), LineWidth=1.5);
 yline(errRMSE, 'k:', num2str(errRMSE), LineWidth=1.5);
 hold off;
 grid on;
 title('Tracking error');
-xlabel('k');
+xlabel('time [s]');
 legend('e_k = y^*_k - y_k', 'Mean', 'RMSE');
 
 % Zonotope volume
