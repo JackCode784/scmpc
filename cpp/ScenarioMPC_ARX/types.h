@@ -300,12 +300,12 @@ typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_output_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_input_type;
 typedef ap_fixed<WORD_LENGTH,1,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> strip_center_type;
-/* Input weight weightR in normalized units, weightR = RBaseLine*(yNormGain/uNormGain)^2.
+/* Input weight weightR in normalized units.
  * FIXED multiplies by it (costFunctionArx), like floating point does. */
 #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* weightR = 0.5*(1.1111/0.3333)^2 = 5.5556 */
+typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* weightR = 2^log2R */
 #else
-typedef ap_ufixed<3,0> input_weight_type; /* weightR = 0.125 = 2^(-3) */
+typedef ap_ufixed<3,0> input_weight_type; /* weightR = 2^log2R, log2R is per-system */
 #endif
 
 /**

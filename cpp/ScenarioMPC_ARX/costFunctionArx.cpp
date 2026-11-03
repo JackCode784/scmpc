@@ -289,7 +289,7 @@ void costFunctionArx(cost_type              cost[2],
         if (k >= DC_STEPS && k < Nhor - 1){
             /* Multiply by R rather than shift, because a constant power-of-two 
             multiply is only wiring in hardware, while an ap_fixed right shift 
-            keeps the operand’s format and drops its low bits. */
+            keeps the operand's format and drops its low bits. */
             costTrack += ((uSamples[0] - uSamples[1]) * (uSamples[0] - uSamples[1])) * weightR;
         }
 
