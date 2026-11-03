@@ -260,13 +260,15 @@ Currently, the agreed upcoming work is to:
 Some additional tweaks and features that would be needed are:
 1. Change name of some variables (e.g. `yHist` $\rightarrow$ `yInit`).
 2. Add the sampling time $T_s$ to C.
-3. Automatic test setups for C code;
-4. Automatic workflow for Vitis fixed point simulations, synthesis and implementation;
-5. Automatic derivation of "good" hyperparameters values ($Q, R, \alpha, I, N_y, N_u, S$) for a system (by grid search if no optimal values are theoretically possible, MATLAB or C++);
-6. Difference between "true" plant and controller's plant model.
-7. Refactor: use structs instead of defines and macros to merge together and set same-topic hyperparameters ($Q, R, \alpha, I, N_y, N_u, S$ number of runs, number of simulation steps, etc.) and the various operation modes' parameters, as well as system constraints and properties.
-8. Compute logarithms instead of writing them by hand.
-9. Cost function: independent and separated input/output contributions, maybe even separate nominal system (always constrained and tracking) and scenarios.
-10. Automatic definition of per-system `pragma`s.
-11. Re-order experiments (i.e. attempts and some researches) in appropriate directories.
-12. Alignment between MATLAB and C++ (e.g., use `patternsearch` instead of `yalmip` and stop using `CORA` for zonotope representation - it's not really needed).
+3. Substitute `constexpr` in systems definitions of $n_a, n_b, n_g$, and initialization variables to delete `*_TABLE` quantities.
+4. Compile-time computation of $D_G$ and keep it as a separate variable (diagnostics, denormalized zonotopes over time,...).
+5. Automatic test setups for C code;
+6. Automatic workflow for Vitis fixed point simulations, synthesis and implementation;
+7. Automatic derivation of "good" hyperparameters values ($Q, R, \alpha, I, N_y, N_u, S$) for a system (by grid search if no optimal values are theoretically possible, MATLAB or C++);
+8. Difference between "true" plant and controller's plant model.
+9. Refactor: use structs instead of defines and macros to merge together and set same-topic hyperparameters ($Q, R, \alpha, I, N_y, N_u, S$ number of runs, number of simulation steps, etc.) and the various operation modes' parameters, as well as system constraints and properties.
+10. Compute logarithms instead of writing them by hand.
+11. Cost function: independent and separated input/output contributions, maybe even separate nominal system (always constrained and tracking) and scenarios.
+12. Automatic definition of per-system `pragma`s.
+13. Re-order experiments (i.e. attempts and some researches) in appropriate directories.
+14. Alignment between MATLAB and C++ (e.g., use `patternsearch` instead of `yalmip` and stop using `CORA` for zonotope representation - it's not really needed).
