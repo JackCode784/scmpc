@@ -6,7 +6,7 @@
  * --------------
  * The MPC objective over a prediction horizon of N steps is:
  *
- *   J = sum_{k=0}^{N-2} [ u(k)*weightR*u(k)  +  weightQ*(ypred_nom(k+1) - y_ref)^2
+ *   J = sum_{k=0}^{N-2} [ (u(k)-u(k-1))^2 * weightR  +  weightQ*(ypred_nom(k+1) - y_ref)^2
  *                                      +  weightQ * scenariosContrib(k+1) ]
  *     +                  weightP*(ypred_nom(N) - y_ref)^2
  *     +                  weightQ * scenariosContrib(N)
@@ -263,8 +263,7 @@ void costFunctionArx(cost_type              cost[2],
      * first step uses the known input u(k) already in uSamples[0]):
      *   * 0 <= j < NhorU : uSamples[0] = currU[j] (within control horizon)
      *   * j >= NhorU     : uSamples[0] unchanged  (zero-order hold)
-     *   * k < Nhor-1  : stage weight weightQ, plus the input cost
-     *                   (not for a known input: k < DC_STEPS)
+     *   * k < Nhor-1  : stage weight weightQ
      *   * k = Nhor-1  : terminal weight weightP, no input cost
      */
 
@@ -273,20 +272,24 @@ void costFunctionArx(cost_type              cost[2],
        uPast[0] always contains the last known input sample (either u_{k-1} or u_k), which
        should is subtracted from currU[0] (either u_k or u_{k+1}). Then only
        currU must be considered for cost contribution. */
-    costTrack += ((currU[0] - uPast[0]) * (currU[0] - uPast[0])) * weightR; // separately: it uses uSamples
+    costTrack += ((currU[0] - uPast[0]) * (currU[0] - uPast[0])) * weightR; // separately: it uses uPast
     #ifdef DEBUG_PRINT
     input_cost_term_f = ((currU_f[0] - uPast[0].to_double()) * (currU_f[0] - uPast[0].to_double())) * weightR.to_double();
     #endif
-    for(int k = 1; k < NhorU; k++)
+    for(int j = 1; j < NhorU; j++)
     {
         #ifdef PRAGMAS
+        /* nOpt terms, independent: wiring and multipliers, not a loop */
         #pragma HLS UNROLL
         #endif
 
         #ifdef DEBUG_PRINT
-        input_cost_term_f = (currU_f[k] - currU_f[k-1]) * (currU_f[k] - currU_f[k-1]) * weightR.to_double();
+        input_cost_term_f = (currU_f[j] - currU_f[j-1]) * (currU_f[j] - currU_f[j-1]) * weightR.to_double();
         #endif
-        costTrack += ((currU[k] - currU[k-1]) * (currU[k] - currU[k-1])) * weightR;
+        /* Multiply by R rather than shift, because a constant power-of-two 
+            multiply is only wiring in hardware, while an ap_fixed right shift 
+            keeps the operand's format and drops its low bits. */
+        costTrack += ((currU[j] - currU[j-1]) * (currU[j] - currU[j-1])) * weightR;
     }
 
     /* Output (scenarios) predictions and cost contributions. */
