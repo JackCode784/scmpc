@@ -29,12 +29,12 @@ errRMSE = sqrt(mean(data.err.^2));
 yDer = diff(data.ySim);
 
 % Plots
-t = data.Ts .* (1:height(data))';
+t = data.Ts .* (0:height(data)-1)';
 % Output simulations
 figure(Name=titleStr); subplot(3,1,1);
 hold on;
 yyaxis left;
-plot(t, data.ySim, 'LineWidth', 1.5); grid on;xlabel('t [s]');
+plot(t, data.ySim, 'LineWidth', 1.5); grid on;xlabel('time [s]');
 plot(t, data.yref, 'r--', 'LineWidth', 1.5);
 yline(data.yMin(1), 'k--', num2str(data.yMin(1)), 'LineWidth',1.5);
 yline(data.yMax(1), 'k--', num2str(data.yMax(1)), 'LineWidth',1.5);
@@ -62,14 +62,14 @@ plot(t(2:end), yDer, LineWidth=1.5);
 yline(data.deltaY(1)*[-1, 1], 'k--', {num2str(-data.deltaY(1)),num2str(data.deltaY(1))}, LineWidth=1.5);
 hold off;
 grid on;
-xlabel('t [s]');
+xlabel('time [s]');
 ylabel('y_k - y_{k-1}');
 title('\Deltay');
 
 % Optimal input
 subplot(3,1,3);
 hold on;
-plot(t, data.uSim, 'LineWidth', 1.5); grid on;xlabel('t [s]');
+plot(t, data.uSim, 'LineWidth', 1.5); grid on;xlabel('time [s]');
 yline(data.uMax(1),'k--', num2str(data.uMax(1)), 'LineWidth',1.5);
 yline(data.uMin(1),'k--', num2str(data.uMin(1)), 'LineWidth',1.5);
 hold off;
@@ -94,7 +94,7 @@ yline(errRMSE, 'k:', num2str(errRMSE), LineWidth=1.5);
 hold off;
 grid on;
 title('Tracking error');
-xlabel('t [s]');
+xlabel('time [s]');
 legend('e_k = y^*_k - y_k', 'Mean', 'RMSE');
 
 % Zonotope volume

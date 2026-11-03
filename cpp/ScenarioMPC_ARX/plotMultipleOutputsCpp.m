@@ -51,7 +51,7 @@ for t = 1:nTags
         % files from an earlier experiment with more runs are never read.
         f = fullfile(d, sprintf('runs_%s_%03d.txt', tag, S.run(r)));
         data = readtable(f, VariableNamingRule="preserve");
-        absTime = data.Ts .* (1:height(data))';
+        absTime = data.Ts .* (0:height(data)-1)';
         c = okColor; if violating(r), c = badColor; end
 
         subplot(3,1,1); hold on;
@@ -67,7 +67,7 @@ for t = 1:nTags
     plot(absTime, data.yref, 'k--', LineWidth=1.5);
     yline(data.yMin(1), 'k:', num2str(data.yMin(1)), LineWidth=1.5);
     yline(data.yMax(1), 'k:', num2str(data.yMax(1)), LineWidth=1.5);
-    hold off; grid on; xlabel('t [s]'); ylabel('y_k');
+    hold off; grid on; xlabel('time [s]'); ylabel('y_k');
     title(sprintf('%s: %d runs, %d leave [y_{min}, y_{max}], %d exceed \\Deltay (red: any violation)', ...
         strrep(tag, '_', ' '), height(S), sum(S.nViolY > 0), sum(S.nViolDy > 0)), Interpreter="tex");
 
