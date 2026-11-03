@@ -211,7 +211,7 @@ static const output_type YMIN = YMINPHYS;
 static const output_type YMAX = 85;
 static const output_type DELTAY = 5;
 static const noise_type SIGMA_UNNORM = 0.2;
-constexpr double Ts = 10e-3;    // Sampling time, logged in output files for printing time in seconds
+constexpr double Ts = 10e-3;    // Sampling time, logged in output files for printing time in seconds. Conventional value
 
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
 static const input_type UMINPHYS = -3;
@@ -225,10 +225,8 @@ static const output_type YMAX = YMAXPHYS;
 static const output_type DELTAY = 10e-3;
 static const noise_type SIGMA_UNNORM = 0.00;
 
-/* PEND_TS was defined as constexpr double, but was substituted
-    by the definition of Ts here (per-system sampling time).
-    If Ts != 10e-3, the pendulum parameters l, m silently change
-    since they are derived from theta params and Ts (l = Ts^2 * g / (theta[0] + 1)) */
+/* The plant derives l, m from Ts, changing it silently changes
+    since they are derived from theta params and Ts (l = Ts^2 * g / (theta[1] + 1)) */
 constexpr double Ts = 10e-3;    // Sampling time, logged in output files for printing time in seconds
 
 #endif
