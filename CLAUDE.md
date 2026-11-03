@@ -42,15 +42,15 @@ There is no build system and no unit-test framework. The closed-loop test bench 
 ```bash
 cd cpp/ScenarioMPC_ARX
 # default setup.h (float + CONVERSIONS_MODE + NRMLZ): plain g++
-g++ -std=c++14 -O2 -I . -o sim $(ls *.cpp | grep -v intervalHull.cpp) && ./sim
+g++ -std=c++14 -O2 -I . -o sim *.cpp && ./sim
 # fixed point (FIXED in setup.h): needs the Xilinx ap_types headers
 # (github.com/Xilinx/HLS_arbitrary_Precision_Types, include/) and a stub
 # hls_math.h (it is included, nothing from it is used):
 #   printf '#pragma once\n#include <cmath>\n' > <stub_dir>/hls_math.h
-g++ -std=c++14 -O2 -I <stub_dir> -I <ap_types>/include -I . -o sim $(ls *.cpp | grep -v intervalHull.cpp) && ./sim
+g++ -std=c++14 -O2 -I <stub_dir> -I <ap_types>/include -I . -o sim *.cpp && ./sim
 ```
 
-- Always leave out `intervalHull.cpp`. It is unused, it is not in the Vitis source list, and it does not compile in fixed point. `passiveLearning/` is not part of the build either.
+- `passiveLearning/` is not part of the build. It holds unused code, including `intervalHull.cpp`, which does not compile in fixed point.
 - The default `setup.h` is floating point with `CONVERSIONS_MODE`, `NRMLZ`, `USE_SCENS_COST` and `USE_SCENS_CONSTR`. For hardware, also uncomment `FIXED`.
 - The pendulum in fixed point requires `NRMLZ` (there is an `#error` otherwise).
 - **Output location.** Floating-point builds write into `FloatSimulations/` (created if missing). Fixed-point builds write into the working directory, which in Vitis is `.../hls/csim/build`.
@@ -123,6 +123,9 @@ With `DELAY_COMPENSATION`, a call at k computes u(k+1) and treats u(k) as known 
   - The model-loop accumulators `ScenAcc` and `ViolAcc` are single additions, bit-identical to the rounding, saturating `cost_type` sums they replace. Don't revert them to `cost_type +=`.
 - **Single call site.** `costFunctionArx` must keep a single call site. Otherwise HLS clones it (`costFunctionArx_1`) and ignores the `ALLOCATION` pragma (warning HLS 214-300).
 - **Bit-exactness.** Fixed-point changes must keep C simulation bit-exact, or be deliberately validated. Types use `AP_RND_CONV`/`AP_SAT`, so regrouping additions is not free.
+  - Exception: the weighted terms of `cost[0]` (the input term ·2^`log2R`, the output terms ·2^`log2Q`/2^`log2P`). A term is a square times 2^r, so the bits it loses when rounded to `cost_type` can be exactly half an LSB (a tie, where the result depends on the running sum's parity) only if r + (fractional bits of `cost_type`) is odd. With every such sum even, each term rounds on its own, and the saturating sum of non-negative terms is min(total, max) in any order.
+  - This is why moving the input term out of the k loop was bit-identical in fixed point: the pendulum has 20 fractional bits and r = 2, 4, 4. With an odd `log2R`, about 1% of random evaluations differ by 1–2 LSB.
+  - In floating point the same reordering does change the cost by about 1 ULP (unit in the last place) in about 1% of evaluations. Trajectories change only if that flips a MADS comparison.
 - **Cost weights are powers of two, defined by their exponents** (`log2Q`, `log2P`, `log2R` in `setup.h`; `pow2()` also handles negative exponents).
   - Fixed point applies `weightQ`/`weightP` as left shifts. It multiplies by `weightR`: a constant power-of-two multiply is only wiring, whereas an `ap_fixed` right shift keeps the operand's format and drops bits.
   - With `NRMLZ`, `weightR = 2^log2R` is in normalized units. Without it, `weightR` is the equivalent physical weight, 2^`log2R` · ((`YMAXPHYS`−`YMINPHYS`)/(`UMAXPHYS`−`UMINPHYS`))², which makes the two problems differ only by the positive factor g_y² (same minimizer). Use the `*PHYS` (normalization) ranges, not the constraint bounds `YMAX`/`UMAX`.
