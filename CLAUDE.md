@@ -88,7 +88,7 @@ Pragmas never change C simulation, so any difference is a behaviour change. Hard
 ## Architecture
 
 **Header chain.**
-- `system_configs.h`: system ids, and per system the controller's *model*: nominal θ, zonotope generators, bounds, initial histories.
+- `system_configs.h`: system ids, and per system the controller's *model*: nominal θ, zonotope generators, bounds, initial histories, and the sampling time `Ts`. `Ts` must be the one the ARX model was discretized at (10 µs for the buck converters, 10 ms for the pendulum, a convention for the abstract systems). The test bench logs it as the last column of the output files, and the MATLAB plots use it for the time axis. The pendulum plant derives l and m from θ and `Ts`, so changing its `Ts` silently changes the pendulum.
 - `types.h`: per-system `ap_fixed` types; everything is `double` without `FIXED`.
 - `setup.h`: configuration knobs, derived dimensions and constants, ADC/normalization constants, pragma profiles, every prototype, and the `extern` declarations of the controller state.
 - `plant.h`: the *true* plant for the test bench (ARX with other parameters, or the nonlinear inverted pendulum). It is never synthesized.
