@@ -17,7 +17,7 @@
  *
  * INTERFACE - one Plant object per simulation run:
  *   plantSampleTrue(p, rng, random)  this run's true parameters
- *   plantReset(p)                    physical initial conditions (*_UNNORM)
+ *   plantReset(p)                    physical initial conditions (*Init)
  *   plantNextOutput(p)               y(k), noise-free, physical units
  *   plantPush(p, yMeas, u)           record measured y(k) and applied u(k)
  *   plantPrintParams(p, f, header)   this run's parameters, for the summary

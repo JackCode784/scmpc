@@ -18,7 +18,7 @@
  *   (nUnc = number of uncertain parameters - see setup.h's UNC_MAP)
  *   nGens                       - number of active generator columns
  *   yHist      [na]                  - output history y(k−1), ..., y(k−na)
- *   uHist      [nb+nk−1]             - input  history u(k−1), ..., u(k−nb−nk+1)
+ *   uHist      [nb+nd-1]             - input  history u(k−1), ..., u(k−nb−nk+1)
  *   uOptPrev   [NhorU]               - last step's MADS solution u*(k−1), ...,
  *                                      u*(k−1+NhorU−1), kept ONLY to seed the
  *                                      next warm start (see Step 1b/7b below) -
@@ -516,7 +516,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /*  Step 6 - Snapshot input history for MADS                          */
     /* ------------------------------------------------------------------ */
     /*
-     * uPast = [u(k−1), ..., u(k−nb−nk+1)] - needed by costFunctionArx to
+     * uPast = [u(k-1), ..., u(k−nb−nd+1)] - needed by costFunctionArx to
      * roll out predictions for y(k+1), ..., y(k+N) alongside uOpt.
      * Must be taken BEFORE uHist is updated with uOpt[0] in step 9.
      */

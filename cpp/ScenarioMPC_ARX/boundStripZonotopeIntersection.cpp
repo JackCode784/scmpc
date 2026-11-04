@@ -17,27 +17,27 @@
  *
  * STRIP REPRESENTATION
  * ---------------------
- * The strip  S = { theta : |h'theta − y| <= sigma }  is represented by two offsets:
+ * The strip  S = { theta : |h'theta - y| <= sigma }  is represented by two offsets:
  *   offset[0] = y + sigma   (upper bound of  h'theta)
- *   offset[1] = sigma − y   (upper bound of −h'theta, i.e. negative of lower bound)
+ *   offset[1] = sigma - y   (upper bound of -h'theta, i.e. negative of lower bound)
  *
  * Given a zonotope Z = { c + Gξ : ‖ξ‖∞ ≤ 1 }, the support of Z along ±h is:
  *   supOffset[0] =  h'c + sum_j |h'g_j|   (max of  h'theta over Z)
- *   supOffset[1] = −h'c + sum_j |h'g_j|   (max of −h'theta over Z)
+ *   supOffset[1] = -h'c + sum_j |h'g_j|   (max of -h'theta over Z)
  *
  * The tight strip is the intersection of S with the projection of Z:
  *   tightOffset[i] = min(offset[i], supOffset[i])
  *
  * From the tight offsets, the tight strip centre and radius are:
- *   tsc = (tightOffset[0] − tightOffset[1]) / 2
+ *   tsc = (tightOffset[0] - tightOffset[1]) / 2
  *   tsr = (tightOffset[0] + tightOffset[1]) / 2
  *
  * BRAVO ALGORITHM (new function)
  * --------------------------------
- * For each candidate generator index s = 0…nGens−1 with h'g_s != 0:
+ * For each candidate generator index s = 0…nGens-1 with h'g_s != 0:
  *   1. New selected generator:  g_s^new = (tsr / h'g_s) * g_s
- *   2. Other generators:        g_j^new = g_j − (h'g_j / h'g_s) * g_s,  j != s
- *   3. New centre:              c^new   = c + (tsc − h'c) / h'g_s * g_s
+ *   2. Other generators:        g_j^new = g_j - (h'g_j / h'g_s) * g_s,  j != s
+ *   3. New centre:              c^new   = c + (tsc - h'c) / h'g_s * g_s
  *   4. Compute volume of the candidate zonotope.
  * Keep the candidate with the smallest volume.
  * If no candidate improves on the original, return the original unchanged.

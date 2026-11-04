@@ -9,7 +9,7 @@
  *   Z = { center + G·ξ  :  ‖ξ‖∞ ≤ 1 }  ⊂  ℝ^nUnc
  *
  * where  G ∈ ℝ^{nUnc × nGens}  is the generator matrix and
- *        ξ ∈ ℝ^nGens             is a coefficient vector with each entry in [−1, 1].
+ *        ξ ∈ ℝ^nGens             is a coefficient vector with each entry in [-1, 1].
  *
  * nUnc is the number of UNCERTAIN parameters (<= nTheta = na + nb; certain
  * ones are left out of the zonotope - see setup.h) — the number of ROWS of G.
@@ -22,7 +22,7 @@
  *   - CONFIG_MILANO has nUnc=nGens=6 from the start (square matrix).
  *   - CONFIG_SIMPLE  has nTheta=nGens=3 but only nUnc=1 uncertain parameter.
  *
- * Drawing a random ξ ∈ [−1,1]^nGens and computing θ = center + G·ξ gives
+ * Drawing a random ξ ∈ [-1,1]^nGens and computing θ = center + G·ξ gives
  * one scenario — a parameter vector guaranteed to lie inside Z.
  *
  * WHY nGens IS AN EXPLICIT ARGUMENT
@@ -47,7 +47,7 @@
 #include "setup.h"
 
 /**
- * Fill thetaScenarios[0..Nscen−1] with Nscen parameter vectors drawn
+ * Fill thetaScenarios[0..Nscen-1] with Nscen parameter vectors drawn
  * uniformly at random from  Z = { center + gens·ξ  :  ‖ξ‖∞ ≤ 1 }.
  *
  * @param thetaScenarios [out]  Nscen × nUnc array of scenario vectors.
@@ -56,7 +56,7 @@
  *                               stored row-major: gens[i][j] is the i-th
  *                               component of the j-th generator.
  *                               The array is declared with nGens columns;
- *                               only columns 0 … nGens−1 are read.
+ *                               only columns 0 … nGens-1 are read.
  * @param nGens           [in]   Number of active generator columns.
  *                               Must satisfy  1 ≤ nGens ≤ nGens.
  *
@@ -83,7 +83,7 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
     #endif
 
     /*
-     * coeffs[k] ∈ [−1, 1] — one random coefficient per generator column.
+     * coeffs[k] ∈ [-1, 1] — one random coefficient per generator column.
      * The array is sized to the compile-time maximum; only the first nGens
      * entries are written by pseudoRandArx and read in the inner loop.
      *
@@ -114,14 +114,14 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
         #pragma HLS PIPELINE off
         #endif
 
-        /* Draw nGens independent random coefficients ξ₀, …, ξ_{nGens−1}. */
+        /* Draw nGens independent random coefficients ξ₀, …, ξ_{nGens-1}. */
         pseudoRandArx(coeffs);
 
         /*
          * Compute  θ_i = center + gens · coeffs:
          *
          *   thetaScenarios[i][j] = center[j]
-         *                        + Σ_{k=0}^{nGens−1}  gens[j][k] · coeffs[k]
+         *                        + Σ_{k=0}^{nGens-1}  gens[j][k] · coeffs[k]
          *
          * theta_j accumulates the dot product for row j before writing to
          * thetaScenarios.  Accumulating into a local variable rather than
