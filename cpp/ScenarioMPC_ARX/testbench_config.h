@@ -1,6 +1,7 @@
 /* ======================================================================
    EXPERIMENT SETTINGS - edit these
    ====================================================================== */
+#pragma once
 namespace testbench_settings
 {
     /** Number of closed-loop simulations. 1 = the classic single run, written
