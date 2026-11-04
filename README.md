@@ -115,10 +115,10 @@ Main files in `cpp/ScenarioMPC_ARX/`:
 - `types.h`: fixed-point data types, per system.
 - `controller.cpp`: the top-level function synthesized to hardware.
 - `costFunctionArx.cpp`, `MADSARX.cpp`, `progressiveBarrierPollingArx.cpp`: cost evaluation and the MADS optimizer.
-- `testMain.cpp` and `plant.h`: test bench only; `plant.h` holds the *true* plant the controller is tested against (e.g. the nonlinear inverted pendulum).
+- `testMain.cpp`, `plant.h` and `testbench_config.h`: test bench only; `plant.h` holds the *true* plant the controller is tested against (e.g. the nonlinear inverted pendulum), `testbench_config.h` the experiment settings.
 
 ## Configuring an experiment
-Experiments are configured by editing `#define`s; no compiler flags are needed.
+Experiments are configured by editing the headers (`#define` mode flags and `constexpr` constants); no compiler flags are needed.
 
 | File | Setting | Meaning |
 |---|---|---|
@@ -129,24 +129,25 @@ Experiments are configured by editing `#define`s; no compiler flags are needed.
 | | `ACTIVE_SYSTEM`, `CTRL_MODE` | system; SCMPC, passive or active learning |
 | | `PRAGMA_PROFILE` | hardware profile: `AREA`, `BALANCED` or `LATENCY` |
 | | `Nhor`, `NhorU`, `Nscen`, `MADS_ITER` | $N_y$, $N_u$, $S$ (a power of 2, with `log2Nscen`), $I$ |
-| `plant.h` | `N_RUNS`, `RANDOM_TRUE_PLANT`, `TB_SEED` | number of closed-loop runs, a new random true plant per run, test-bench seed |
-| | `TB_COMPUTE_DELAY_FRACTION` | controller latency emulated by the test bench, as a fraction of the sampling period |
+| `testbench_config.h` | `nRuns`, `randomTruePlant`, `testbenchSeed` (namespace `testbench_settings`) | number of closed-loop runs, a new random true plant per run, test-bench seed |
+| | `computeDelayFraction` | controller latency emulated by the test bench, as a fraction of the sampling period |
+| `plant.h` | `PENDULUM_NONLINEAR` | the pendulum's true plant: nonlinear equation (1) or its ARX model (0) |
 
 ## Running a simulation
 Any C++14 compiler works. From `cpp/ScenarioMPC_ARX/`:
 ```bash
 # floating point
-g++ -std=c++14 -O2 -I . -o sim $(ls *.cpp | grep -v intervalHull.cpp) && ./sim
+g++ -std=c++14 -O2 -I . -o sim *.cpp && ./sim
 # fixed point: also needs the Xilinx ap_types headers (shipped with Vitis, or
 # github.com/Xilinx/HLS_arbitrary_Precision_Types) and Vitis's hls_math.h
-g++ -std=c++14 -O2 -I <vitis_include_dir> -I . -o sim $(ls *.cpp | grep -v intervalHull.cpp) && ./sim
+g++ -std=c++14 -O2 -I <vitis_include_dir> -I . -o sim *.cpp && ./sim
 ```
-`intervalHull.cpp` is unused and must be left out (it does not compile in fixed point).
+`passiveLearning/` holds unused code and is not part of the build.
 
 The test bench simulates the controller in closed loop and prints, for each run, the constraint violations and the tracking RMSE. Outputs:
 - floating point: in `FloatSimulations/`; fixed point: in the working directory (in Vitis, `.../hls/csim/build`);
-- `N_RUNS = 1`: `output.txt`, plotted by `plotOutputCpp.m`;
-- `N_RUNS > 1`: one `runs_<ctrl>_<plant>_<run>.txt` per run plus `runs_<ctrl>_<plant>_summary.txt`, plotted by `plotMultipleOutputsCpp.m`. `<ctrl>` tells the controller configuration (e.g. `scen`, `noscen`, with `_dc` for delay compensation) and `<plant>` the true plant (`nl` nonlinear, `arx`).
+- `nRuns = 1`: `output.txt`, plotted by `plotOutputCpp.m`;
+- `nRuns > 1`: one `runs_<ctrl>_<plant>_<run>.txt` per run plus `runs_<ctrl>_<plant>_summary.txt`, plotted by `plotMultipleOutputsCpp.m`. `<ctrl>` tells the controller configuration (e.g. `scen`, `noscen`, with `_dc` for delay compensation) and `<plant>` the true plant (`nl` nonlinear, `arx`).
 
 In both MATLAB scripts, `opts.isVitisSim = true` reads the Vitis C-simulation folder instead of `FloatSimulations/`.
 
@@ -155,7 +156,7 @@ In both MATLAB scripts, `opts.isVitisSim = true` reads the Vitis C-simulation fo
 2. Set `FIXED` (and the other hardware options) in `setup.h`.
 3. **C simulation**: runs the test bench in fixed point and writes `golden_u.txt`, the inputs applied in the first run.
 4. **Synthesis**: `csynth.rpt` reports latency, resources and the estimated clock period. The estimate must stay within the clock period minus the uncertainty margin (7.3 ns for a 10 ns clock with the default 27 % uncertainty).
-5. **C/RTL co-simulation**, with `N_RUNS 1` in `plant.h`: the test bench compares the RTL's inputs with `golden_u.txt`, so run C simulation first. Vitis's "Pass" only means that `main()` returned 0; the log line `CO-SIM CHECK PASSED` confirms that the RTL matches C simulation.
+5. **C/RTL co-simulation**, with `nRuns = 1` in `testbench_config.h`: the test bench compares the RTL's inputs with `golden_u.txt`, so run C simulation first. Vitis's "Pass" only means that `main()` returned 0; the log line `CO-SIM CHECK PASSED` confirms that the RTL matches C simulation.
 6. **Implementation**: post-route timing and resources, the final word on whether the design meets the clock.
 
 ## Checking a change
@@ -270,8 +271,8 @@ Some additional tweaks and features that would be needed are:
 - [ ] Automatic definition of per-system `pragma`s.
 - [ ] Re-order experiments (i.e. attempts and some researches) in appropriate directories.
 - [ ] Alignment between MATLAB and C++ (e.g., use `patternsearch` instead of `yalmip` and stop using `CORA` for zonotope representation - it's not really needed).
-- [ ] Use `constexpr` instead of `#define` for the system dimensions (`na`, `nb`, `nk`, `nGens`, `nTheta`, `nOpt`): they are scoped and typed, and give the same hardware. Only what the preprocessor itself must see stays a macro: `ACTIVE_SYSTEM` and the system ids, the mode flags, and the arguments of `HLS_PRAGMA(...)`.
-- [ ] Write the per-system initial values (`THETA_NOMINAL_UNNORM`, `GENERATORS_UNNORM`, `THETA_TRUE_INIT`, `Y_HIST_UNNORM`, `U_HIST_UNNORM`) as `constexpr double` arrays, read directly by `initControllerState` and `plant.h`. This removes the macro lists and the `*_TABLE` copies in `setup.h`, and a `static_assert` can check each array's length. Do it together with the renaming of point 1.
-- [ ] Derive the initial warm start (`U_PREV_UNNORM`) from the initial input history instead of giving it per system: it must be the same operating point anyway, and its length `NhorU` is a tuning parameter, not a property of the system.
+- [x] Use `constexpr` instead of `#define` for the system dimensions (`na`, `nb`, `nd` (formerly `nk`), `nGens`, `nTheta`, `nOpt`): they are scoped and typed, and give the same hardware. Only what the preprocessor itself must see stays a macro: `ACTIVE_SYSTEM` and the system ids, the mode flags, and the arguments of `HLS_PRAGMA(...)`.
+- [x] Write the per-system initial values (`THETA_NOMINAL_UNNORM`, `GENERATORS_UNNORM`, `THETA_TRUE_INIT`, `Y_HIST_UNNORM`, `U_HIST_UNNORM`) as `constexpr double` arrays, read directly by `initControllerState` and `plant.h`. This removes the macro lists and the `*_TABLE` copies in `setup.h`, and a `static_assert` can check each array's length. Do it together with the renaming of point 1.
+- [x] Derive the initial warm start (`U_PREV_UNNORM`) from the initial input history instead of giving it per system: it must be the same operating point anyway, and its length `NhorU` is a tuning parameter, not a property of the system.
 - [ ] Per-system tuning parameters ($N_y, N_u, S, I$ and the weight exponents `log2Q`, `log2P`, `log2R`) in their own file (e.g. `tuning.h`), separate from the system models in `system_configs.h`, with a global default. Per-system `log2R` is also what the buck converters' fixed-point build needs.
 - [ ] Compile-time computation of $D_G$ and keep it as a separate variable (diagnostics, denormalized zonotopes over time,...).

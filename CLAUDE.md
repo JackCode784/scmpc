@@ -23,7 +23,7 @@ Scenario-based MPC (SCMPC) for ARX systems with a zonotopic parameter-uncertaint
 |---|---|
 | $N_y$ (prediction horizon), $N_u$ (control horizon) | `Nhor`, `NhorU` (= `nOpt`) |
 | $S$ scenarios, $I$ MADS iterations | `Nscen` (= `1 << log2Nscen`), `MADS_ITER` |
-| $n_a$, $n_b$, $n_d$ (input delay) | `na`, `nb`, `nk` |
+| $n_a$, $n_b$, $n_d$ (input delay) | `na`, `nb`, `nd` |
 | zonotope centre $c$ (= $\theta^{(0)}$, nominal model), generators $G$, $n_g$ | `thetaCenter`, `thetaGens`, `nGens`; only the `nUnc` uncertain parameters have rows (`UNC_MAP`) |
 | $\xi$ | `coeffs` (`generateScenarios`, `pseudoRandArx`) |
 | $Q$, $R$ | `weightQ`, `weightR` (= 2^`log2Q`, 2^`log2R` in normalized units; see "Cost weights" below) |
@@ -54,17 +54,21 @@ g++ -std=c++14 -O2 -I <stub_dir> -I <ap_types>/include -I . -o sim *.cpp && ./si
 - The default `setup.h` is floating point with `CONVERSIONS_MODE`, `NRMLZ`, `USE_SCENS_COST` and `USE_SCENS_CONSTR`. For hardware, also uncomment `FIXED`.
 - The pendulum in fixed point requires `NRMLZ` (there is an `#error` otherwise).
 - **Output location.** Floating-point builds write into `FloatSimulations/` (created if missing). Fixed-point builds write into the working directory, which in Vitis is `.../hls/csim/build`.
-  - `N_RUNS == 1` writes `output.txt` (plotted by `plotOutputCpp.m`).
-  - `N_RUNS > 1` writes `runs_<ctrl>_<plant>_<NNN>.txt` plus `..._summary.txt` (plotted by `plotMultipleOutputsCpp.m`; `opts.isVitisSim` selects the Vitis folder).
+  - `testbench_settings::nRuns == 1` writes `output.txt` (plotted by `plotOutputCpp.m`).
+  - `nRuns > 1` writes `runs_<ctrl>_<plant>_<NNN>.txt` plus `..._summary.txt` (plotted by `plotMultipleOutputsCpp.m`; `opts.isVitisSim` selects the Vitis folder).
   - `<ctrl>` is `scen`, `scencost`, `scenconstr` or `noscen`, plus `_dc` (delay compensation) or `_latNN` (emulated latency). `<plant>` is `nl` or `arx`.
 
-### Configuration is by editing `#define`s, not compiler flags
+### Configuration is by editing headers, not compiler flags
+
+Mode flags and selectors are `#define`s; constants are `constexpr`. Only what the preprocessor itself must see stays a macro: what is tested in `#if`, `ACTIVE_SYSTEM` and the system ids, and the arguments of `HLS_PRAGMA(...)`.
 
 - `setup.h`, the "TARGET SELECTION" block and below:
   - mode flags: `FIXED`, `CONVERSIONS_MODE`, `NRMLZ`, `USE_SCENS_COST`, `USE_SCENS_CONSTR`, `DELAY_COMPENSATION`;
   - selectors: `ACTIVE_SYSTEM`, `CTRL_MODE` (SCMPC / passive learning / active-learning stub), `PRAGMA_PROFILE`;
   - algorithm constants: `Nhor`, `NhorU`, `log2Nscen`, `MADS_ITER`, and the weight exponents `log2Q`, `log2P`, `log2R`. These are global for now, shared by every system.
-- `plant.h` (test bench only): `N_RUNS`, `RANDOM_TRUE_PLANT`, `TB_SEED`, `TB_COMPUTE_DELAY_FRACTION`.
+- `system_configs.h`, per system: dimensions `na`, `nb`, `nd`, `nGens` (`constexpr int`), bounds, `Ts`, and the initial values as `constexpr double` arrays (`thetaNominalInit`, `generatorsInit`, `thetaTrueInit`, `yHistInit`, `uHistInit`).
+- `testbench_config.h` (test bench only), namespace `testbench_settings`: `nRuns`, `randomTruePlant`, `testbenchSeed`, `computeDelayFraction`. It is kept out of `setup.h` on purpose: everything in `setup.h` may change the RTL, nothing in the test-bench headers can.
+- `plant.h` (test bench only): `PENDULUM_NONLINEAR`. It stays a macro because it selects code with `#if` and the `PLANT_TAG` file-name literal.
 
 ### Vitis flow (on the author's machine; not available in this environment)
 
@@ -73,13 +77,13 @@ C simulation, then synthesis, then C/RTL co-simulation. Vitis reports co-simulat
 1. C simulation writes `golden_u.txt` (run 0's applied inputs).
 2. Co-simulation (`__RTL_SIMULATION__`) compares the RTL's inputs against it and returns 1 on any mismatch, or if the file is missing.
 
-So run C simulation first, and set `N_RUNS 1` for co-simulation: only run 0 is compared, and the RTL's state is not reset between runs.
+So run C simulation first, and set `testbench_settings::nRuns = 1` for co-simulation: only run 0 is compared, and the RTL's state is not reset between runs.
 
 ## Verifying changes
 
 The established check for refactors and pragma changes is that **C simulation output is byte-identical to the previous commit**:
 
-1. Build the old tree (`git archive <rev> cpp/ScenarioMPC_ARX`) and the new tree with the same configuration (`N_RUNS` reduced, e.g. 3). Set every mode flag explicitly in both trees: the committed defaults have changed over time (before `qol/log2-weights`, `CONVERSIONS_MODE` and `NRMLZ` were off).
+1. Build the old tree (`git archive <rev> cpp/ScenarioMPC_ARX`) and the new tree with the same configuration (`nRuns` reduced, e.g. 3). Set every mode flag explicitly in both trees: the committed defaults have changed over time (before `qol/log2-weights`, `CONVERSIONS_MODE` and `NRMLZ` were off).
 2. Run both and `cmp` every output file.
 3. Do this across a matrix of configurations: systems (pendulum, buck converters), fixed and float, the three pragma profiles, with and without scenarios, delay compensation, passive learning.
 
@@ -88,12 +92,13 @@ Pragmas never change C simulation, so any difference is a behaviour change. Hard
 ## Architecture
 
 **Header chain.**
-- `system_configs.h`: system ids, and per system the controller's *model*: nominal θ, zonotope generators, bounds, initial histories, and the sampling time `Ts`. `Ts` must be the one the ARX model was discretized at (10 µs for the buck converters, 10 ms for the pendulum, a convention for the abstract systems). The test bench logs it as the last column of the output files, and the MATLAB plots use it for the time axis. The pendulum plant derives l and m from θ and `Ts`, so changing its `Ts` silently changes the pendulum.
+- `system_configs.h`: system ids, and per system the controller's *model*: dimensions, nominal θ, zonotope generators, bounds, initial histories, and the sampling time `Ts`. `Ts` must be the one the ARX model was discretized at (10 µs for the buck converters, 10 ms for the pendulum, a convention for the abstract systems). The test bench logs it as the last column of the output files, and the MATLAB plots use it for the time axis. The pendulum plant derives l and m from θ and `Ts`, so changing its `Ts` silently changes the pendulum.
 - `types.h`: per-system `ap_fixed` types; everything is `double` without `FIXED`.
 - `setup.h`: configuration knobs, derived dimensions and constants, ADC/normalization constants, pragma profiles, every prototype, and the `extern` declarations of the controller state.
 - `plant.h`: the *true* plant for the test bench (ARX with other parameters, or the nonlinear inverted pendulum). It is never synthesized.
+- `testbench_config.h`: the experiment settings (`testbench_settings`), included by `testMain.cpp` only.
 
-**`controller()` (`controller.cpp`)** is the HLS top level, with `ap_ctrl_hs` control, 12-bit ADC inputs `yCurrDig`/`yrefDig`, and the DAC value as return. State persists across calls in file-scope globals defined without `static`: zonotope `thetaCenter`/`thetaGens`, `yHist`/`uHist`, `uOptPrev` (warm start), `uNow` (delay compensation). The step order documented at the top of the file matters (time k vs k−1 data). A call does:
+**`controller()` (`controller.cpp`)** is the HLS top level, with `ap_ctrl_hs` control, 12-bit ADC inputs `yCurrDig`/`yrefDig`, and the DAC value as return. State persists across calls in file-scope globals defined without `static`: zonotope `thetaCenter`/`thetaGens`, `yHist`/`uHist`, `uOptPrev` (warm start), `uNow` (delay compensation). `initControllerState` sets them from the `*Init` arrays; the warm start and `uNow` start from `uHistInit[0]`. The step order documented at the top of the file matters (time k vs k−1 data). A call does:
 
 1. Convert and normalize the inputs.
 2. Warm start: shift the previous solution.
@@ -131,6 +136,8 @@ With `DELAY_COMPENSATION`, a call at k computes u(k+1) and treats u(k) as known 
   - With `NRMLZ`, `weightR = 2^log2R` is in normalized units. Without it, `weightR` is the equivalent physical weight, 2^`log2R` · ((`YMAXPHYS`−`YMINPHYS`)/(`UMAXPHYS`−`UMINPHYS`))², which makes the two problems differ only by the positive factor g_y² (same minimizer). Use the `*PHYS` (normalization) ranges, not the constraint bounds `YMAX`/`UMAX`.
   - `static_assert`s on `width`/`iwidth` check that each 2^e fits its type (`output_weight_type`, the per-system `input_weight_type`). Without them an out-of-range weight would silently become 0: before the exponents were introduced, the buck converters had `weightR` = 0 in fixed point.
   - **Current state:** `log2R = 2` is the pendulum's value. The buck converters need −3, so their fixed-point build fails that assert until the exponents become per system.
+- **`#ifdef` vs `constexpr`.** Use `#ifdef` only when the variants cannot both compile (different types, array sizes, or symbols that exist in one mode only). When they differ only in a number, use a `constexpr` value in ordinary code (e.g. `DC_STEPS`): both variants are then compiled in every build, and the folded condition gives the same hardware.
+- **Known bug (fixed point, `NRMLZ`), pending the compile-time D_G work:** `computeStripCoeffs` (`setup.h`) copies `thetaNominalInit`/`generatorsInit` into `theta_type` (`ap_fixed<18,2>` for the pendulum, LSB 2^-16) before computing D_G and the prediction coefficients. For the pendulum this saturates θ₁ = 2 to 1.99998, zeroes G₁₁ = −10⁻⁶, and puts D_G[1] 3% low. `initControllerState` uses the exact doubles. So the fixed-point model differs from the float one by a few percent in the unstable part (Ts²g/l). The fix is to compute from the doubles and quantize only into the final types: a deliberate change of fixed-point results.
 - **`static const ap_fixed` constants** are initialized dynamically. Vitis HLS 2026.1 co-simulation matched C simulation with them. The older toolchain produced constant-zero RTL, fixed on branch `fix/hw-constants-on-e6e7d01`.
 
 ## Conventions
