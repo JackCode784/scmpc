@@ -290,7 +290,7 @@
    UNCERTAIN PARAMETERS - the zonotope's own dimension nUnc <= nTheta
    ======================================================================
    A parameter whose row of generatorsInit is entirely zero is known
-   exactly (theta_i = thetaNominalInit for every point of the
+   exactly (theta_i = thetaNominalInit[i] for every point of the
    zonotope). The zonotope, the scenarios and the PL/AL strip update live
    only in the space of the nUnc UNCERTAIN parameters; certain ones are
    re-inserted as known constants wherever the full nTheta-vector is
@@ -377,10 +377,8 @@ static_assert(nGens >= nUnc,
      a moving reference, which reduces (without eliminating) transient
      DELTAYNORM violations right after a reference step.
 
-     Its initial value (uHistInit, system_configs.h) is unlike
-     the old flat warm start, this one is never re-anchored to the real
-     applied input, so an inconsistent cold start can seed a persistent
-     closed-loop problem rather than a one-call transient.
+     Initialized from uHistInit[0] (system_configs.h) so it is always 
+     the same operating point as the input history.
    ====================================================================== */
 extern theta_type  thetaCenter[nUnc];
 extern theta_type  thetaGens  [nUnc][nGens];

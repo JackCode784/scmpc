@@ -249,7 +249,7 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
             { 0.0,  0.0,  0.0},
             { 0.0,  0.0,  0.0},
             { 0.0,  0.0,  0.5}};
-    constexpr double thetaTrueInit[nTheta] = {2.0, -1.0, 1.0}; // == thetaNominalInit[nTheta]
+    constexpr double thetaTrueInit[nTheta] = {2.0, -1.0, 1.0}; // == thetaNominalInit
     /* cold start at physical 0, as for the other systems */
     constexpr double yHistInit[na] = {0, 0};
     constexpr double uHistInit[nb+nd-1] = {0, 0};
