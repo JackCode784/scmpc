@@ -19,13 +19,9 @@
  * VITIS HLS 2021.1 COMPATIBILITY NOTES
  * --------------------------------------
  * * "constexpr int" is fully supported (C++14 mode).  Used for all
- *   integer algorithm parameters (Nhor, NhorU, etc.).
+ *   integer algorithm parameters (Nhor, NhorU, na, nb, nk, nOpt, etc.).
  * * "static const <type>" is used for fixed-point constants because
  *   ap_fixed<> does not have a constexpr constructor.
- * * na, nb, nk, nTheta, nOpt remain #define macros because array sizes
- *   in function prototypes  (e.g. theta[nTheta])  must be integral
- *   constant expressions visible at the point of declaration, and #define
- *   guarantees this across every C++ standard and every HLS front-end.
  * * static_assert is used for invariant checks; it produces a clean
  *   compile error and has zero RTL impact.
  * * All mutable global state (zonotope centre/generators, output/input
@@ -461,7 +457,7 @@ static_assert(Nhor - nk - DC_STEPS >= NhorU - 1,
     "With DELAY_COMPENSATION the last decision u(k+NhorU) must still reach the horizon: Nhor >= NhorU + nk.");
 
 /** Number of scalar optimisation variables (= Nu for a SISO system). */
-#define nOpt NhorU
+constexpr int nOpt = NhorU;
 
 #if defined(PRAGMAS) && defined(PRAGMA_PARALLEL_POLLS)
 static_assert(PRAGMA_COSTFUNC_INSTANCES == 2 * nOpt,

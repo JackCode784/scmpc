@@ -54,56 +54,50 @@
 #include "types.h"
 
 /* ======================================================================
-   ARX MODEL DIMENSIONS  (compile-time macros - must remain #define)
-   ======================================================================
-   These are #define macros rather than constexpr ints because they appear
-   as array sizes inside function prototypes, where the C++ standard
-   requires an integral constant expression at the point of declaration.
-   constexpr works in a single-TU build under C++14 but #define is the
-   safest choice across all HLS front-ends.
+   ARX MODEL DIMENSIONS  (compile-time macros)
    ====================================================================== */
 #if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-  #define na   2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
+  constexpr int na      = 2;
+  constexpr int nb      = 1;
+  constexpr int nk      = 2;
+  constexpr int nGens   = 3;
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-  #define na   2
-  #define nb   2
-  #define nk   1
-  #define nGens 6
+  constexpr int na      = 2;
+  constexpr int nb      = 2;
+  constexpr int nk      = 1;
+  constexpr int nGens   = 6;
   #elif ACTIVE_SYSTEM == SYSTEM_MILANO
-  #define na   3
-  #define nb   3
-  #define nk   1
-  #define nGens 6
+  constexpr int na      = 3;
+  constexpr int nb      = 3;
+  constexpr int nk      = 1;
+  constexpr int nGens   = 6;
   #elif ACTIVE_SYSTEM == SYSTEM_BUCK
-  #define na   2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
+  constexpr int na      = 2;
+  constexpr int nb      = 1;
+  constexpr int nk      = 2;
+  constexpr int nGens   = 3;
   #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-  #define na  2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
+  constexpr int na      = 2;
+  constexpr int nb      = 1;
+  constexpr int nk      = 2;
+  constexpr int nGens   = 3;
   #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-  #define na  2
-  #define nb   1
-  #define nk   2
-  #define nGens 3
+  constexpr int na      = 2;
+  constexpr int nb      = 1;
+  constexpr int nk      = 2;
+  constexpr int nGens   = 3;
   #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
-  #define na   1
-  #define nb   1
-  #define nk   2
-  #define nGens 2
+  constexpr int na      = 1;
+  constexpr int nb      = 1;
+  constexpr int nk      = 2;
+  constexpr int nGens   = 2;
   #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-  #define   na  2
-  #define   nb  1
-  #define   nk  2
-  #define   nGens  3
+  constexpr int   na    = 2;
+  constexpr int   nb    = 1;
+  constexpr int   nk    = 2;
+  constexpr int   nGens = 3;
   #endif
-  #define nTheta  (na + nb)       /* total ARX parameter count */
+  constexpr int nTheta = na + nb;       /* total ARX parameter count */
   
   
   /* ======================================================================
