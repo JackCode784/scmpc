@@ -4,12 +4,12 @@
  *
  * System registry
  * ---------------
- *  SYSTEM_SIMPLE     (id 0)  na=2, nb=1, nk=2 - original non-CMPLSYS ARX
- *  SYSTEM_BENCHMARK  (id 1)  na=2, nb=2, nk=1 - benchmark ARX (selectSys.m)
- *  SYSTEM_MILANO     (id 2)  na=3, nb=3, nk=1 - original CMPLSYS (BESS)
- *  SYSTEM_BUCK       (id 3)  na=2, nb=1, nk=2 - buck power converter
- *  SYSTEM_BUCK_LOSS  (id 4)  na=2, nb=1, nk=2 - buck power converter with loss resistance
- *  SYSTEM_GAIN_DEMO  (id 5)  na=1, nb=1, nk=2 - minimal demo: is scenario MPC worth it?
+ *  SYSTEM_SIMPLE     (id 0)  na=2, nb=1, nd=2 - original non-CMPLSYS ARX
+ *  SYSTEM_BENCHMARK  (id 1)  na=2, nb=2, nd=1 - benchmark ARX (selectSys.m)
+ *  SYSTEM_MILANO     (id 2)  na=3, nb=3, nd=1 - original CMPLSYS (BESS)
+ *  SYSTEM_BUCK       (id 3)  na=2, nb=1, nd=2 - buck power converter
+ *  SYSTEM_BUCK_LOSS  (id 4)  na=2, nb=1, nd=2 - buck power converter with loss resistance
+ *  SYSTEM_GAIN_DEMO  (id 5)  na=1, nb=1, nd=2 - minimal demo: is scenario MPC worth it?
  *
  * Why fixed-size arrays in the structs?
  * --------------------------------------
@@ -54,47 +54,47 @@
 #include "types.h"
 
 /* ======================================================================
-   ARX MODEL DIMENSIONS  (compile-time macros)
+   ARX MODEL DIMENSIONS  (compile-time constants)
    ====================================================================== */
 #if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
   constexpr int na      = 2;
   constexpr int nb      = 1;
-  constexpr int nk      = 2;
+  constexpr int nd      = 2;
   constexpr int nGens   = 3;
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
   constexpr int na      = 2;
   constexpr int nb      = 2;
-  constexpr int nk      = 1;
+  constexpr int nd      = 1;
   constexpr int nGens   = 6;
   #elif ACTIVE_SYSTEM == SYSTEM_MILANO
   constexpr int na      = 3;
   constexpr int nb      = 3;
-  constexpr int nk      = 1;
+  constexpr int nd      = 1;
   constexpr int nGens   = 6;
   #elif ACTIVE_SYSTEM == SYSTEM_BUCK
   constexpr int na      = 2;
   constexpr int nb      = 1;
-  constexpr int nk      = 2;
+  constexpr int nd      = 2;
   constexpr int nGens   = 3;
   #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
   constexpr int na      = 2;
   constexpr int nb      = 1;
-  constexpr int nk      = 2;
+  constexpr int nd      = 2;
   constexpr int nGens   = 3;
   #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
   constexpr int na      = 2;
   constexpr int nb      = 1;
-  constexpr int nk      = 2;
+  constexpr int nd      = 2;
   constexpr int nGens   = 3;
   #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
   constexpr int na      = 1;
   constexpr int nb      = 1;
-  constexpr int nk      = 2;
+  constexpr int nd      = 2;
   constexpr int nGens   = 2;
   #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
   constexpr int   na    = 2;
   constexpr int   nb    = 1;
-  constexpr int   nk    = 2;
+  constexpr int   nd    = 2;
   constexpr int   nGens = 3;
   #endif
   constexpr int nTheta = na + nb;       /* total ARX parameter count */
@@ -238,7 +238,7 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
                            thetaNominalInit value.
      thetaTrueInit       true plant parameters (testMain.cpp only)
      yHistInit         initial output samples y(-1), ..., y(-na)
-     uHistInit         initial input samples, nb+nk-1 values
+     uHistInit         initial input samples, nb+nd-1 values
    With NRMLZ, controller.cpp's initControllerState() derives the
    normalized zonotope and samples from these at static-initialization
    time (see there); without NRMLZ it copies them unchanged.
@@ -252,7 +252,7 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
     constexpr double thetaTrueInit[nTheta] = {2.0, -1.0, 1.0}; // == thetaNominalInit[nTheta]
     /* cold start at physical 0, as for the other systems */
     constexpr double yHistInit[na] = {0, 0};
-    constexpr double uHistInit[nb+nk-1] = {0, 0};
+    constexpr double uHistInit[nb+nd-1] = {0, 0};
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
     constexpr double thetaNominalInit[nTheta] = { 1.50,  -0.70,   1.00,   0.50};
     constexpr double generatorsInit[nTheta][nGens] = {
@@ -262,7 +262,7 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
             {  0.005,  0.000,  0.012,  0.055, -0.010,  0.000 }};
     constexpr double thetaTrueInit[nTheta] = {1.5540,  -0.7433,   1.0570,   0.4761};
     constexpr double yHistInit[na] = {0, 0};
-    constexpr double uHistInit[nb+nk-1] = {0, 0};
+    constexpr double uHistInit[nb+nd-1] = {0, 0};
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
     constexpr double thetaNominalInit[nTheta] = {    0.7921,  0.1524, -0.1668,  0.0842,  0.0442,  0.0860 };
     constexpr double generatorsInit[nTheta][nGens] =  {
@@ -274,7 +274,7 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
             {  0.0021,  0.1180,  0.0538, -0.0985,  0.0126,  0.0086 }};
     constexpr double thetaTrueInit[nTheta] = {0.7921, 0.1524, -0.1668, 0.0842, 0.0442, 0.0860};
     constexpr double yHistInit[na] = {0, 0, 0};
-    constexpr double uHistInit[nb+nk-1] = {0, 0, 0};
+    constexpr double uHistInit[nb+nd-1] = {0, 0, 0};
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
     constexpr double thetaNominalInit[nTheta] = { 1.8889, -0.9333, 0.4444};
     constexpr double generatorsInit[nTheta][nGens] = {
@@ -283,7 +283,7 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
             {      0,        0,    0.2500}};
     constexpr double thetaTrueInit[nTheta] = {1.8612, -0.9276, 0.6732};
     constexpr double yHistInit[na] = {0, 0};
-    constexpr double uHistInit[nb+nk-1] = {0, 0};
+    constexpr double uHistInit[nb+nd-1] = {0, 0};
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
 constexpr double thetaNominalInit[nTheta] = {1.817972144631566,  -0.871463786797535,   0.457543557236585};
 constexpr double generatorsInit[nTheta][nGens] = {
@@ -292,7 +292,7 @@ constexpr double generatorsInit[nTheta][nGens] = {
         {0.271071396611763,   0.068140402887871,   0.000360367556716}};
 constexpr double thetaTrueInit[nTheta] = {1.857831352244614, -0.933661885378246, 0.683201544134083};
 constexpr double yHistInit[na] = {0, 0};
-constexpr double uHistInit[nb+nk-1] = {0, 0};      // nb+nk-1=2
+constexpr double uHistInit[nb+nd-1] = {0, 0};      // nb+nd-1=2
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
 constexpr double thetaNominalInit[nTheta] = {1.733749265658302,  -0.881912845894497,  14.298236163643255};
 constexpr double generatorsInit[nTheta][nGens] = {
@@ -301,15 +301,15 @@ constexpr double generatorsInit[nTheta][nGens] = {
     {7.403892173947610,   0.001125040669095,   0.000048274664814}};
 constexpr double thetaTrueInit[nTheta] = {1.753571428571429,  -0.894444444444444,  13.888888888888886};
 constexpr double yHistInit[na] ={ 0, 0};
-constexpr double uHistInit[nb+nk-1] ={ 0, 0};
+constexpr double uHistInit[nb+nd-1] ={ 0, 0};
 
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
 /**
  * Minimal demonstration system: IS SCENARIO MPC WORTH IT?
  * ------------------------------------------------------------------
- * y(k) = a*y(k-1) + b*u(k-2)   (na=1, nb=1, nk=2 - a first-order ARX
+ * y(k) = a*y(k-1) + b*u(k-2)   (na=1, nb=1, nd=2 - a first-order ARX
  * with a two-step actuation delay, structurally identical to
- * SYSTEM_BUCK/SYSTEM_BUCK_LOSS's own (nb,nk)=(1,2), just na=1 instead
+ * SYSTEM_BUCK/SYSTEM_BUCK_LOSS's own (nb,nd)=(1,2), just na=1 instead
  * of na=2 for the simplest possible hand-checkable dynamics).
  *
  * theta = [a, b]. The zonotope is diagonal (independent per-parameter
@@ -410,7 +410,7 @@ constexpr double generatorsInit[nTheta][nGens] = {
     {0, 1.0}};
 constexpr double thetaTrueInit[nTheta] = {0.5, 3.0};
 constexpr double yHistInit[na] = {0};     // na=1
-constexpr double uHistInit[nb+nk-1] = {0, 0};  // nb+nk-1=2
+constexpr double uHistInit[nb+nd-1] = {0, 0};  // nb+nd-1=2
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
 constexpr double thetaNominalInit[nTheta] = {2.000000000000000, -0.998821001683502, 0.000751434382693};
 constexpr double generatorsInit[nTheta][nGens] = {
@@ -422,5 +422,5 @@ constexpr double thetaTrueInit[nTheta] = {2.000000000000000, -0.998821001683502,
 //2.0, -0.999091666666667, 0.0003572245084590763
 //2.000000000000000,   -0.998637500000000,   0.001205632716049
 constexpr double yHistInit[na] = {-0.78, -0.78};
-constexpr double uHistInit[nb+nk-1] = {0, 0};
+constexpr double uHistInit[nb+nd-1] = {0, 0};
 #endif

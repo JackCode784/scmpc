@@ -65,7 +65,7 @@
 theta_type  thetaCenter[nUnc];
 theta_type  thetaGens  [nUnc][nGens];
 norm_output_type yHist[na];
-norm_input_type  uHist[nb + nk - 1];
+norm_input_type  uHist[nb + nd - 1];
 /*
  * MUST be tied to uHistInit's operating point, not zero: a first
  * MADS call warm-started from a value inconsistent with the assumed
@@ -156,7 +156,7 @@ static bool initControllerState()
     const double yGain = 1.0, yOff = 0.0, uGain = 1.0, uOff = 0.0;
     #endif
     for (int i = 0; i < na; i++)         yHist[i]    = yGain * yHistInit[i]     + yOff;
-    for (int i = 0; i < nb + nk - 1; i++) uHist[i]    = uGain * uHistInit[i]     + uOff;
+    for (int i = 0; i < nb + nd - 1; i++) uHist[i]    = uGain * uHistInit[i]     + uOff;
     for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uHistInit[0] + uOff;
     #ifdef DELAY_COMPENSATION
     uNow = uGain * uHistInit[0] + uOff;
@@ -198,7 +198,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
 	 * partitioning turns each into individual registers instead of a
 	 * single-/dual-port BRAM, which is required for those unrolled
 	 * accesses to happen in parallel and is affordable here because
-	 * nTheta, nGens, na, nb+nk-1 and NhorU are all <= 6 for every
+	 * nTheta, nGens, na, nb+nd-1 and NhorU are all <= 6 for every
 	 * ACTIVE_SYSTEM.
 	 */
 	#pragma HLS ARRAY_PARTITION variable=thetaCenter complete dim=1
@@ -336,7 +336,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        phi[i+na] = (uHist[i+nk-1] - uNormOffset);
+        phi[i+na] = (uHist[i+nd-1] - uNormOffset);
     }
 
     /* Use (\tilde{phi} - offsets) to multiply by my*Dm^-1*c0 */
@@ -381,7 +381,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        phi[i+na] = uHist[i+nk-1];
+        phi[i+na] = uHist[i+nd-1];
     }
 
     /*
@@ -525,10 +525,10 @@ digital_input_type controller(const digital_output_type yCurrDig,
     norm_input_type uPast[nUKnown];
     #ifdef DELAY_COMPENSATION
     uPast[0] = uNow;
-    for (int i = 0; i < nb + nk - 2; i++)
+    for (int i = 0; i < nb + nd - 2; i++)
         uPast[i + 1] = uHist[i];
     #else
-    for (int i = 0; i < nb + nk - 2; i++)
+    for (int i = 0; i < nb + nd - 2; i++)
         uPast[i] = uHist[i];
     #endif
 
@@ -551,7 +551,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* ------------------------------------------------------------------ */
     /*  Step 8 - Update input history: push uOpt[0] into uHist           */
     /* ------------------------------------------------------------------ */
-    for (int i = nb + nk - 2; i > 0; i--)
+    for (int i = nb + nd - 2; i > 0; i--)
         uHist[i] = uHist[i - 1];
     #ifdef DELAY_COMPENSATION
     /* u(k), applied during this interval, becomes the most recent past
@@ -566,12 +566,12 @@ digital_input_type controller(const digital_output_type yCurrDig,
     uOptDig = ctrlU2dig(uOptNorm[0]);
     
     #ifdef DEBUG_PRINT
-    double yHist_f[na], uHist_f[nb+nk-1];
+    double yHist_f[na], uHist_f[nb+nd-1];
     double uOptDig_f = uOptDig.to_double();
     double uOptNorm_f[NhorU];
     for(int i = 0; i < NhorU; i++) uOptNorm_f[i] = uOptNorm[i].to_double();
     for(int i = 0; i < na; i++) yHist_f[i] = yHist[i].to_double();
-    for(int i = 0; i < nb+nk-1; i++) uHist_f[i] = uHist[i].to_double();
+    for(int i = 0; i < nb+nd-1; i++) uHist_f[i] = uHist[i].to_double();
     #endif
 
     return uOptDig;

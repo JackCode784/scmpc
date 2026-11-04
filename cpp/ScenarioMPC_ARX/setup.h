@@ -16,10 +16,10 @@
  *   system_configs.h- system definitions
  *   setup.h         - this file; algorithm-level constants and prototypes
  *
- * VITIS HLS 2021.1 COMPATIBILITY NOTES
+ * VITIS HLS 2026.1 COMPATIBILITY NOTES
  * --------------------------------------
  * * "constexpr int" is fully supported (C++14 mode).  Used for all
- *   integer algorithm parameters (Nhor, NhorU, na, nb, nk, nOpt, etc.).
+ *   integer algorithm parameters (Nhor, NhorU, na, nb, nTheta, nd, nOpt, etc.).
  * * "static const <type>" is used for fixed-point constants because
  *   ap_fixed<> does not have a constexpr constructor.
  * * static_assert is used for invariant checks; it produces a clean
@@ -164,7 +164,7 @@
  *   - the same in every profile, each explained where it is: INTERFACE
  *     (controller.cpp: ap_none scalar ports, ap_ctrl_hs start/done);
  *     ARRAY_PARTITION complete on every small array that unrolled code
- *     reads in parallel; UNROLL on loops over na, nb, nk, nTheta, nGens,
+ *     reads in parallel; UNROLL on loops over na, nb, nd, nTheta, nGens,
  *     nUnc or nOpt (wiring and a few operators); PIPELINE II=1 on the
  *     random-number loops (generateScenarios, generatePollMatrixArx,
  *     pseudoRandArx); INLINE on small leaf functions and INLINE off on
@@ -364,7 +364,7 @@ static_assert(nGens >= nUnc,
 
    yHist / uHist - ARX regressor history buffers
      yHist[0] = y(k-1), yHist[1] = y(k-2), ..., yHist[na-1]  = y(k-na)
-     uHist[0] = u(k-1), uHist[1] = u(k-2), ..., uHist[nb+nk-2] = u(k-nb-nk+1)
+     uHist[0] = u(k-1), uHist[1] = u(k-2), ..., uHist[nb+nd-2] = u(k-nb-nd+1)
      Updated each step inside controller().
 
    uOptPrev - MADS warm-start seed, NOT part of the ARX regressor
@@ -385,7 +385,7 @@ static_assert(nGens >= nUnc,
 extern theta_type  thetaCenter[nUnc];
 extern theta_type  thetaGens  [nUnc][nGens];
 extern norm_output_type yHist[na];
-extern norm_input_type  uHist[nb + nk - 1];
+extern norm_input_type  uHist[nb + nd - 1];
 /* uOptPrev[NhorU] is declared extern further below, once NhorU itself
  * has been defined (see "MPC PARAMETERS" section). */
 
@@ -416,9 +416,9 @@ static_assert(log2Nscen >= 0,
     "Number of scenarios must be a positive integer.");
 static_assert(NhorU <= Nhor,
     "Control horizon NhorU must not exceed prediction horizon Nhor.");
-static_assert(Nhor >= nk, 
+static_assert(Nhor >= nd, 
     "Prediction horizon must be at least system delay.");
-static_assert(Nhor - nk >= NhorU - 1,
+static_assert(Nhor - nd >= NhorU - 1,
     "Control horizon is longer than maximum.");
 
 /*
@@ -441,17 +441,17 @@ static_assert(Nhor - nk >= NhorU - 1,
  *
  * DC_STEPS is the number of known future inputs at each call (0 or 1),
  * nUKnown the length of the known-input array passed to the optimizer:
- *   without: [u(k-1), ..., u(k-nb-nk+2)]          (nb+nk-2 values)
- *   with:    [u(k), u(k-1), ..., u(k-nb-nk+2)]    (nb+nk-1 values)
+ *   without: [u(k-1), ..., u(k-nb-nd+2)]          (nb+nd-2 values)
+ *   with:    [u(k), u(k-1), ..., u(k-nb-nd+2)]    (nb+nd-1 values)
  */
 #ifdef DELAY_COMPENSATION
 constexpr int DC_STEPS = 1;
 #else
 constexpr int DC_STEPS = 0;
 #endif
-constexpr int nUKnown = nb + nk - 2 + DC_STEPS;
-static_assert(Nhor - nk - DC_STEPS >= NhorU - 1,
-    "With DELAY_COMPENSATION the last decision u(k+NhorU) must still reach the horizon: Nhor >= NhorU + nk.");
+constexpr int nUKnown = nb + nd - 2 + DC_STEPS;
+static_assert(Nhor - nd - DC_STEPS >= NhorU - 1,
+    "With DELAY_COMPENSATION the last decision u(k+NhorU) must still reach the horizon: Nhor >= NhorU + nd.");
 
 /** Number of scalar optimisation variables (= Nu for a SISO system). */
 constexpr int nOpt = NhorU;
@@ -771,11 +771,11 @@ digital_input_type controller(const digital_output_type yCurrDig,
 /* --- ARX model -------------------------------------------------------- */
 
 /** One-step-ahead prediction:
- *  ypred(k) = offset + coeff^T * [y(k-1),...,y(k-na), u(k-nk),...,u(k-nk-nb+1)]^T
+ *  ypred(k) = offset + coeff^T * [y(k-1),...,y(k-na), u(k-nd),...,u(k-nd-nb+1)]^T
  *  with coeff/offset from computeArxCoeffs (coeff = theta, offset = 0
  *  without NRMLZ). */
 norm_output_type computeArxOutput(const norm_output_type yPast[na],
-                                  const norm_input_type  uSamples[nb+nk-1],
+                                  const norm_input_type  uSamples[nb+nd-1],
                                   const arx_coeff_type   coeff[nTheta],
                                   const arx_coeff_type   offset);
 
@@ -900,7 +900,7 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl);
 /**
  * Intersect the current parameter zonotope with the measurement strip
  *   S(k) = { theta : |y(k) - phi(k)^T theta| <= epsilon }
- * where phi(k) = [y(k-1),...,y(k-na), u(k-nk),...]^T is the ARX regressor.
+ * where phi(k) = [y(k-1),...,y(k-na), u(k-nd),...]^T is the ARX regressor.
  *
  * The algorithm used here preserves the number of generator columns, so
  * the output zonotope has the same shape as the input (no reduction 
@@ -909,7 +909,7 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl);
  * Inputs:
  *   yCurr         - current measurement y(k)
  *   yPast         - output history  [y(k-1), ..., y(k-na)]
- *   uSamplesIn    - input  history  [u(k-1), ..., u(k-nb-nk+1)]
+ *   uSamplesIn    - input  history  [u(k-1), ..., u(k-nb-nd+1)]
  *   phi           - regressor restricted to the nUnc uncertain
  *                   parameters; stripCenter already has the certain
  *                   parameters' known contribution removed (controller.cpp)

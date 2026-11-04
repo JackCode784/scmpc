@@ -7,7 +7,7 @@ where coeff/offset are the effective coefficients computed once per
 controller() call by computeArxCoeffs() below.
 */
 norm_output_type computeArxOutput(const norm_output_type yPast[na],
-                                  const norm_input_type  uSamples[nb+nk-1],
+                                  const norm_input_type  uSamples[nb+nd-1],
                                   const arx_coeff_type   coeff[nTheta],
                                   const arx_coeff_type   offset)
 {
@@ -36,7 +36,7 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na],
         #ifdef PRAGMAS
         PRAGMA_ARX_TERMS   /* setup.h: UNROLL, or PIPELINE off in AREA */
         #endif
-        yRes += ((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * coeff[i];
+        yRes += ((i < na) ? yPast[i] : uSamples[i-na+nd-1]) * coeff[i];
     }
     return yRes;
     #else
@@ -48,7 +48,7 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na],
         #ifdef PRAGMAS
         PRAGMA_ARX_TERMS   /* setup.h: UNROLL, or PIPELINE off in AREA */
         #endif
-        acc += (arx_acc_type)(((i < na) ? yPast[i] : uSamples[i-na+nk-1]) * coeff[i]);
+        acc += (arx_acc_type)(((i < na) ? yPast[i] : uSamples[i-na+nd-1]) * coeff[i]);
     }
     return (norm_output_type)acc;
     #endif

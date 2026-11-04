@@ -29,7 +29,7 @@
  * nonlinear model used to be silently skipped whenever NRMLZ was on.)
  *
  * Default for every system: an ARX plant with the controller's structure
- * (na, nb, nk). A system with a different true model provides its own
+ * (na, nb, nd). A system with a different true model provides its own
  * version of the functions below, selected by #if ACTIVE_SYSTEM (see the
  * inverted pendulum).
  */
@@ -100,7 +100,7 @@ struct TbRng
    The controller's ARX model is the forward-Euler discretization, with
    step Ts, of the LINEARIZED equation (sin(theta) ~ theta):
      y(k) = 2*y(k-1) + (-1 + Ts^2*g/l)*y(k-2) + Ts^2/(m*l^2)*u(k-2)
-   i.e. theta = [2, -1 + Ts^2*g/l, Ts^2/(m*l^2)] (na=2, nb=1, nk=2). The
+   i.e. theta = [2, -1 + Ts^2*g/l, Ts^2/(m*l^2)] (na=2, nb=1, nd=2). The
    nominal l, m are recovered from thetaNominalInit through this map
    (l ~ 0.83, m ~ 0.19 for the current values in system_configs.h), so there is a
    single source of truth.
@@ -114,7 +114,7 @@ struct TbRng
    forward-Euler sub-steps per sample, input held constant over the
    sample (zero-order hold). Besides sin(theta), this differs from the ARX
    model in a second, smaller way: fine integration lets u(k-1) already
-   affect y(k), which the one-step Euler model (nk = 2) cannot represent -
+   affect y(k), which the one-step Euler model (nd = 2) cannot represent -
    a genuine model mismatch the robust controller has to absorb.
    ---------------------------------------------------------------------- */
 /** 1: true output from the nonlinear equation; 0: from the ARX model. */
@@ -124,8 +124,8 @@ constexpr double PEND_G     = 9.81;   /* [m/s^2]                               *
 constexpr double PEND_REL_UNC = 0.2;  /* l, m drawn in nominal*(1 +- 0.2)      */
 constexpr int    PENDULUM_EULER_SUBSTEPS = 100;
 
-static_assert(na == 2 && nb == 1 && nk == 2,
-    "plant.h's pendulum map assumes the ARX structure na=2, nb=1, nk=2.");
+static_assert(na == 2 && nb == 1 && nd == 2,
+    "plant.h's pendulum map assumes the ARX structure na=2, nb=1, nd=2.");
 
 #if PENDULUM_NONLINEAR
 #define PLANT_TAG "nl"
@@ -138,7 +138,7 @@ struct Plant
     double l, m;              /* physical parameters                       */
     double theta[nTheta];     /* equivalent ARX parameters                 */
     double y[na];             /* y(k-1), ..., y(k-na)   (measured)          */
-    double u[nb + nk - 1];    /* u(k-1), ..., u(k-nb-nk+1)                  */
+    double u[nb + nd - 1];    /* u(k-1), ..., u(k-nb-nd+1)                  */
     double x[2];              /* nonlinear state: angle, angular velocity   */
     double uEarly;            /* input held during the first fEarly of the  */
     double fEarly;            /* last interval, before u[0] took effect     */
@@ -179,7 +179,7 @@ inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
 inline void plantReset(Plant &p)
 {
     for (int i = 0; i < na; i++)          p.y[i] = yHistInit[i];
-    for (int i = 0; i < nb + nk - 1; i++) p.u[i] = uHistInit[i];
+    for (int i = 0; i < nb + nd - 1; i++) p.u[i] = uHistInit[i];
     /* State consistent with the output history: angle y(-1), velocity
      * from the last two samples. */
     p.x[0] = yHistInit[0];
@@ -206,7 +206,7 @@ inline double plantNextOutput(Plant &p)
     #else
     double y = 0.0;
     for (int i = 0; i < nTheta; i++)
-        y += ((i < na) ? p.y[i] : p.u[i - na + nk - 1]) * p.theta[i];
+        y += ((i < na) ? p.y[i] : p.u[i - na + nd - 1]) * p.theta[i];
     return y;
     #endif
 }
@@ -233,7 +233,7 @@ struct Plant
 {
     double theta[nTheta];
     double y[na];             /* y(k-1), ..., y(k-na)   (measured)          */
-    double u[nb + nk - 1];    /* u(k-1), ..., u(k-nb-nk+1)                  */
+    double u[nb + nd - 1];    /* u(k-1), ..., u(k-nb-nd+1)                  */
 };
 
 inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
@@ -258,14 +258,14 @@ inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
 inline void plantReset(Plant &p)
 {
     for (int i = 0; i < na; i++)          p.y[i] = yHistInit[i];
-    for (int i = 0; i < nb + nk - 1; i++) p.u[i] = uHistInit[i];
+    for (int i = 0; i < nb + nd - 1; i++) p.u[i] = uHistInit[i];
 }
 
 inline double plantNextOutput(Plant &p)
 {
     double y = 0.0;
     for (int i = 0; i < nTheta; i++)
-        y += ((i < na) ? p.y[i] : p.u[i - na + nk - 1]) * p.theta[i];
+        y += ((i < na) ? p.y[i] : p.u[i - na + nd - 1]) * p.theta[i];
     return y;
 }
 
@@ -285,7 +285,7 @@ inline void plantPush(Plant &p, double yMeas, double uEarly, double u, double fE
 {
     for (int i = na - 1; i > 0; i--)          p.y[i] = p.y[i - 1];
     p.y[0] = yMeas;
-    for (int i = nb + nk - 2; i > 0; i--)     p.u[i] = p.u[i - 1];
+    for (int i = nb + nd - 2; i > 0; i--)     p.u[i] = p.u[i - 1];
     #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM && PENDULUM_NONLINEAR
     p.u[0] = u;               /* the Euler sub-steps apply the switch */
     p.uEarly = uEarly;

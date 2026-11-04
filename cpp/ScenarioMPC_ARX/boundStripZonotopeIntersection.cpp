@@ -64,7 +64,7 @@
    ====================================================================== */
 // void boundStripZonotopeIntersection(const output_type stripCenter, 
 //                                     const output_type yPast[na], 
-//                                     const input_type uSamples[nb + nk - 1], 
+//                                     const input_type uSamples[nb + nd - 1], 
 //                                     const theta_type oldCenter[nTheta],
 //                                     const theta_type oldGens[nTheta][nTheta], 
 //                                     theta_type newCenter[nTheta], 
@@ -92,13 +92,13 @@
 //             // From most recent to oldest sample
 //             lambda[i] += tmp[i][j] * 
 //                         ((j < na) ? (alg_type)yPast[j] 
-//                                 : (alg_type)uSamples[j - na + nk - 1]);
+//                                 : (alg_type)uSamples[j - na + nd - 1]);
 //         }
 //     }
 
 //     for (int i = 0; i < nTheta; i++)
 //     {
-//         div += ((i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i - na + nk - 1]) * lambda[i];
+//         div += ((i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i - na + nd - 1]) * lambda[i];
 //     }
 
 //     for (int i = 0; i < nTheta; i++) 
@@ -108,7 +108,7 @@
 //     alg_type term = stripCenter;
 //     for (int i = 0; i < nTheta; i++)
 //     {
-//         term -= ((i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i - na + nk - 1]) * (alg_type)oldCenter[i];
+//         term -= ((i < na) ? (alg_type)yPast[i] : (alg_type)uSamples[i - na + nd - 1]) * (alg_type)oldCenter[i];
 //     }
 
 //     for (int i = 0; i < nTheta; i++)
@@ -124,7 +124,7 @@
 //             newGens[i][j] = 0; // preparation for upcoming for loop
 //             tmp[i][j] = (i == j) ? (alg_type)1 : (alg_type)0;
 //             tmp[i][j] -= lambda[i] * 
-//                         ((j < na) ? (alg_type)yPast[j] : (alg_type)uSamples[j - na + nk - 1]);
+//                         ((j < na) ? (alg_type)yPast[j] : (alg_type)uSamples[j - na + nd - 1]);
 //         }
 
 //         for (int j = 0; j < nTheta; j++)

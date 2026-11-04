@@ -55,7 +55,7 @@
  * - INLINE off on the function, every profile: it stays one RTL module,
  *   so the number of instances is set by MADSARX's ALLOCATION pragma (and
  *   not by automatic inlining, which would copy it into each call site).
- * - uSamples: ARRAY_PARTITION complete, every profile (nb+nk-1
+ * - uSamples: ARRAY_PARTITION complete, every profile (nb+nd-1
  *   registers, shifted by an unrolled loop).
  * - yPastCurr: ARRAY_PARTITION complete on dim 2 only, plus BIND_STORAGE
  *   LUTRAM, every profile: na small RAMs (one per past sample) of Nscen+1
@@ -184,7 +184,7 @@ void costFunctionArx(cost_type              cost[2],
 
     #ifdef DEBUG_PRINT
     double cost_f[2];
-    double yPastCurr_f[Nscen+1][na], uSamples_f[nb+nk-1];
+    double yPastCurr_f[Nscen+1][na], uSamples_f[nb+nd-1];
     double currU_f[nOpt], yNext_f;
     double input_cost_term_f, output_cost_term_f, scenariosContrib_f;
     double err_nom_f, err_s_f;
@@ -208,13 +208,13 @@ void costFunctionArx(cost_type              cost[2],
     /*
      * Per-model output history: yPastCurr[l] = [y_l(k-1), ..., y_l(k-na)]
      * for scenario l (l < Nscen) and the nominal model (l = Nscen).
-     * uSamples = [u(k), u(k-1), ..., u(k-nb-nk+1)], shared by all models:
+     * uSamples = [u(k), u(k-1), ..., u(k-nb-nd+1)], shared by all models:
      *   uSamples[0]   = u(k)       <= set from currU[k] or held constant
      *   uSamples[1]   = u(k-1)
      *   ...
      */
     norm_output_type yPastCurr[Nscen+1][na];
-    norm_input_type  uSamples [nb + nk - 1];
+    norm_input_type  uSamples [nb + nd - 1];
     #ifdef PRAGMAS
     /* yPastCurr: na RAMs of Nscen+1 words, rows not initialized - the
      * first step reads yPast instead (HLS NOTES) */
@@ -306,7 +306,7 @@ void costFunctionArx(cost_type              cost[2],
 
         #ifdef DEBUG_PRINT
         for(int i = 0; i < Nscen+1; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = (k == 0) ? yPast[j].to_double() : yPastCurr[i][j].to_double();
-        for(int i = 0; i < nb+nk-1; i++) uSamples_f[i] = uSamples[i].to_double();
+        for(int i = 0; i < nb+nd-1; i++) uSamples_f[i] = uSamples[i].to_double();
         #endif
 
         /* --- Model loop: the scenarios, then the nominal model ---------- */
@@ -434,7 +434,7 @@ void costFunctionArx(cost_type              cost[2],
         #endif
 
         /* --- Shift the input samples for the next prediction step ------ */
-        for (int i = nb + nk - 2; i > 0; i--)
+        for (int i = nb + nd - 2; i > 0; i--)
         {
             #ifdef PRAGMAS
             #pragma HLS UNROLL
