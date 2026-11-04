@@ -239,9 +239,6 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
      thetaTrueInit       true plant parameters (testMain.cpp only)
      yHistInit         initial output samples y(-1), ..., y(-na)
      uHistInit         initial input samples, nb+nk-1 values
-     uOptInit        initial MADS warm start, NhorU values - must be
-                           the same operating point as uHistInit (see
-                           uOptPrev in controller.cpp)
    With NRMLZ, controller.cpp's initControllerState() derives the
    normalized zonotope and samples from these at static-initialization
    time (see there); without NRMLZ it copies them unchanged.
@@ -256,7 +253,6 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
     /* cold start at physical 0, as for the other systems */
     constexpr double yHistInit[na] = {0, 0};
     constexpr double uHistInit[nb+nk-1] = {0, 0};
-    constexpr double uOptInit[nOpt] = {0, 0, 0};
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
     constexpr double thetaNominalInit[nTheta] = { 1.50,  -0.70,   1.00,   0.50};
     constexpr double generatorsInit[nTheta][nGens] = {
@@ -267,7 +263,6 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
     constexpr double thetaTrueInit[nTheta] = {1.5540,  -0.7433,   1.0570,   0.4761};
     constexpr double yHistInit[na] = {0, 0};
     constexpr double uHistInit[nb+nk-1] = {0, 0};
-    constexpr double uOptInit[nOpt] = {0, 0, 0};
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
     constexpr double thetaNominalInit[nTheta] = {    0.7921,  0.1524, -0.1668,  0.0842,  0.0442,  0.0860 };
     constexpr double generatorsInit[nTheta][nGens] =  {
@@ -280,7 +275,6 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
     constexpr double thetaTrueInit[nTheta] = {0.7921, 0.1524, -0.1668, 0.0842, 0.0442, 0.0860};
     constexpr double yHistInit[na] = {0, 0, 0};
     constexpr double uHistInit[nb+nk-1] = {0, 0, 0};
-    constexpr double uOptInit[nOpt] = {0, 0, 0};
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
     constexpr double thetaNominalInit[nTheta] = { 1.8889, -0.9333, 0.4444};
     constexpr double generatorsInit[nTheta][nGens] = {
@@ -290,7 +284,6 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
     constexpr double thetaTrueInit[nTheta] = {1.8612, -0.9276, 0.6732};
     constexpr double yHistInit[na] = {0, 0};
     constexpr double uHistInit[nb+nk-1] = {0, 0};
-    constexpr double uOptInit[nOpt] = {0, 0, 0};
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
 constexpr double thetaNominalInit[nTheta] = {1.817972144631566,  -0.871463786797535,   0.457543557236585};
 constexpr double generatorsInit[nTheta][nGens] = {
@@ -300,7 +293,6 @@ constexpr double generatorsInit[nTheta][nGens] = {
 constexpr double thetaTrueInit[nTheta] = {1.857831352244614, -0.933661885378246, 0.683201544134083};
 constexpr double yHistInit[na] = {0, 0};
 constexpr double uHistInit[nb+nk-1] = {0, 0};      // nb+nk-1=2
-constexpr double uOptInit[nOpt] = {0, 0, 0};   // NhorU
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
 constexpr double thetaNominalInit[nTheta] = {1.733749265658302,  -0.881912845894497,  14.298236163643255};
 constexpr double generatorsInit[nTheta][nGens] = {
@@ -310,7 +302,6 @@ constexpr double generatorsInit[nTheta][nGens] = {
 constexpr double thetaTrueInit[nTheta] = {1.753571428571429,  -0.894444444444444,  13.888888888888886};
 constexpr double yHistInit[na] ={ 0, 0};
 constexpr double uHistInit[nb+nk-1] ={ 0, 0};
-constexpr double uOptInit[nOpt] = {0, 0, 0};
 
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
 /**
@@ -420,7 +411,6 @@ constexpr double generatorsInit[nTheta][nGens] = {
 constexpr double thetaTrueInit[nTheta] = {0.5, 3.0};
 constexpr double yHistInit[na] = {0};     // na=1
 constexpr double uHistInit[nb+nk-1] = {0, 0};  // nb+nk-1=2
-constexpr double uOptInit[nOpt] = {0, 0, 0};  // NhorU
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
 constexpr double thetaNominalInit[nTheta] = {2.000000000000000, -0.998821001683502, 0.000751434382693};
 constexpr double generatorsInit[nTheta][nGens] = {
@@ -433,5 +423,4 @@ constexpr double thetaTrueInit[nTheta] = {2.000000000000000, -0.998821001683502,
 //2.000000000000000,   -0.998637500000000,   0.001205632716049
 constexpr double yHistInit[na] = {-0.78, -0.78};
 constexpr double uHistInit[nb+nk-1] = {0, 0};
-constexpr double uOptInit[nOpt] = {0, 0, 0};
 #endif

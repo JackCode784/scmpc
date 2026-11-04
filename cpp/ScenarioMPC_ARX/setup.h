@@ -377,8 +377,7 @@ static_assert(nGens >= nUnc,
      a moving reference, which reduces (without eliminating) transient
      DELTAYNORM violations right after a reference step.
 
-     Its initial value (uOptInit, system_configs.h) MUST encode the
-     same cold-start operating point as yHistInit/uHistInit - unlike
+     Its initial value (uHistInit, system_configs.h) is unlike
      the old flat warm start, this one is never re-anchored to the real
      applied input, so an inconsistent cold start can seed a persistent
      closed-loop problem rather than a one-call transient.

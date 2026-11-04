@@ -93,7 +93,7 @@ norm_input_type  uNow;
 /*
  * Initial values of the five arrays above, derived from the PHYSICAL
  * values in system_configs.h (thetaNominalInit, generatorsInit,
- * yHistInit, uHistInit, uOptInit).
+ * yHistInit, uHistInit for previous input samples and warm-start).
  *
  * The zonotope only has rows for the nUnc UNCERTAIN parameters (setup.h's
  * UNC_MAP: parameters whose generatorsInit row is non-zero); row k is
@@ -157,7 +157,7 @@ static bool initControllerState()
     #endif
     for (int i = 0; i < na; i++)         yHist[i]    = yGain * yHistInit[i]     + yOff;
     for (int i = 0; i < nb + nk - 1; i++) uHist[i]    = uGain * uHistInit[i]     + uOff;
-    for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uOptInit[i] + uOff;
+    for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uHistInit[0] + uOff;
     #ifdef DELAY_COMPENSATION
     uNow = uGain * uHistInit[0] + uOff;
     #endif
