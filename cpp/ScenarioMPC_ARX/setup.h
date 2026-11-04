@@ -435,7 +435,7 @@ static_assert(Nhor - nd >= NhorU - 1,
  * u(k+2), ... One extra sample of loop delay, but exact and modelled,
  * and the input changes exactly at the sampling instants. The test bench
  * applies each output one sample later (plant.h); without compensation,
- * TB_COMPUTE_DELAY_FRACTION emulates the latency dt instead.
+ * testbench_settings::computeDelayFraction emulates the latency dt instead.
  *
  * DC_STEPS is the number of known future inputs at each call (0 or 1),
  * nUKnown the length of the known-input array passed to the optimizer:

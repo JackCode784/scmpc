@@ -5,21 +5,21 @@
 
 #ifndef PRNG_STDLIB
 // 32-bit initial state
-constexpr unsigned int RANDOM_STATE_RESET = 0xAAAAAAAAu;
-static unsigned int random_state = RANDOM_STATE_RESET;
+constexpr unsigned int RANDOM_STATE_RESET_CTRL = 0xAAAAAAAAu;
+static unsigned int random_state_ctrl = RANDOM_STATE_RESET_CTRL;
 
 inline void pseudoRandSeed(unsigned int seed)
 {
-	random_state = (seed == 0u) ? 1u : seed;
+	random_state_ctrl = (seed == 0u) ? 1u : seed;
 }
 
 inline unsigned int xorshift32Step()
 {
-	unsigned int x = random_state;
+	unsigned int x = random_state_ctrl;
 	x ^= (x << 13);
 	x ^= (x >> 17);
 	x ^= (x << 5);
-	random_state = x;
+	random_state_ctrl = x;
 	return x;
 }
 #endif
@@ -32,7 +32,7 @@ void pseudoRandReset()
 	#ifdef PRNG_STDLIB
 	srand(1u); // C standard: the sequence rand() produces before any srand()
 	#else
-	random_state = RANDOM_STATE_RESET;
+	random_state_ctrl = RANDOM_STATE_RESET_CTRL;
 	#endif
 }
 
@@ -41,7 +41,7 @@ rand_type pseudoRandArx()
 {
 	#ifdef PRAGMAS
 	/*
-	 * random_state is a single global register: every call reads and
+	 * random_state_ctrl is a single global register: every call reads and
 	 * rewrites it, so successive calls are a genuine data recurrence and
 	 * can never be parallelised regardless of pragmas at the call site
 	 * (see generatePollMatrixArx.cpp). INLINE just removes the call
@@ -89,7 +89,7 @@ void pseudoRandArx(rand_type coeffs[nGens])
 	for(int i = 0; i < nGens; i++)
 	{
 		#ifdef PRAGMAS
-		/* Same random_state recurrence as pseudoRandArx() above: the loop
+		/* Same random_state_ctrl recurrence as pseudoRandArx() above: the loop
 		 * cannot be unrolled, but each xorshift32Step fits comfortably in
 		 * one cycle, so pipelining still overlaps the (cheap) coefficient
 		 * bookkeeping around it at II=1. */

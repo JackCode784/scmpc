@@ -41,41 +41,6 @@
 #include <random>
 
 /* ======================================================================
-   EXPERIMENT SETTINGS - edit these
-   ====================================================================== */
-/** Number of closed-loop simulations. 1 = the classic single run, written
- *  to output.txt (plotOutputCpp.m); more = one file per run plus a summary
- *  (plotMultipleOutputsCpp.m). */
-#define N_RUNS              10
-
-/** 0: true plant = thetaTrueInit (system_configs.h), the same every run.
- *  1: a new true plant per run, drawn by plantSampleTrue(). */
-#define RANDOM_TRUE_PLANT   1
-
-/** Seed of the test-bench random generator, which draws the true plants
- *  and the measurement noise. It is separate from the controller's own
- *  generator (pseudoRand.cpp): the controller consumes random numbers
- *  differently with and without scenarios, so sharing one generator would
- *  give the two configurations DIFFERENT true plants and noise, and the
- *  comparison would not be fair. With this one, the same seed gives the
- *  same plants and noise to every controller configuration. */
-#define TB_SEED             1u
-
-/** Controller latency dt emulated by the test bench, as a fraction of the
- *  sampling period (0 <= dt/Ts < 1). Without DELAY_COMPENSATION (setup.h)
- *  the input computed at instant k takes effect at k*Ts + dt: the plant
- *  keeps the previous input for the first dt of the interval, as a real
- *  DAC would. 0 is the ideal, instantaneous controller (the original test
- *  bench). With DELAY_COMPENSATION every input is applied at the sampling
- *  instant after the one it was computed at, so dt plays no role as long
- *  as it is below Ts. The inverted pendulum's nonlinear plant applies the
- *  switch inside its Euler sub-steps; ARX plants, which only know one input
- *  per interval, get the interval's average, (dt/Ts)*u_old + (1-dt/Ts)*u_new. */
-#define TB_COMPUTE_DELAY_FRACTION  0.0
-static_assert(TB_COMPUTE_DELAY_FRACTION >= 0.0 && TB_COMPUTE_DELAY_FRACTION < 1.0,
-    "TB_COMPUTE_DELAY_FRACTION must be in [0, 1): a latency of a full period or more misses the next sample.");
-
-/* ======================================================================
    Test-bench random generator
    ======================================================================
    std::mt19937's raw output is fixed by the C++ standard, but
@@ -193,7 +158,7 @@ inline double plantNextOutput(Plant &p)
     #if PENDULUM_NONLINEAR
     const double h = Ts / PENDULUM_EULER_SUBSTEPS;
     /* Zero-order hold of u(k-1) = u[0], after uEarly for the first fEarly
-     * of the interval (controller latency, TB_COMPUTE_DELAY_FRACTION) */
+     * of the interval (controller latency, testbench_settings::computeDelayFraction) */
     const int nEarly = int(std::lround(p.fEarly * PENDULUM_EULER_SUBSTEPS));
     for (int s = 0; s < PENDULUM_EULER_SUBSTEPS; s++)
     {
