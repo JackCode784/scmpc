@@ -8,7 +8,7 @@
  *
  * SIMULATION STRUCTURE
  * ---------------------
- * testbench_settings::nRuns independent runs (plant.h). Each run:
+ * testbench_settings::nRuns independent runs (testbench_config.h). Each run:
  *  - draws its true plant (plantSampleTrue) and measurement noise from the
  *    test-bench generator, and resets the plant, the controller state and
  *    the controller's random generator - as if the hardware had just been
@@ -383,7 +383,7 @@ int main(void)
      * compares the RTL's against it: any difference makes main() return 1,
      * i.e. a FAILED co-simulation. Run C simulation first. Only run 0 is
      * compared: the per-run reset only reaches the C copies of the
-     * controller's state, not the RTL's, so set testbench_settings::nRuns to 1 (plant.h) for
+     * controller's state, not the RTL's, so set testbench_settings::nRuns to 1 (testbench_config.h) for
      * co-simulation to avoid simulating runs that cannot match.
      */
     if (run == 0)
