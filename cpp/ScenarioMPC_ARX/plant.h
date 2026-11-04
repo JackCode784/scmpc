@@ -23,7 +23,7 @@
  *   plantPrintParams(p, f, header)   this run's parameters, for the summary
  *
  * The plant keeps its OWN history of physical outputs and inputs. (The old
- * test bench read the controller's yHist/uHist instead, which ties the true
+ * test bench read the controller's yHistCtrl/uHistCtrl instead, which ties the true
  * system to controller internals: with NRMLZ those are normalized, with
  * CONVERSIONS_MODE they carry ADC/DAC quantization, and the pendulum's
  * nonlinear model used to be silently skipped whenever NRMLZ was on.)

@@ -17,12 +17,12 @@
  *   thetaGens  [nUnc][nGens]  - current generator matrix G(k)
  *   (nUnc = number of uncertain parameters - see setup.h's UNC_MAP)
  *   nGens                       - number of active generator columns
- *   yHist      [na]                  - output history y(k−1), ..., y(k−na)
- *   uHist      [nb+nd-1]             - input  history u(k−1), ..., u(k−nb−nk+1)
+ *   yHistCtrl      [na]                  - output history y(k−1), ..., y(k−na)
+ *   uHistCtrl      [nb+nd-1]             - input  history u(k−1), ..., u(k−nb−nk+1)
  *   uOptPrev   [NhorU]               - last step's MADS solution u*(k−1), ...,
  *                                      u*(k−1+NhorU−1), kept ONLY to seed the
  *                                      next warm start (see Step 1b/7b below) -
- *                                      not part of the ARX regressor, unlike uHist.
+ *                                      not part of the ARX regressor, unlike uHistCtrl.
  *
  * ZONOTOPE LIFECYCLE
  * ------------------
@@ -40,17 +40,17 @@
  *  1. Convert digital inputs -> algorithm types.
  *  1b. Warm-start uOptNorm by shifting uOptPrev (last call's MADS
  *          solution) by one step, repeating its last entry.
- *  2. [PL] Update zonotope using y(k), OLD yHist, OLD uHist.
+ *  2. [PL] Update zonotope using y(k), OLD yHistCtrl, OLD uHistCtrl.
  *          The strip S(k) = {theta : |y(k)−phi(k)^T*theta|<=epsilon} uses the regressor
  *          phi(k) = [y(k−1),..., u(k−1),...] - the OLD histories.
  *  3. [AL] WIP stub.
  *  4. Generate scenarios from the (now updated) thetaCenter / thetaGens.
- *  5. Shift yHist <- [y(k), y(k−1), ...].
- *  6. Snapshot uHist into uPast (before it is updated in step 9).
+ *  5. Shift yHistCtrl <- [y(k), y(k−1), ...].
+ *  6. Snapshot uHistCtrl into uPast (before it is updated in step 9).
  *  7. Run MADS -> uOpt, warm-started from step 1b.
  *  7b. Save uOpt into uOptPrev, to seed step 1b on the NEXT call.
  *  8. Convert uOpt -> digital.
- *  9. Shift uHist <- [uOpt[0], u(k−1), ...].
+ *  9. Shift uHistCtrl <- [uOpt[0], u(k−1), ...].
  */
 
 #include "setup.h"
@@ -64,13 +64,13 @@
    ====================================================================== */
 theta_type  thetaCenter[nUnc];
 theta_type  thetaGens  [nUnc][nGens];
-norm_output_type yHist[na];
-norm_input_type  uHist[nb + nd - 1];
+norm_output_type yHistCtrl[na];
+norm_input_type  uHistCtrl[nb + nd - 1];
 /*
  * MUST be tied to uHistInit's operating point, not zero: a first
  * MADS call warm-started from a value inconsistent with the assumed
  * equilibrium encoded in yHistInit/uHistInit can return a poor
- * first solution, and - unlike the old flat "uOptNorm[i] = uHist[0]"
+ * first solution, and - unlike the old flat "uOptNorm[i] = uHistCtrl[0]"
  * warm start, which re-anchored to the REAL applied input every single
  * call - the shifted warm start below carries that solution's quality
  * forward via uOptPrev with no automatic reset to reality in between.
@@ -155,8 +155,8 @@ static bool initControllerState()
     #else
     const double yGain = 1.0, yOff = 0.0, uGain = 1.0, uOff = 0.0;
     #endif
-    for (int i = 0; i < na; i++)         yHist[i]    = yGain * yHistInit[i]     + yOff;
-    for (int i = 0; i < nb + nd - 1; i++) uHist[i]    = uGain * uHistInit[i]     + uOff;
+    for (int i = 0; i < na; i++)         yHistCtrl[i]    = yGain * yHistInit[i]     + yOff;
+    for (int i = 0; i < nb + nd - 1; i++) uHistCtrl[i]    = uGain * uHistInit[i]     + uOff;
     for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uHistInit[0] + uOff;
     #ifdef DELAY_COMPENSATION
     uNow = uGain * uHistInit[0] + uOff;
@@ -184,7 +184,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
 	#pragma HLS INTERFACE ap_ctrl_hs port=return
 
 	/*
-	 * thetaCenter/thetaGens/yHist/uHist/uOptPrev are FILE-SCOPE globals
+	 * thetaCenter/thetaGens/yHistCtrl/uHistCtrl/uOptPrev are FILE-SCOPE globals
 	 * (defined above with external linkage) rather than local arrays, so
 	 * their memory partitioning must be declared here, inside the
 	 * top-level function, where HLS elaborates the design's static
@@ -203,8 +203,8 @@ digital_input_type controller(const digital_output_type yCurrDig,
 	 */
 	#pragma HLS ARRAY_PARTITION variable=thetaCenter complete dim=1
 	#pragma HLS ARRAY_PARTITION variable=thetaGens   complete dim=0
-	#pragma HLS ARRAY_PARTITION variable=yHist       complete dim=1
-	#pragma HLS ARRAY_PARTITION variable=uHist       complete dim=1
+	#pragma HLS ARRAY_PARTITION variable=yHistCtrl       complete dim=1
+	#pragma HLS ARRAY_PARTITION variable=uHistCtrl       complete dim=1
 	#pragma HLS ARRAY_PARTITION variable=uOptPrev    complete dim=1
 	#endif
     /* ------------------------------------------------------------------ */
@@ -235,7 +235,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /*  Step 1b - Warm-start uOptNorm by shifting the previous solution   */
     /* ------------------------------------------------------------------ */
     /*
-     * Previously this held uHist[0] constant across the whole horizon
+     * Previously this held uHistCtrl[0] constant across the whole horizon
      * ("freeze current input"), which is a poor guess whenever yref is
      * moving: MADS then spends its limited MADS_ITER budget fighting its
      * way away from a flat start instead of refining an already-good
@@ -271,7 +271,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     #if CTRL_MODE == CTRL_MODE_PL || CTRL_MODE == CTRL_MODE_AL
     /*
         * Intersect the current zonotope with the strip S(k).
-        * The strip uses the OLD yHist and OLD uHist - the regressor
+        * The strip uses the OLD yHistCtrl and OLD uHistCtrl - the regressor
         * phi(k) = [y(k−1),..., u(k−1),...] refers to measurements taken
         * BEFORE this time step.
         *
@@ -299,8 +299,8 @@ digital_input_type controller(const digital_output_type yCurrDig,
     #endif
 
     /* In NRMLZ case, the inputs should be:
-        * yCurr -> yCurr - yNormOffset - ([yHist, uHist] - offsets) * yNormGain * ((i < na) ? 1 : normGainsRatio) * Dg * c0
-        * yHist, uHist -> ([yHist, uHist] - ioOffsets) * yNormGain * (i < na) ? 1 : normGainsRatio * Dg
+        * yCurr -> yCurr - yNormOffset - ([yHistCtrl, uHistCtrl] - offsets) * yNormGain * ((i < na) ? 1 : normGainsRatio) * Dg * c0
+        * yHistCtrl, uHistCtrl -> ([yHistCtrl, uHistCtrl] - ioOffsets) * yNormGain * (i < na) ? 1 : normGainsRatio * Dg
         * the rest is the same
         In brief, phi should become (phi_norm-q)*my*Dm^-1*Dg
         */
@@ -329,14 +329,14 @@ digital_input_type controller(const digital_output_type yCurrDig,
          * this subtract in as many cycles as the target clock needs. */
         #pragma HLS UNROLL
         #endif
-        phi[i] = (yHist[i] - yNormOffset);
+        phi[i] = (yHistCtrl[i] - yNormOffset);
     }
     for(int i = 0; i < nb; i++)
     {
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        phi[i+na] = (uHist[i+nd-1] - uNormOffset);
+        phi[i+na] = (uHistCtrl[i+nd-1] - uNormOffset);
     }
 
     /* Use (\tilde{phi} - offsets) to multiply by my*Dm^-1*c0 */
@@ -374,14 +374,14 @@ digital_input_type controller(const digital_output_type yCurrDig,
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        phi[i] = yHist[i];
+        phi[i] = yHistCtrl[i];
     }
     for(int i = 0; i < nb; i++)
     {
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        phi[i+na] = uHist[i+nd-1];
+        phi[i+na] = uHistCtrl[i+nd-1];
     }
 
     /*
@@ -506,11 +506,11 @@ digital_input_type controller(const digital_output_type yCurrDig,
     computeArxCoeffs(thetaScenarios, thetaCenter, arxCoeff, arxOffset);
 
     /* ------------------------------------------------------------------ */
-    /*  Step 5 - Update output history: push y(k) into yHist             */
+    /*  Step 5 - Update output history: push y(k) into yHistCtrl             */
     /* ------------------------------------------------------------------ */
     for (int i = na - 1; i > 0; i--)
-        yHist[i] = yHist[i - 1];
-    yHist[0] = yCurrNorm;   /* yHist = [y(k), y(k−1), ..., y(k−na+1)] */
+        yHistCtrl[i] = yHistCtrl[i - 1];
+    yHistCtrl[0] = yCurrNorm;   /* yHistCtrl = [y(k), y(k−1), ..., y(k−na+1)] */
 
     /* ------------------------------------------------------------------ */
     /*  Step 6 - Snapshot input history for MADS                          */
@@ -518,7 +518,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /*
      * uPast = [u(k-1), ..., u(k−nb−nd+1)] - needed by costFunctionArx to
      * roll out predictions for y(k+1), ..., y(k+N) alongside uOpt.
-     * Must be taken BEFORE uHist is updated with uOpt[0] in step 9.
+     * Must be taken BEFORE uHistCtrl is updated with uOpt[0] in step 9.
      */
     /* With DELAY_COMPENSATION, u(k) = uNow is known too and comes first:
      * uPast = [u(k), u(k-1), ...] (nUKnown values, setup.h). */
@@ -526,16 +526,16 @@ digital_input_type controller(const digital_output_type yCurrDig,
     #ifdef DELAY_COMPENSATION
     uPast[0] = uNow;
     for (int i = 0; i < nb + nd - 2; i++)
-        uPast[i + 1] = uHist[i];
+        uPast[i + 1] = uHistCtrl[i];
     #else
     for (int i = 0; i < nb + nd - 2; i++)
-        uPast[i] = uHist[i];
+        uPast[i] = uHistCtrl[i];
     #endif
 
     /* ------------------------------------------------------------------ */
     /*  Step 7 - Run MADS optimisation                                    */
     /* ------------------------------------------------------------------ */
-    MADSARX(uOptNorm, uPast, yHist, yrefNorm, arxCoeff, arxOffset);
+    MADSARX(uOptNorm, uPast, yHistCtrl, yrefNorm, arxCoeff, arxOffset);
 
     /* ------------------------------------------------------------------ */
     /*  Step 7b - Save this solution as next call's warm-start seed       */
@@ -549,29 +549,29 @@ digital_input_type controller(const digital_output_type yCurrDig,
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Step 8 - Update input history: push uOpt[0] into uHist           */
+    /*  Step 8 - Update input history: push uOpt[0] into uHistCtrl           */
     /* ------------------------------------------------------------------ */
     for (int i = nb + nd - 2; i > 0; i--)
-        uHist[i] = uHist[i - 1];
+        uHistCtrl[i] = uHistCtrl[i - 1];
     #ifdef DELAY_COMPENSATION
     /* u(k), applied during this interval, becomes the most recent past
      * input; this call's result u(k+1) = uOptNorm[0] is applied at the next
      * instant and is the next call's known input. */
-    uHist[0] = uNow;
+    uHistCtrl[0] = uNow;
     uNow = uOptNorm[0];
     #else
-    uHist[0] = uOptNorm[0];   /* receding horizon: only u(k) is applied */
+    uHistCtrl[0] = uOptNorm[0];   /* receding horizon: only u(k) is applied */
     #endif
  
     uOptDig = ctrlU2dig(uOptNorm[0]);
     
     #ifdef DEBUG_PRINT
-    double yHist_f[na], uHist_f[nb+nd-1];
+    double yHistCtrl_f[na], uHistCtrl_f[nb+nd-1];
     double uOptDig_f = uOptDig.to_double();
     double uOptNorm_f[NhorU];
     for(int i = 0; i < NhorU; i++) uOptNorm_f[i] = uOptNorm[i].to_double();
-    for(int i = 0; i < na; i++) yHist_f[i] = yHist[i].to_double();
-    for(int i = 0; i < nb+nd-1; i++) uHist_f[i] = uHist[i].to_double();
+    for(int i = 0; i < na; i++) yHistCtrl_f[i] = yHistCtrl[i].to_double();
+    for(int i = 0; i < nb+nd-1; i++) uHistCtrl_f[i] = uHistCtrl[i].to_double();
     #endif
 
     return uOptDig;

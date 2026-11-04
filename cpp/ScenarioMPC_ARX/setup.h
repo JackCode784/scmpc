@@ -362,9 +362,9 @@ static_assert(nGens >= nUnc,
      over the nUnc UNCERTAIN parameters only (see UNC_MAP above).
      Updated each step by boundStripZonotopeIntersection (PL/AL modes).
 
-   yHist / uHist - ARX regressor history buffers
-     yHist[0] = y(k-1), yHist[1] = y(k-2), ..., yHist[na-1]  = y(k-na)
-     uHist[0] = u(k-1), uHist[1] = u(k-2), ..., uHist[nb+nd-2] = u(k-nb-nd+1)
+   yHistCtrl / uHistCtrl - ARX regressor history buffers
+     yHistCtrl[0] = y(k-1), yHistCtrl[1] = y(k-2), ..., yHistCtrl[na-1]  = y(k-na)
+     uHistCtrl[0] = u(k-1), uHistCtrl[1] = u(k-2), ..., uHistCtrl[nb+nd-2] = u(k-nb-nd+1)
      Updated each step inside controller().
 
    uOptPrev - MADS warm-start seed, NOT part of the ARX regressor
@@ -372,7 +372,7 @@ static_assert(nGens >= nUnc,
      control sequence MADS returned on the PREVIOUS call. controller()
      shifts this by one step (dropping the already-applied first entry
      and repeating the last one) to seed uOptNorm for the current call,
-     instead of holding uHist[0] constant across the whole horizon. This
+     instead of holding uHistCtrl[0] constant across the whole horizon. This
      gives MADS a much better starting point once the plant is tracking
      a moving reference, which reduces (without eliminating) transient
      DELTAYNORM violations right after a reference step.
@@ -382,8 +382,8 @@ static_assert(nGens >= nUnc,
    ====================================================================== */
 extern theta_type  thetaCenter[nUnc];
 extern theta_type  thetaGens  [nUnc][nGens];
-extern norm_output_type yHist[na];
-extern norm_input_type  uHist[nb + nd - 1];
+extern norm_output_type yHistCtrl[na];
+extern norm_input_type  uHistCtrl[nb + nd - 1];
 /* uOptPrev[NhorU] is declared extern further below, once NhorU itself
  * has been defined (see "MPC PARAMETERS" section). */
 
@@ -460,7 +460,7 @@ static_assert(PRAGMA_COSTFUNC_INSTANCES == 2 * nOpt,
 #endif
 
 /** MADS warm-start seed - see "CONTROLLER STATE" comment above.
- *  Declared here, rather than alongside thetaCenter/yHist/uHist, because
+ *  Declared here, rather than alongside thetaCenter/yHistCtrl/uHistCtrl, because
  *  its size depends on NhorU, which is only just defined above. */
 extern norm_input_type uOptPrev[NhorU];
 
