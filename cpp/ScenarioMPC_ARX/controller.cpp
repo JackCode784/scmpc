@@ -67,9 +67,9 @@ theta_type  thetaGens  [nUnc][nGens];
 norm_output_type yHist[na];
 norm_input_type  uHist[nb + nk - 1];
 /*
- * MUST be tied to U_HIST_UNNORM's operating point, not zero: a first
+ * MUST be tied to uHistInit's operating point, not zero: a first
  * MADS call warm-started from a value inconsistent with the assumed
- * equilibrium encoded in Y_HIST_UNNORM/U_HIST_UNNORM can return a poor
+ * equilibrium encoded in yHistInit/uHistInit can return a poor
  * first solution, and - unlike the old flat "uOptNorm[i] = uHist[0]"
  * warm start, which re-anchored to the REAL applied input every single
  * call - the shifted warm start below carries that solution's quality
@@ -85,18 +85,18 @@ norm_input_type  uOptPrev[NhorU];
 /*
  * Input applied during the current sampling interval, u(k): returned by
  * the PREVIOUS call and applied at instant k (see DELAY_COMPENSATION in
- * setup.h). Initially the same operating point as U_HIST_UNNORM.
+ * setup.h). Initially the same operating point as uHistInit.
  */
 norm_input_type  uNow;
 #endif
 
 /*
  * Initial values of the five arrays above, derived from the PHYSICAL
- * values in system_configs.h (THETA_NOMINAL_UNNORM, GENERATORS_UNNORM,
- * Y_HIST_UNNORM, U_HIST_UNNORM, U_PREV_UNNORM).
+ * values in system_configs.h (thetaNominalInit, generatorsInit,
+ * yHistInit, uHistInit, uOptInit).
  *
  * The zonotope only has rows for the nUnc UNCERTAIN parameters (setup.h's
- * UNC_MAP: parameters whose GENERATORS_UNNORM row is non-zero); row k is
+ * UNC_MAP: parameters whose generatorsInit row is non-zero); row k is
  * full parameter i = UNC_MAP.full[k]. Certain parameters are not part of
  * it at all - they re-enter as known constants in computeArxCoeffs and in
  * the PL strip below.
@@ -129,10 +129,6 @@ norm_input_type  uNow;
  */
 static bool initControllerState()
 {
-    const double y0[na]             = { Y_HIST_UNNORM };
-    const double u0[nb + nk - 1]    = { U_HIST_UNNORM };
-    const double uPrev0[NhorU]      = { U_PREV_UNNORM };
-
     for (int k = 0; k < nUnc; k++)
     {
         const int i = UNC_MAP.full[k];
@@ -140,16 +136,16 @@ static bool initControllerState()
         double Dg = 0.0;
         for (int j = 0; j < nGens; j++)
         {
-            const double g = GENERATORS_UNNORM_TABLE[i][j];
+            const double g = generatorsInit[i][j];
             Dg += (g < 0.0) ? -g : g;
         }
         thetaCenter[k] = 0.0;
         for (int j = 0; j < nGens; j++)
-            thetaGens[k][j] = GENERATORS_UNNORM_TABLE[i][j] / Dg;
+            thetaGens[k][j] = generatorsInit[i][j] / Dg;
         #else
-        thetaCenter[k] = THETA_NOMINAL_UNNORM_TABLE[i];
+        thetaCenter[k] = thetaNominalInit[i];
         for (int j = 0; j < nGens; j++)
-            thetaGens[k][j] = GENERATORS_UNNORM_TABLE[i][j];
+            thetaGens[k][j] = generatorsInit[i][j];
         #endif
     }
 
@@ -159,11 +155,11 @@ static bool initControllerState()
     #else
     const double yGain = 1.0, yOff = 0.0, uGain = 1.0, uOff = 0.0;
     #endif
-    for (int i = 0; i < na; i++)         yHist[i]    = yGain * y0[i]     + yOff;
-    for (int i = 0; i < nb + nk - 1; i++) uHist[i]    = uGain * u0[i]     + uOff;
-    for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uPrev0[i] + uOff;
+    for (int i = 0; i < na; i++)         yHist[i]    = yGain * yHistInit[i]     + yOff;
+    for (int i = 0; i < nb + nk - 1; i++) uHist[i]    = uGain * uHistInit[i]     + uOff;
+    for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uOptInit[i] + uOff;
     #ifdef DELAY_COMPENSATION
-    uNow = uGain * u0[0] + uOff;
+    uNow = uGain * uHistInit[0] + uOff;
     #endif
     return true;
 }
@@ -402,7 +398,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
         #pragma HLS UNROLL
         #endif
         if (UNC_MAP.red[i] < 0)
-            stripCenter -= phi[i] * theta_type(THETA_NOMINAL_UNNORM_TABLE[i]);
+            stripCenter -= phi[i] * theta_type(thetaNominalInit[i]);
     }
 
     #endif

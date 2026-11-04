@@ -74,7 +74,7 @@ in types.h for the precision budget).
 
 The scenario/centre vectors only hold the nUnc UNCERTAIN parameters (the
 zonotope's own dimension, setup.h's UNC_MAP); each certain parameter i is
-re-inserted here as its known value: THETA_NOMINAL_UNNORM[i] without
+re-inserted here as its known value: thetaNominalInit[i] without
 NRMLZ, 0 with it (its normalized value; myInvDmDg[i] = 0 then makes
 coeff[i] = myInvDmc0[i], its exact nominal coefficient). The i-loop is
 fully unrolled, so UNC_MAP.red[i] is a constant and the choice costs no
@@ -117,7 +117,7 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
             #pragma HLS UNROLL
             #endif
             const int k = UNC_MAP.red[i];
-            coeff[l][i] = (k < 0)      ? theta_type(THETA_NOMINAL_UNNORM_TABLE[i]) :
+            coeff[l][i] = (k < 0)      ? theta_type(thetaNominalInit[i]) :
                           (l < Nscen)  ? thetaScenarios[l][k] : thetaNominal[k];
         }
         offset[l] = 0;

@@ -289,8 +289,8 @@
 /* ======================================================================
    UNCERTAIN PARAMETERS - the zonotope's own dimension nUnc <= nTheta
    ======================================================================
-   A parameter whose row of GENERATORS_UNNORM is entirely zero is known
-   exactly (theta_i = THETA_NOMINAL_UNNORM[i] for every point of the
+   A parameter whose row of generatorsInit is entirely zero is known
+   exactly (theta_i = thetaNominalInit for every point of the
    zonotope). The zonotope, the scenarios and the PL/AL strip update live
    only in the space of the nUnc UNCERTAIN parameters; certain ones are
    re-inserted as known constants wherever the full nTheta-vector is
@@ -304,15 +304,13 @@
    meaningful, and generateScenarios/strip update/volume work on nUnc
    rows instead of nTheta.
 
-   Detected at compile time from GENERATORS_UNNORM (C++14 constexpr):
+   Detected at compile time from generatorsInit (C++14 constexpr):
      nUnc                   number of uncertain parameters
      UNC_MAP.full[k]        full index i of the k-th uncertain parameter
      UNC_MAP.red[i]         reduced index k of parameter i, or -1 if certain
    Both tables are compile-time constants: indexed with loop variables of
    fully unrolled loops they fold away completely in hardware.
    ====================================================================== */
-constexpr double GENERATORS_UNNORM_TABLE[nTheta][nGens]  = { GENERATORS_UNNORM };
-constexpr double THETA_NOMINAL_UNNORM_TABLE[nTheta]      = { THETA_NOMINAL_UNNORM };
 
 struct UncertainMap
 {
@@ -328,7 +326,7 @@ constexpr UncertainMap makeUncertainMap()
     {
         bool uncertain = false;
         for (int j = 0; j < nGens; j++)
-            if (GENERATORS_UNNORM_TABLE[i][j] != 0.0) uncertain = true;
+            if (generatorsInit[i][j] != 0.0) uncertain = true;
         m.red[i] = uncertain ? m.n : -1;
         if (uncertain) m.full[m.n++] = i;
     }
@@ -339,7 +337,7 @@ constexpr UncertainMap UNC_MAP = makeUncertainMap();
 constexpr int nUnc = UNC_MAP.n;
 
 static_assert(nUnc >= 1,
-    "Every row of GENERATORS_UNNORM is zero: the model is fully known, so there "
+    "Every row of generatorsInit is zero: the model is fully known, so there "
     "is no uncertainty for the zonotope/scenario machinery to represent.");
 static_assert(nGens >= nUnc,
     "Fewer generators than uncertain parameters: the zonotope is flat (zero "
@@ -379,8 +377,8 @@ static_assert(nGens >= nUnc,
      a moving reference, which reduces (without eliminating) transient
      DELTAYNORM violations right after a reference step.
 
-     Its initial value (U_PREV_UNNORM, system_configs.h) MUST encode the
-     same cold-start operating point as Y_HIST_UNNORM/U_HIST_UNNORM - unlike
+     Its initial value (uOptInit, system_configs.h) MUST encode the
+     same cold-start operating point as yHistInit/uHistInit - unlike
      the old flat warm start, this one is never re-anchored to the real
      applied input, so an inconsistent cold start can seed a persistent
      closed-loop problem rather than a one-call transient.
@@ -590,22 +588,22 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  * SYSTEM_BUCK_LOSS's previously hand-pasted MATLAB output to 12+
  * significant digits):
  *
- *   Z0 = (THETA_NOMINAL_UNNORM, GENERATORS_UNNORM), the INITIAL zonotope
+ *   Z0 = (thetaNominalInit, generatorsInit), the INITIAL zonotope
  *        in UNNORMALIZED (physical parameter) space - deliberately NOT
  *        thetaCenter/thetaGens (see the note below for why).
- *   Dg[i] = sum_j |GENERATORS_UNNORM[i][j]| - Z0's interval-hull
+ *   Dg[i] = sum_j |generatorsInit[i][j]| - Z0's interval-hull
  *           half-width in parameter i (row-sum of |generators|).
  *   Dm[i] = yNormGain for i<na, uNormGain for i>=na - per-parameter
  *           I/O normalization gain (block-diagonal in the MATLAB).
  *   q[i]  = yNormOffset for i<na, uNormOffset for i>=na.
  *
  *   myInvDmDg[i]  = (yNormGain/Dm[i]) * Dg[i]
- *   myInvDmc0[i]  = (yNormGain/Dm[i]) * THETA_NOMINAL_UNNORM[i]
+ *   myInvDmc0[i]  = (yNormGain/Dm[i]) * thetaNominalInit[i]
  *   qmyInvDmDg[i] = -q[i] * myInvDmDg[i]
  *   qmyInvDmc0    = -sum_i q[i] * myInvDmc0[i]
  *
  * For i<na, yNormGain/Dm[i] = yNormGain/yNormGain = 1, so those entries
- * collapse to exactly Dg[i] / THETA_NOMINAL_UNNORM[i] with no gain
+ * collapse to exactly Dg[i] / thetaNominalInit[i] with no gain
  * factor at all - which is why SYSTEM_BUCK_LOSS's first two (na=2)
  * hardcoded myInvDmDg/myInvDmc0 entries above used to just BE the
  * row-sum and the center component, unscaled.
@@ -670,8 +668,15 @@ struct StripCoeffs
 
 static StripCoeffs computeStripCoeffs()
 {
-    theta_type c0[nTheta]        = { THETA_NOMINAL_UNNORM };  // Z0.c
-    theta_type G [nTheta][nGens] = { GENERATORS_UNNORM };      // Z0.G
+    /* theta_type conversions of double initializers for
+    zonotope center and generators. */
+    theta_type c0[nTheta];
+    theta_type G [nTheta][nGens];
+    for(int i = 0; i < nTheta; i++)
+    {
+        c0[i] = theta_type(thetaNominalInit[i]);
+        for(int j = 0; j < nGens; j++) G[i][j] = theta_type(generatorsInit[i][j]);
+    }
 
     StripCoeffs out{};
     double qmyInvDmc0Acc = 0.0;

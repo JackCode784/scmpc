@@ -90,7 +90,7 @@ int main(void)
     printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
     printf("Experiment (plant.h):\n");
     printf("\tRuns: %d, true plant: %s, plant model: %s, seed: %u\n",
-           N_RUNS, RANDOM_TRUE_PLANT ? "random" : "THETA_TRUE_INIT",
+           N_RUNS, RANDOM_TRUE_PLANT ? "random" : "thetaTrueInit",
            PLANT_TAG, (unsigned)TB_SEED);
     #ifdef DELAY_COMPENSATION
     printf("\tTiming: delay compensation (each input applied at the next sampling instant)\n");
@@ -161,9 +161,8 @@ int main(void)
     pseudoRandReset();
 
     /* Input on the DAC when the interval starts (physical units, and its
-     * digital code): initially the operating point of U_HIST_UNNORM. */
-    const double uInit0[nb + nk - 1] = { U_HIST_UNNORM };
-    input_type uDac = uInit0[0];
+     * digital code): initially the operating point of uHistInit. */
+    input_type uDac = uHistInit[0];
     #if defined(CONVERSIONS_MODE) && defined(DELAY_COMPENSATION)
     digital_input_type uDacDig = UADCGain * uDac + UBias;
     #endif

@@ -48,7 +48,7 @@
  *  (plotMultipleOutputsCpp.m). */
 #define N_RUNS              10
 
-/** 0: true plant = THETA_TRUE_INIT (system_configs.h), the same every run.
+/** 0: true plant = thetaTrueInit (system_configs.h), the same every run.
  *  1: a new true plant per run, drawn by plantSampleTrue(). */
 #define RANDOM_TRUE_PLANT   1
 
@@ -101,7 +101,7 @@ struct TbRng
    step Ts, of the LINEARIZED equation (sin(theta) ~ theta):
      y(k) = 2*y(k-1) + (-1 + Ts^2*g/l)*y(k-2) + Ts^2/(m*l^2)*u(k-2)
    i.e. theta = [2, -1 + Ts^2*g/l, Ts^2/(m*l^2)] (na=2, nb=1, nk=2). The
-   nominal l, m are recovered from THETA_NOMINAL_UNNORM through this map
+   nominal l, m are recovered from thetaNominalInit through this map
    (l ~ 0.83, m ~ 0.19 for the current values in system_configs.h), so there is a
    single source of truth.
 
@@ -162,32 +162,29 @@ inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
     if (random)
     {
         double lNom, mNom;
-        pendulumPhysFromTheta(THETA_NOMINAL_UNNORM_TABLE, lNom, mNom);
+        pendulumPhysFromTheta(thetaNominalInit, lNom, mNom);
         p.l = lNom * (1.0 + PEND_REL_UNC * rng.uniform());
         p.m = mNom * (1.0 + PEND_REL_UNC * rng.uniform());
         pendulumThetaFromPhys(p.l, p.m, p.theta);
     }
     else
     {
-        /* THETA_TRUE_INIT exactly for the ARX model; l, m derived from it
+        /* thetaTrueInit exactly for the ARX model; l, m derived from it
          * for the nonlinear one */
-        const double thetaTrue[nTheta] = { THETA_TRUE_INIT };
-        for (int i = 0; i < nTheta; i++) p.theta[i] = thetaTrue[i];
-        pendulumPhysFromTheta(thetaTrue, p.l, p.m);
+        for (int i = 0; i < nTheta; i++) p.theta[i] = thetaTrueInit[i];
+        pendulumPhysFromTheta(thetaTrueInit, p.l, p.m);
     }
 }
 
 inline void plantReset(Plant &p)
 {
-    const double y0[na]         = { Y_HIST_UNNORM };
-    const double u0[nb + nk - 1] = { U_HIST_UNNORM };
-    for (int i = 0; i < na; i++)          p.y[i] = y0[i];
-    for (int i = 0; i < nb + nk - 1; i++) p.u[i] = u0[i];
+    for (int i = 0; i < na; i++)          p.y[i] = yHistInit[i];
+    for (int i = 0; i < nb + nk - 1; i++) p.u[i] = uHistInit[i];
     /* State consistent with the output history: angle y(-1), velocity
      * from the last two samples. */
-    p.x[0] = y0[0];
-    p.x[1] = (y0[0] - y0[1]) / Ts;
-    p.uEarly = u0[0];
+    p.x[0] = yHistInit[0];
+    p.x[1] = (yHistInit[0] - yHistInit[1]) / Ts;
+    p.uEarly = uHistInit[0];
     p.fEarly = 0.0;
 }
 
@@ -225,7 +222,7 @@ inline void plantPrintParams(const Plant &p, FILE *f, bool header)
    Default: ARX plant with the controller's structure.
    ----------------------------------------------------------------------
    A random true plant draws theta = c0 + G*xi, xi uniform in [-1, 1]^nGens
-   (c0 = THETA_NOMINAL_UNNORM, G = GENERATORS_UNNORM): a point of the
+   (c0 = thetaNominalInit, G = generatorsInit): a point of the
    controller's initial uncertainty zonotope, which is exactly the set the
    robust controller is designed to handle. Certain parameters (all-zero
    generator rows) automatically keep their nominal value.
@@ -247,24 +244,21 @@ inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
         for (int j = 0; j < nGens; j++) xi[j] = rng.uniform();
         for (int i = 0; i < nTheta; i++)
         {
-            p.theta[i] = THETA_NOMINAL_UNNORM_TABLE[i];
+            p.theta[i] = thetaNominalInit[i];
             for (int j = 0; j < nGens; j++)
-                p.theta[i] += GENERATORS_UNNORM_TABLE[i][j] * xi[j];
+                p.theta[i] += generatorsInit[i][j] * xi[j];
         }
     }
     else
     {
-        const double thetaTrue[nTheta] = { THETA_TRUE_INIT };
-        for (int i = 0; i < nTheta; i++) p.theta[i] = thetaTrue[i];
+        for (int i = 0; i < nTheta; i++) p.theta[i] = thetaTrueInit[i];
     }
 }
 
 inline void plantReset(Plant &p)
 {
-    const double y0[na]          = { Y_HIST_UNNORM };
-    const double u0[nb + nk - 1] = { U_HIST_UNNORM };
-    for (int i = 0; i < na; i++)          p.y[i] = y0[i];
-    for (int i = 0; i < nb + nk - 1; i++) p.u[i] = u0[i];
+    for (int i = 0; i < na; i++)          p.y[i] = yHistInit[i];
+    for (int i = 0; i < nb + nk - 1; i++) p.u[i] = uHistInit[i];
 }
 
 inline double plantNextOutput(Plant &p)
