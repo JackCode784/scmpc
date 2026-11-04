@@ -1,4 +1,4 @@
-%% Plot multi-run results of testMain.cpp (N_RUNS > 1 in plant.h)
+%% Plot multi-run results of testMain.cpp (testbench_settings::nRuns > 1 in plant.h)
 % Each experiment (a build of testMain.cpp) writes
 %   runs_<tag>_<run>.txt      one per run, same columns as output.txt
 %   runs_<tag>_summary.txt    one row per run: true plant parameters and

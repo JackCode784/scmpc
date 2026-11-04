@@ -8,7 +8,7 @@
  *
  * SIMULATION STRUCTURE
  * ---------------------
- * N_RUNS independent runs (plant.h). Each run:
+ * testbench_settings::nRuns independent runs (plant.h). Each run:
  *  - draws its true plant (plantSampleTrue) and measurement noise from the
  *    test-bench generator, and resets the plant, the controller state and
  *    the controller's random generator - as if the hardware had just been
@@ -28,9 +28,9 @@
  * relative to the working directory; fixed-point builds into the working
  * directory itself, i.e. Vitis' csim/build folder, where plot*Cpp.m with
  * isVitisSim and the co-simulation check below look for them (TB_OUT_DIR).
- * N_RUNS == 1: "output.txt", one row per step (format unchanged; the
+ * testbench_settings::nRuns == 1: "output.txt", one row per step (format unchanged; the
  *              columns depend on the compilation mode) - plotOutputCpp.m.
- * N_RUNS  > 1: "runs_<ctrl>_<plant>_<run>.txt", same format, one per run,
+ * testbench_settings::nRuns  > 1: "runs_<ctrl>_<plant>_<run>.txt", same format, one per run,
  *              plus "runs_<ctrl>_<plant>_summary.txt", one row per run with
  *              the true plant parameters and constraint-violation metrics -
  *              plotMultipleOutputsCpp.m. <ctrl> is scen / scencost /
@@ -46,6 +46,7 @@
  * are forbidden.
  */
 
+#include "testbench_config.h"
 #include "setup.h"
 #include "plant.h"
 #include <stdio.h>
@@ -90,13 +91,13 @@ int main(void)
     printf("\tUse rand(): %s\n", PRNG_STDLIB_PRINT);
     printf("Experiment (plant.h):\n");
     printf("\tRuns: %d, true plant: %s, plant model: %s, seed: %u\n",
-           N_RUNS, RANDOM_TRUE_PLANT ? "random" : "THETA_TRUE_INIT",
-           PLANT_TAG, (unsigned)TB_SEED);
+           testbench_settings::nRuns, testbench_settings::randomTruePlant ? "random" : "THETA_TRUE_INIT",
+           PLANT_TAG, (unsigned)testbench_settings::testbenchSeed);
     #ifdef DELAY_COMPENSATION
     printf("\tTiming: delay compensation (each input applied at the next sampling instant)\n");
     #else
     printf("\tTiming: no delay compensation, controller latency %.3g of the sampling period%s\n",
-           TB_COMPUTE_DELAY_FRACTION, TB_COMPUTE_DELAY_FRACTION == 0.0 ? " (ideal)" : "");
+           testbench_settings::computeDelayFraction, testbench_settings::computeDelayFraction == 0.0 ? " (ideal)" : "");
     #endif
 
     /* File tag: TB_CTRL_TAG plus the timing case - "" (ideal), "_latNN" (no
@@ -106,10 +107,10 @@ int main(void)
     #ifdef DELAY_COMPENSATION
     snprintf(ctrlTag, sizeof ctrlTag, "%s_dc", TB_CTRL_TAG);
     #else
-    if (TB_COMPUTE_DELAY_FRACTION == 0.0)
+    if (testbench_settings::computeDelayFraction == 0.0)
         snprintf(ctrlTag, sizeof ctrlTag, "%s", TB_CTRL_TAG);
     else
-        snprintf(ctrlTag, sizeof ctrlTag, "%s_lat%d", TB_CTRL_TAG, int(TB_COMPUTE_DELAY_FRACTION * 100.0 + 0.5));
+        snprintf(ctrlTag, sizeof ctrlTag, "%s_lat%d", TB_CTRL_TAG, int(testbench_settings::computeDelayFraction * 100.0 + 0.5));
     #endif
     printf("\n\n");
 
@@ -133,14 +134,14 @@ int main(void)
     /* Reference: the same for every run */
     generateReference(yref, nSim);
 
-    TbRng rng(TB_SEED);
+    TbRng rng(testbench_settings::testbenchSeed);
 
     #ifdef TB_OUT_DIR_NAME
     (void)TB_MKDIR(TB_OUT_DIR_NAME);   /* fails harmlessly if it already exists */
     #endif
     FILE* summary = nullptr;
     char fileName[128];
-    if (N_RUNS > 1)
+    if (testbench_settings::nRuns > 1)
     {
         snprintf(fileName, sizeof fileName, TB_OUT_DIR "runs_%s_%s_summary.txt", ctrlTag, PLANT_TAG);
         summary = fopen(fileName, "w");
@@ -149,13 +150,13 @@ int main(void)
     int runsViolY = 0, runsViolDy = 0;
 
     bool coSimFailed = false;   /* set by the co-simulation check below */
-    for (int run = 0; run < N_RUNS; run++)
+    for (int run = 0; run < testbench_settings::nRuns; run++)
     {
     /* ------------------------------------------------------------------ */
     /*  This run's true system, noise and a freshly reset controller      */
     /* ------------------------------------------------------------------ */
     Plant plant;
-    plantSampleTrue(plant, rng, RANDOM_TRUE_PLANT != 0);
+    plantSampleTrue(plant, rng, testbench_settings::randomTruePlant);
     plantReset(plant);
     resetControllerState();
     pseudoRandReset();
@@ -235,7 +236,7 @@ int main(void)
          * With DELAY_COMPENSATION this call returned u(k+1), applied at the
          * NEXT instant: the interval runs on the previous call's result,
          * already on the DAC. Without it, the result takes effect after the
-         * latency TB_COMPUTE_DELAY_FRACTION*Ts, the previous input before
+         * latency testbench_settings::computeDelayFraction*Ts, the previous input before
          * that (no latency: the original test bench).
          */
         #ifdef DELAY_COMPENSATION
@@ -251,7 +252,7 @@ int main(void)
         #ifdef CONVERSIONS_MODE
         uSimDig[k] = uOptDig;
         #endif
-        plantPush(plant, double(ySim[k]), double(uDac), double(uOut), TB_COMPUTE_DELAY_FRACTION);
+        plantPush(plant, double(ySim[k]), double(uDac), double(uOut), testbench_settings::computeDelayFraction);
         uDac = uOut;
         #endif
 
@@ -263,7 +264,7 @@ int main(void)
     /* ------------------------------------------------------------------ */
     /*  Write this run's trajectory to file                               */
     /* ------------------------------------------------------------------ */
-    if (N_RUNS == 1)
+    if (testbench_settings::nRuns == 1)
         snprintf(fileName, sizeof fileName, TB_OUT_DIR "output.txt");
     else
         snprintf(fileName, sizeof fileName, TB_OUT_DIR "runs_%s_%s_%03d.txt", ctrlTag, PLANT_TAG, run);
@@ -382,7 +383,7 @@ int main(void)
      * compares the RTL's against it: any difference makes main() return 1,
      * i.e. a FAILED co-simulation. Run C simulation first. Only run 0 is
      * compared: the per-run reset only reaches the C copies of the
-     * controller's state, not the RTL's, so set N_RUNS to 1 (plant.h) for
+     * controller's state, not the RTL's, so set testbench_settings::nRuns to 1 (plant.h) for
      * co-simulation to avoid simulating runs that cannot match.
      */
     if (run == 0)
@@ -438,7 +439,7 @@ int main(void)
     {
         fclose(summary);
         printf("\n%d runs: %d with y outside [yMin,yMax], %d with |dy| > deltaY.\n",
-               N_RUNS, runsViolY, runsViolDy);
+               testbench_settings::nRuns, runsViolY, runsViolDy);
     }
     printf("Simulation complete.\n");
     return coSimFailed ? 1 : 0;
