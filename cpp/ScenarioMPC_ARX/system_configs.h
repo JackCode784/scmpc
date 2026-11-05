@@ -417,7 +417,7 @@ constexpr double generatorsInit[nTheta][nGens] = {
     {-0.000001, 0, 0},
     {0, 1e-3 * -0.281338543972914, 1e-4 * -0.961862828825779},
     {0, 1e-3 * -0.386439223972734, 1e-4 * 0.700262993444492}};
-constexpr const double (&thetaTrueInit)[nTheta] = thetaNominalInit;
+static constexpr const double (&thetaTrueInit)[nTheta] = thetaNominalInit;
 //2.0000000000,   -0.998637500000000,   0.001205632716049
 //2.0, -0.999091666666667, 0.0003572245084590763
 //2.000000000000000,   -0.998637500000000,   0.001205632716049
