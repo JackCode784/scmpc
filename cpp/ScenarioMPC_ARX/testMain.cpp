@@ -220,8 +220,8 @@ int main(void)
         /* --- Call controller ------------------------------------------- */
         /*
          * controller() receives y(k) and yref as digital samples.
-         * It returns the updated uCtrlDig sequence, whose first element
-         * uCtrlDig[0] is u(k) in the receding-horizon sense.
+         * It returns uCtrlDig, which is the (possibly digital version of) 
+         * u(k) in the receding-horizon sense.
          * The controller internally updates its own history; we do NOT
          * duplicate that update here.
          */
