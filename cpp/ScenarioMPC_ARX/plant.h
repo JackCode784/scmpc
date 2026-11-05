@@ -102,8 +102,8 @@ struct Plant
 {
     double l, m;              /* physical parameters                       */
     double theta[nTheta];     /* equivalent ARX parameters                 */
-    double y[na];             /* y(k-1), ..., y(k-na)   (measured)          */
-    double u[nb + nd - 1];    /* u(k-1), ..., u(k-nb-nd+1)                  */
+    double yMeasHist[na];             /* y(k-1), ..., y(k-na)   (measured)          */
+    double uHist[nb + nd - 1];    /* u(k-1), ..., u(k-nb-nd+1)                  */
     double x[2];              /* nonlinear state: angle, angular velocity   */
     double uEarly;            /* input held during the first fEarly of the  */
     double fEarly;            /* last interval, before u[0] took effect     */
@@ -143,8 +143,8 @@ inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
 
 inline void plantReset(Plant &p)
 {
-    for (int i = 0; i < na; i++)          p.y[i] = yHistInit[i];
-    for (int i = 0; i < nb + nd - 1; i++) p.u[i] = uHistInit[i];
+    for (int i = 0; i < na; i++)          p.yMeasHist[i] = yHistInit[i];
+    for (int i = 0; i < nb + nd - 1; i++) p.uHist[i] = uHistInit[i];
     /* State consistent with the output history: angle y(-1), velocity
      * from the last two samples. */
     p.x[0] = yHistInit[0];
@@ -162,7 +162,7 @@ inline double plantNextOutput(Plant &p)
     const int nEarly = int(std::lround(p.fEarly * PENDULUM_EULER_SUBSTEPS));
     for (int s = 0; s < PENDULUM_EULER_SUBSTEPS; s++)
     {
-        const double uHold = (s < nEarly) ? p.uEarly : p.u[0];
+        const double uHold = (s < nEarly) ? p.uEarly : p.uHist[0];
         const double angle = p.x[0], vel = p.x[1];
         p.x[0] = angle + h * vel;
         p.x[1] = vel + h * (PEND_G / p.l * std::sin(angle) + uHold / (p.m * p.l * p.l));
@@ -171,7 +171,7 @@ inline double plantNextOutput(Plant &p)
     #else
     double y = 0.0;
     for (int i = 0; i < nTheta; i++)
-        y += ((i < na) ? p.y[i] : p.u[i - na + nd - 1]) * p.theta[i];
+        y += ((i < na) ? p.yMeasHist[i] : p.uHist[i - na + nd - 1]) * p.theta[i];
     return y;
     #endif
 }
@@ -197,8 +197,8 @@ inline void plantPrintParams(const Plant &p, FILE *f, bool header)
 struct Plant
 {
     double theta[nTheta];
-    double y[na];             /* y(k-1), ..., y(k-na)   (measured)          */
-    double u[nb + nd - 1];    /* u(k-1), ..., u(k-nb-nd+1)                  */
+    double yMeasHist[na];         /* y(k-1), ..., y(k-na)   (measured)          */
+    double uHist[nb + nd - 1];    /* u(k-1), ..., u(k-nb-nd+1)                  */
 };
 
 inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
@@ -222,15 +222,15 @@ inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
 
 inline void plantReset(Plant &p)
 {
-    for (int i = 0; i < na; i++)          p.y[i] = yHistInit[i];
-    for (int i = 0; i < nb + nd - 1; i++) p.u[i] = uHistInit[i];
+    for (int i = 0; i < na; i++)          p.yMeasHist[i] = yHistInit[i];
+    for (int i = 0; i < nb + nd - 1; i++) p.uHist[i] = uHistInit[i];
 }
 
 inline double plantNextOutput(Plant &p)
 {
     double y = 0.0;
     for (int i = 0; i < nTheta; i++)
-        y += ((i < na) ? p.y[i] : p.u[i - na + nd - 1]) * p.theta[i];
+        y += ((i < na) ? p.yMeasHist[i] : p.uHist[i - na + nd - 1]) * p.theta[i];
     return y;
 }
 
@@ -248,15 +248,15 @@ inline void plantPrintParams(const Plant &p, FILE *f, bool header)
  *  past outputs - an equation-error model, as before. */
 inline void plantPush(Plant &p, double yMeas, double uEarly, double u, double fEarly)
 {
-    for (int i = na - 1; i > 0; i--)          p.y[i] = p.y[i - 1];
-    p.y[0] = yMeas;
-    for (int i = nb + nd - 2; i > 0; i--)     p.u[i] = p.u[i - 1];
+    for (int i = na - 1; i > 0; i--)          p.yMeasHist[i] = p.yMeasHist[i - 1];
+    p.yMeasHist[0] = yMeas;
+    for (int i = nb + nd - 2; i > 0; i--)     p.uHist[i] = p.uHist[i - 1];
     #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM && PENDULUM_NONLINEAR
-    p.u[0] = u;               /* the Euler sub-steps apply the switch */
+    p.uHist[0] = u;               /* the Euler sub-steps apply the switch */
     p.uEarly = uEarly;
     p.fEarly = fEarly;
     #else
     /* one input per interval: its average */
-    p.u[0] = (fEarly == 0.0) ? u : fEarly * uEarly + (1.0 - fEarly) * u;
+    p.uHist[0] = (fEarly == 0.0) ? u : fEarly * uEarly + (1.0 - fEarly) * u;
     #endif
 }

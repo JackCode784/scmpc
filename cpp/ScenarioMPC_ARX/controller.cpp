@@ -13,16 +13,16 @@
  * copies would silently diverge as soon as one was updated.  That is the
  * wrong behaviour for shared controller state.
  *
- *   thetaCenter[nUnc]                - current zonotope centre c(k)
- *   thetaGens  [nUnc][nGens]  - current generator matrix G(k)
+ *   thetaCenter[nUnc]          - current zonotope centre c(k)
+ *   thetaGens  [nUnc][nGens]   - current generator matrix G(k)
  *   (nUnc = number of uncertain parameters - see setup.h's UNC_MAP)
- *   nGens                       - number of active generator columns
- *   yHistCtrl      [na]                  - output history y(k−1), ..., y(k−na)
- *   uHistCtrl      [nb+nd-1]             - input  history u(k−1), ..., u(k−nb−nk+1)
- *   uOptPrev   [NhorU]               - last step's MADS solution u*(k−1), ...,
- *                                      u*(k−1+NhorU−1), kept ONLY to seed the
- *                                      next warm start (see Step 1b/7b below) -
- *                                      not part of the ARX regressor, unlike uHistCtrl.
+ *   nGens                      - number of active generator columns
+ *   yHistCtrl      [na]        - output history y(k−1), ..., y(k-na)
+ *   uHistCtrl      [nb+nd-1]   - input  history u(k−1), ..., u(k-nb-nd+1)
+ *   uOptPrev   [NhorU]         - last step's MADS solution u*(k−1), ...,
+ *                                u*(k−1+NhorU−1), kept ONLY to seed the
+ *                                next warm start (see Step 1b/7b below) -
+ *                                not part of the ARX regressor, unlike uHistCtrl.
  *
  * ZONOTOPE LIFECYCLE
  * ------------------
