@@ -9,6 +9,11 @@ namespace testbench_settings
      *  (plotMultipleOutputsCpp.m). */
     constexpr int nRuns = 10;
 
+    /**
+     * Number of simulations steps in a single run. 
+     */
+    constexpr int nSim = 500;
+
     /** false: true plant = thetaTrueInit (system_configs.h), the same every run.
      *  true: a new true plant per run, drawn by plantSampleTrue(). */
     constexpr bool randomTruePlant = true;

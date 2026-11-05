@@ -114,10 +114,8 @@ int main(void)
     #endif
     printf("\n\n");
 
-    /* ------------------------------------------------------------------ */
-    /*  Simulation parameters                                              */
-    /* ------------------------------------------------------------------ */
-    constexpr int nSim = 500;
+    /* Number of simulations steps, directly from testbench_config.h */
+    constexpr int nSim = testbench_settings::nSim;
 
     /* Arrays to log one run's trajectory (reused by every run). */
     output_type yMeasLog[nSim];
