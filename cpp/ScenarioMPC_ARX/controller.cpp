@@ -135,7 +135,7 @@ static bool initControllerState()
         #ifdef NRMLZ
         thetaCenter[k] = 0.0;
         for (int j = 0; j < nGens; j++)
-            thetaGens[k][j] = generatorsInit[i][j] / DgInit.Dg[k];
+            thetaGens[k][j] = generatorsInit[i][j] / DgInit.Dg[i];
         #else
         thetaCenter[k] = thetaNominalInit[i];
         for (int j = 0; j < nGens; j++)

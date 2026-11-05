@@ -320,7 +320,7 @@ struct UncertainMap
 };
 
 /* Interval Hull diagonal matrix becomes only the diagonal vector */
-struct IntervalHull { double Dg[nUnc]; };
+struct IntervalHull { double Dg[nTheta]; };
 
 constexpr UncertainMap makeUncertainMap()
 {
@@ -340,16 +340,15 @@ constexpr IntervalHull computeIntervalHull()
 {
     IntervalHull ih = {};
 
-    for (int k = 0; k < nUnc; k++)
+    for (int i = 0; i < nTheta; i++)
     {
-        const int i = UNC_MAP.full[k];
         double Dg = 0.0;
         for (int j = 0; j < nGens; j++)
         {
             const double g = generatorsInit[i][j];
             Dg += (g < 0.0) ? -g : g;
         }
-        ih.Dg[k] = Dg;
+        ih.Dg[i] = Dg;
     }
 
     return ih;
@@ -688,16 +687,6 @@ struct StripCoeffs
 
 static StripCoeffs computeStripCoeffs()
 {
-    /* theta_type conversions of double initializers for
-    zonotope center and generators. */
-    theta_type c0[nTheta];
-    theta_type G [nTheta][nGens];
-    for(int i = 0; i < nTheta; i++)
-    {
-        c0[i] = theta_type(thetaNominalInit[i]);
-        for(int j = 0; j < nGens; j++) G[i][j] = theta_type(generatorsInit[i][j]);
-    }
-
     StripCoeffs out{};
     double qmyInvDmc0Acc = 0.0;
 
@@ -715,7 +704,7 @@ static StripCoeffs computeStripCoeffs()
         const double qi         = isY ? double(yNormOffset)    : double(uNormOffset);
 
         const double myInvDmDg_i = gainRatio * Dg_i;
-        const double myInvDmc0_i = gainRatio * double(c0[i]);
+        const double myInvDmc0_i = gainRatio * double(thetaNominalInit[i]);
 
         out.myInvDmDg[i]  = myInvDmDg_i;
         out.qmyInvDmDg[i] = -qi * myInvDmDg_i;
