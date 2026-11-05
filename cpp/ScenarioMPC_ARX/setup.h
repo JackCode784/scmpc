@@ -692,18 +692,11 @@ static StripCoeffs computeStripCoeffs()
 
     for (int i = 0; i < nTheta; i++)
     {
-        double Dg_i = 0.0;
-        for (int j = 0; j < nGens; j++)
-        {
-            double g = double(G[i][j]);
-            Dg_i += (g < 0.0) ? -g : g;
-        }
-
         const bool   isY        = (i < na);
         const double gainRatio  = isY ? 1.0 : double(yNormGain) / double(uNormGain);
         const double qi         = isY ? double(yNormOffset)    : double(uNormOffset);
 
-        const double myInvDmDg_i = gainRatio * Dg_i;
+        const double myInvDmDg_i = gainRatio * DgInit.Dg[i];
         const double myInvDmc0_i = gainRatio * double(thetaNominalInit[i]);
 
         out.myInvDmDg[i]  = myInvDmDg_i;
