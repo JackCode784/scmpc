@@ -87,7 +87,7 @@ norm_input_type  uOptPrev[NhorU];
  * the PREVIOUS call and applied at instant k (see DELAY_COMPENSATION in
  * setup.h). Initially the same operating point as uHistInit.
  */
-norm_input_type  uNow;
+norm_input_type  uAppliedCtrl;
 #endif
 
 /*
@@ -159,7 +159,7 @@ static bool initControllerState()
     for (int i = 0; i < nb + nd - 1; i++) uHistCtrl[i]    = uGain * uHistInit[i]     + uOff;
     for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uHistInit[0] + uOff;
     #ifdef DELAY_COMPENSATION
-    uNow = uGain * uHistInit[0] + uOff;
+    uAppliedCtrl = uGain * uHistInit[0] + uOff;
     #endif
     return true;
 }
@@ -520,11 +520,11 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * roll out predictions for y(k+1), ..., y(k+N) alongside uOpt.
      * Must be taken BEFORE uHistCtrl is updated with uOpt[0] in step 9.
      */
-    /* With DELAY_COMPENSATION, u(k) = uNow is known too and comes first:
+    /* With DELAY_COMPENSATION, u(k) = uAppliedCtrl is known too and comes first:
      * uPast = [u(k), u(k-1), ...] (nUKnown values, setup.h). */
     norm_input_type uPast[nUKnown];
     #ifdef DELAY_COMPENSATION
-    uPast[0] = uNow;
+    uPast[0] = uAppliedCtrl;
     for (int i = 0; i < nb + nd - 2; i++)
         uPast[i + 1] = uHistCtrl[i];
     #else
@@ -557,8 +557,8 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* u(k), applied during this interval, becomes the most recent past
      * input; this call's result u(k+1) = uOptNorm[0] is applied at the next
      * instant and is the next call's known input. */
-    uHistCtrl[0] = uNow;
-    uNow = uOptNorm[0];
+    uHistCtrl[0] = uAppliedCtrl;
+    uAppliedCtrl = uOptNorm[0];
     #else
     uHistCtrl[0] = uOptNorm[0];   /* receding horizon: only u(k) is applied */
     #endif

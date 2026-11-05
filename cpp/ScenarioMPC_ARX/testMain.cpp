@@ -40,7 +40,7 @@
  *
  * NOTE ON VARIABLE-LENGTH ARRAYS
  * --------------------------------
- * nSim is a constexpr so that ySim[nSim] and uSim[nSim] are arrays with
+ * nSim is a constexpr so that yMeasLog[nSim] and uAppliedLog[nSim] are arrays with
  * compile-time-known sizes, NOT variable-length arrays (VLAs). VLAs are
  * arrays the size of which is a runtime variable. Such data structures
  * are forbidden.
@@ -120,15 +120,16 @@ int main(void)
     constexpr int nSim = 500;
 
     /* Arrays to log one run's trajectory (reused by every run). */
-    output_type ySim[nSim];
-    input_type  uSim[nSim];
+    output_type yMeasLog[nSim];
+    input_type  uAppliedLog[nSim];
     output_type yref[nSim]; // output follows this
-    output_type yCurr;
+    output_type yTrue;  // noise-free current output sample
+    output_type yMeas;  // noisy current output sample
     vol_type volumes[nSim];
     noise_type noise[nSim];
     #if defined(CONVERSIONS_MODE)
-    digital_output_type ySimDig[nSim];
-    digital_input_type  uSimDig[nSim];
+    digital_output_type yMeasDigLog[nSim];
+    digital_input_type  uAppliedDigLog[nSim];
     #endif
 
     /* Reference: the same for every run */
@@ -162,17 +163,20 @@ int main(void)
     pseudoRandReset();
 
     /* Input on the DAC when the interval starts (physical units, and its
-     * digital code): initially the operating point of uHistInit. */
-    input_type uDac = uHistInit[0];
+     * digital code): initially the operating point of uHistInit. 
+     * Without DC, uApplied remains for the first testbench_settings::computeDelayFraction
+     * percentage of the new interval (then uCtrl takes its place). With DC,
+     * uApplied contains u(k) computed by the controller at step k-1.*/
+    input_type uApplied = uHistInit[0];
     #if defined(CONVERSIONS_MODE) && defined(DELAY_COMPENSATION)
-    digital_input_type uDacDig = UADCGain * uDac + UBias;
+    digital_input_type uAppliedDig = UADCGain * uApplied + UBias;
     #endif
 
     /* Measurement noise, uniform in [-SIGMA_UNNORM, SIGMA_UNNORM] */
     for (int i = 0; i < nSim; i++) noise[i] = rng.uniform() * double(SIGMA_UNNORM);
 
     #ifdef DEBUG_PRINT
-    double ySim_f[nSim], yref_f[nSim], volumes_f[nSim], noise_f[nSim], yCurr_f, uOpt_f;
+    double yMeasLog_f[nSim], yref_f[nSim], volumes_f[nSim], noise_f[nSim], yTrue_f, yMeas_f, uCtrl_f;
     for(int i = 0; i < nSim; i++)           noise_f[i] = noise[i].to_double();
     for(int i = 0; i < nSim; i++)           yref_f[i] = yref[i].to_double();
     #endif
@@ -192,46 +196,51 @@ int main(void)
         #endif
 
         /* --- True plant output y(k), plus measurement noise ----------- */
-        yCurr = plantNextOutput(plant);
+        yTrue = plantNextOutput(plant);
         #ifdef DEBUG_PRINT
-        yCurr_f = yCurr.to_double();
+        yTrue_f = yTrue.to_double();
         #endif
-        yCurr += noise[k];
-        ySim[k] = yCurr;
+        yMeas = yTrue + noise[k];
+        yMeasLog[k] = yMeas;
         #ifdef DEBUG_PRINT
-        ySim_f[k] = ySim[k].to_double();
+        yMeas_f = yMeas.to_double();
+        yMeasLog_f[k] = yMeasLog[k].to_double();
         #endif
 
         /* --- Convert y(k) to digital ----------------------------------- */
         #ifdef CONVERSIONS_MODE
         digital_output_type yrefDig = ADConvertY(yref[k]);
-        digital_output_type yCurrDig = ADConvertY(yCurr);
-        ySimDig[k] = yCurrDig;
+        digital_output_type yMeasDig = ADConvertY(yMeas);
+        yMeasDigLog[k] = yMeasDig;
         #else
         digital_output_type yrefDig = yref[k];
-        digital_output_type yCurrDig = yCurr;
+        digital_output_type yMeasDig = yMeas;
         #endif
 
         /* --- Call controller ------------------------------------------- */
         /*
          * controller() receives y(k) and yref as digital samples.
-         * It returns the updated uOptDig sequence, whose first element
-         * uOptDig[0] is u(k) in the receding-horizon sense.
+         * It returns the updated uCtrlDig sequence, whose first element
+         * uCtrlDig[0] is u(k) in the receding-horizon sense.
          * The controller internally updates its own history; we do NOT
          * duplicate that update here.
          */
-        digital_input_type uOptDig = controller(yCurrDig, yrefDig);
+        digital_input_type uCtrlDig = controller(yMeasDig, yrefDig);
 
         /* Receding-horizon: only the first input of the solution is applied. */
         #ifdef CONVERSIONS_MODE
-        const input_type uOut = DAConvertU(uOptDig);
+        const input_type uCtrl = DAConvertU(uCtrlDig);
         #else
-        const input_type uOut = uOptDig;
+        const input_type uCtrl = uCtrlDig;
+        #endif
+
+        #ifdef DEBUG_PRINT
+        uCtrl_f = uCtrl.to_double();
         #endif
 
         /*
          * --- Input of the interval [k*Ts, (k+1)*Ts) --------------------
-         * uSim[k] / uSimDig[k] log the input in force for (most of) it.
+         * uAppliedLog[k] / uAppliedDigLog[k] log the input in force for (most of) it.
          * With DELAY_COMPENSATION this call returned u(k+1), applied at the
          * NEXT instant: the interval runs on the previous call's result,
          * already on the DAC. Without it, the result takes effect after the
@@ -239,24 +248,20 @@ int main(void)
          * that (no latency: the original test bench).
          */
         #ifdef DELAY_COMPENSATION
-        uSim[k] = uDac;
+        uAppliedLog[k] = uApplied;
         #ifdef CONVERSIONS_MODE
-        uSimDig[k] = uDacDig;
-        uDacDig = uOptDig;
+        uAppliedDigLog[k] = uAppliedDig;
+        uAppliedDig = uCtrlDig;
         #endif
-        plantPush(plant, double(ySim[k]), double(uDac), double(uDac), 0.0);
-        uDac = uOut;
+        plantPush(plant, double(yMeasLog[k]), double(uApplied), double(uApplied), 0.0);
+        uApplied = uCtrl;
         #else
-        uSim[k] = uOut;
+        uAppliedLog[k] = uCtrl;
         #ifdef CONVERSIONS_MODE
-        uSimDig[k] = uOptDig;
+        uAppliedDigLog[k] = uCtrlDig;
         #endif
-        plantPush(plant, double(ySim[k]), double(uDac), double(uOut), testbench_settings::computeDelayFraction);
-        uDac = uOut;
-        #endif
-
-        #ifdef DEBUG_PRINT
-        uOpt_f = uOut.to_double();
+        plantPush(plant, double(yMeasLog[k]), double(uApplied), double(uCtrl), testbench_settings::computeDelayFraction);
+        uApplied = uCtrl;
         #endif
     }
 
@@ -274,28 +279,28 @@ int main(void)
     }
 
     /* Digital columns only exist with ADC/DAC conversions (FIXED without
-     * CONVERSIONS_MODE used to print uSimDig/ySimDig, which are not
+     * CONVERSIONS_MODE used to print uAppliedDigLog/yMeasDigLog, which are not
      * declared in that mode, and failed to compile) */
     #if defined(CONVERSIONS_MODE)
-        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY uSimDig ySimDig vol Ts\n");
+        fprintf(fp, "uAppliedLog yMeasLog yref uMin uMax yMin yMax deltaY uAppliedDigLog yMeasDigLog vol Ts\n");
     #else
-        fprintf(fp, "uSim ySim yref uMin uMax yMin yMax deltaY vol Ts\n");
+        fprintf(fp, "uAppliedLog yMeasLog yref uMin uMax yMin yMax deltaY vol Ts\n");
     #endif
 
     for (int k = 0; k < nSim; k++)
     {
 #if defined(FIXED) && defined(CONVERSIONS_MODE)
         fprintf(fp, "%f %f %f %f %f %f %f %f %f %f %e %e\n",
-                uSim[k].to_float(), ySim[k].to_float(),
+                uAppliedLog[k].to_float(), yMeasLog[k].to_float(),
                 yref[k].to_float(),
                 UMIN.to_float(), UMAX.to_float(),
                 YMIN.to_float(), YMAX.to_float(),
                 DELTAY.to_float(),
-                uSimDig[k].to_float(), ySimDig[k].to_float(),
+                uAppliedDigLog[k].to_float(), yMeasDigLog[k].to_float(),
                 volumes[k].to_float()/volumes[0].to_float(), Ts);
 #elif defined(FIXED)
         fprintf(fp, "%f %f %f %f %f %f %f %f %e %e\n",
-                uSim[k].to_float(), ySim[k].to_float(),
+                uAppliedLog[k].to_float(), yMeasLog[k].to_float(),
                 yref[k].to_float(),
                 UMIN.to_float(), UMAX.to_float(),
                 YMIN.to_float(), YMAX.to_float(),
@@ -303,16 +308,16 @@ int main(void)
                 volumes[k].to_float()/volumes[0].to_float(), Ts);
 #elif defined(CONVERSIONS_MODE)
         fprintf(fp, "%f %f %f %f %f %f %f %f %d %d %e %e\n",
-                (double)uSim[k], (double)ySim[k],
+                (double)uAppliedLog[k], (double)yMeasLog[k],
                 (double)yref[k],
                 (double)UMIN, (double)UMAX,
                 (double)YMIN, (double)YMAX,
                 (double)DELTAY,
-                (int)uSimDig[k], (int)ySimDig[k],
+                (int)uAppliedDigLog[k], (int)yMeasDigLog[k],
                 (double)volumes[k]/(double)volumes[0], Ts);
 #else
         fprintf(fp, "%f %f %f %f %f %f %f %f %e %e\n",
-                (double)uSim[k], (double)ySim[k],
+                (double)uAppliedLog[k], (double)yMeasLog[k],
                 (double)yref[k],
                 (double)UMIN, (double)UMAX,
                 (double)YMIN, (double)YMAX,
@@ -336,13 +341,13 @@ int main(void)
     int nViolY = 0, nViolDy = 0;
     for (int k = 0; k < nSim; k++)
     {
-        const double y = double(ySim[k]);
+        const double y = double(yMeasLog[k]);
         const double v = (y > double(YMAX)) ? y - double(YMAX) :
                          (y < double(YMIN)) ? double(YMIN) - y : 0.0;
         if (v > 0.0) { nViolY++; if (v > maxViolY) maxViolY = v; }
         if (k > 0)
         {
-            const double dy = y - double(ySim[k - 1]);
+            const double dy = y - double(yMeasLog[k - 1]);
             const double vd = ((dy < 0.0) ? -dy : dy) - double(DELTAY);
             if (vd > 0.0) { nViolDy++; if (vd > maxViolDy) maxViolDy = vd; }
         }
@@ -391,7 +396,7 @@ int main(void)
         FILE* g = fopen(TB_OUT_DIR "golden_u.txt", "w");
         if (g)
         {
-            for (int k = 0; k < nSim; k++) fprintf(g, "%.17g\n", double(uSim[k]));
+            for (int k = 0; k < nSim; k++) fprintf(g, "%.17g\n", double(uAppliedLog[k]));
             fclose(g);
         }
         #else
@@ -414,7 +419,7 @@ int main(void)
             for (int k = 0; k < nSim; k++)
             {
                 double ug;
-                if (fscanf(g, "%lf", &ug) != 1 || ug != double(uSim[k]))
+                if (fscanf(g, "%lf", &ug) != 1 || ug != double(uAppliedLog[k]))
                 {
                     if (firstMismatch < 0) firstMismatch = k;
                     nMismatch++;

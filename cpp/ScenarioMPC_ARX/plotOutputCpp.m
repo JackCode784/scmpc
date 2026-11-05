@@ -21,12 +21,12 @@ if isfield(opts, 'fileName'), fileName = opts.fileName; else, fileName = "output
 data = readtable(fullfile(d, fileName), VariableNamingRule="preserve");
 
 % Tracking error
-data.err = data.yref - data.ySim;
+data.err = data.yref - data.yMeasLog;
 errMean = mean(data.err);
 errRMSE = sqrt(mean(data.err.^2));
 
 % Output "derivative" computation
-yDer = diff(data.ySim);
+yDer = diff(data.yMeasLog);
 
 % Plots
 t = data.Ts .* (0:height(data)-1)';
@@ -34,22 +34,22 @@ t = data.Ts .* (0:height(data)-1)';
 figure(Name=titleStr); subplot(3,1,1);
 hold on;
 yyaxis left;
-plot(t, data.ySim, 'LineWidth', 1.5); grid on;xlabel('time [s]');
+plot(t, data.yMeasLog, 'LineWidth', 1.5); grid on;xlabel('time [s]');
 plot(t, data.yref, 'r--', 'LineWidth', 1.5);
 yline(data.yMin(1), 'k--', num2str(data.yMin(1)), 'LineWidth',1.5);
 yline(data.yMax(1), 'k--', num2str(data.yMax(1)), 'LineWidth',1.5);
 hold off;
 ylabel('Simulated analog output');
 legend('y_k', 'yref');
-if ismember('ySimDig', data.Properties.VariableNames)
-    % uSimDig = output(:,8);
-    % ySimDig = output(:,9);
+if ismember('yMeasDigLog', data.Properties.VariableNames)
+    % uAppliedDigLog = output(:,8);
+    % yMeasDigLog = output(:,9);
 
     % figure;
     % subplot(2,1,1);
     yyaxis right;
     hold on;
-    stairs(t, data.ySimDig, 'LineWidth', 1.5); grid on; ylabel('Simulated digital output');
+    stairs(t, data.yMeasDigLog, 'LineWidth', 1.5); grid on; ylabel('Simulated digital output');
     hold off;
     legend('off');
 end
@@ -69,15 +69,15 @@ title('\Deltay');
 % Optimal input
 subplot(3,1,3);
 hold on;
-plot(t, data.uSim, 'LineWidth', 1.5); grid on;xlabel('time [s]');
+plot(t, data.uAppliedLog, 'LineWidth', 1.5); grid on;xlabel('time [s]');
 yline(data.uMax(1),'k--', num2str(data.uMax(1)), 'LineWidth',1.5);
 yline(data.uMin(1),'k--', num2str(data.uMin(1)), 'LineWidth',1.5);
 hold off;
 ylabel('u^*_k');
-if ismember('uSimDig', data.Properties.VariableNames)
+if ismember('uAppliedDigLog', data.Properties.VariableNames)
     yyaxis right;
     hold on;
-    stairs(t, data.uSimDig, 'LineWidth', 1.5); grid on;
+    stairs(t, data.uAppliedDigLog, 'LineWidth', 1.5); grid on;
     ylabel('Optimized digital input');title('Optimal input');
 end
 

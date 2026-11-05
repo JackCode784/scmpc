@@ -55,11 +55,11 @@ for t = 1:nTags
         c = okColor; if violating(r), c = badColor; end
 
         subplot(3,1,1); hold on;
-        plot(absTime, data.ySim, Color=c, LineWidth=1);
+        plot(absTime, data.yMeasLog, Color=c, LineWidth=1);
         subplot(3,1,2); hold on;
-        plot(absTime(2:end), diff(data.ySim), Color=c, LineWidth=1);
+        plot(absTime(2:end), diff(data.yMeasLog), Color=c, LineWidth=1);
         subplot(3,1,3); hold on;
-        plot(absTime, data.uSim, Color=c, LineWidth=1);
+        plot(absTime, data.uAppliedLog, Color=c, LineWidth=1);
     end
 
     % Reference and bounds (identical in every run)
