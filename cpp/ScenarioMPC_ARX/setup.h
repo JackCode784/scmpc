@@ -319,6 +319,9 @@ struct UncertainMap
     int red [nTheta];   /* [i] -> reduced index, or -1 if i is certain   */
 };
 
+/* Interval Hull diagonal matrix becomes only the diagonal vector */
+struct IntervalHull { double Dg[nTheta]; };
+
 constexpr UncertainMap makeUncertainMap()
 {
     UncertainMap m{};
@@ -333,8 +336,27 @@ constexpr UncertainMap makeUncertainMap()
     return m;
 }
 
+constexpr IntervalHull computeIntervalHull()
+{
+    IntervalHull ih = {};
+
+    for (int i = 0; i < nTheta; i++)
+    {
+        double Dg = 0.0;
+        for (int j = 0; j < nGens; j++)
+        {
+            const double g = generatorsInit[i][j];
+            Dg += (g < 0.0) ? -g : g;
+        }
+        ih.Dg[i] = Dg;
+    }
+
+    return ih;
+}
+
 constexpr UncertainMap UNC_MAP = makeUncertainMap();
 constexpr int nUnc = UNC_MAP.n;
+constexpr IntervalHull DgInit = computeIntervalHull();
 
 static_assert(nUnc >= 1,
     "Every row of generatorsInit is zero: the model is fully known, so there "
@@ -665,34 +687,17 @@ struct StripCoeffs
 
 static StripCoeffs computeStripCoeffs()
 {
-    /* theta_type conversions of double initializers for
-    zonotope center and generators. */
-    theta_type c0[nTheta];
-    theta_type G [nTheta][nGens];
-    for(int i = 0; i < nTheta; i++)
-    {
-        c0[i] = theta_type(thetaNominalInit[i]);
-        for(int j = 0; j < nGens; j++) G[i][j] = theta_type(generatorsInit[i][j]);
-    }
-
     StripCoeffs out{};
     double qmyInvDmc0Acc = 0.0;
 
     for (int i = 0; i < nTheta; i++)
     {
-        double Dg_i = 0.0;
-        for (int j = 0; j < nGens; j++)
-        {
-            double g = double(G[i][j]);
-            Dg_i += (g < 0.0) ? -g : g;
-        }
-
         const bool   isY        = (i < na);
         const double gainRatio  = isY ? 1.0 : double(yNormGain) / double(uNormGain);
         const double qi         = isY ? double(yNormOffset)    : double(uNormOffset);
 
-        const double myInvDmDg_i = gainRatio * Dg_i;
-        const double myInvDmc0_i = gainRatio * double(c0[i]);
+        const double myInvDmDg_i = gainRatio * DgInit.Dg[i];
+        const double myInvDmc0_i = gainRatio * double(thetaNominalInit[i]);
 
         out.myInvDmDg[i]  = myInvDmDg_i;
         out.qmyInvDmDg[i] = -qi * myInvDmDg_i;
