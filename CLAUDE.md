@@ -37,7 +37,7 @@ Where the code differs from the README's formulation:
 
 ## Building and running the simulation
 
-There is no build system and no unit-test framework. The closed-loop test bench `testMain.cpp` is the test: it simulates the controller against a plant, reports constraint violations and RMSE, and writes trajectories.
+There is no build system. The closed-loop test bench `testMain.cpp` simulates the controller against a plant, reports constraint violations and RMSE, and writes trajectories. `tests/` holds the automated checks (C++ only, see `tests/README.md`): `tests/scmpc_test regress | unit | closedloop`.
 
 ```bash
 cd cpp/ScenarioMPC_ARX
@@ -81,11 +81,13 @@ So run C simulation first, and set `testbench_settings::nRuns = 1` for co-simula
 
 ## Verifying changes
 
-The established check for refactors and pragma changes is that **C simulation output is byte-identical to the previous commit**:
+The established check for refactors and pragma changes is that **C simulation output is byte-identical to the previous commit**. `tests/scmpc_test regress <old> <new>` (`WORKTREE` = files on disk) does all of the following; by hand:
 
 1. Build the old tree (`git archive <rev> cpp/ScenarioMPC_ARX`) and the new tree with the same configuration (`nRuns` reduced, e.g. 3). Set every mode flag explicitly in both trees: the committed defaults have changed over time (before `qol/log2-weights`, `CONVERSIONS_MODE` and `NRMLZ` were off).
 2. Run both and `cmp` every output file.
 3. Do this across a matrix of configurations: systems (pendulum, buck converters), fixed and float, the three pragma profiles, with and without scenarios, delay compensation, passive learning.
+
+For changes to a function, also run `tests/scmpc_test unit`; for deliberate behaviour changes, `tests/scmpc_test closedloop` (and `--record` once the new behaviour is accepted).
 
 Pragmas never change C simulation, so any difference is a behaviour change. Hardware effects (timing, latency, instance counts) can only be checked from Vitis reports (`csynth.rpt`, `hls_compile.log`, implementation reports), which the user provides.
 
@@ -142,6 +144,13 @@ With `DELAY_COMPENSATION`, a call at k computes u(k+1) and treats u(k) as known 
 - **Interval hull D_G** of the initial zonotope is `DgInit.Dg[i]` (`nTheta` entries, 0 for certain parameters, so divide only over `UNC_MAP` rows). `initControllerState` and `computeStripCoeffs` both use it. `computeStripCoeffs` works in double from the `*Init` arrays and rounds only into the `StripCoeffs` member types. Never route physical θ through `theta_type`: with `NRMLZ` it is sized for the normalized zonotope (`ap_fixed<18,2>` for the pendulum). Doing so used to saturate θ₁ = 2 and zero G₁₁ = −10⁻⁶, giving the fixed-point controller a model a few percent off the float one (fixed in f313012).
 - **Header-defined references need `static`.** A namespace-scope `const`/`constexpr` *object* has internal linkage, but a reference does not: `static constexpr const double (&thetaTrueInit)[nTheta] = thetaNominalInit;` (the pendulum) needs the `static`, or every `.cpp` that includes the header defines the same symbol and the link fails.
 - **`static const ap_fixed` constants** are initialized dynamically. Vitis HLS 2026.1 co-simulation matched C simulation with them. The older toolchain produced constant-zero RTL, fixed on branch `fix/hw-constants-on-e6e7d01`.
+
+## Known issues (found by the unit tests, not fixed yet)
+
+- **ADC/DAC offsets lose half a code.** For symmetric ranges (the pendulum) `YBias`/`UBias` = 2047.5, but `digital_*_type` is an integer type: 2048 in fixed point (rounded), 2047 in float (`int`, truncated).
+- **Float and fixed model the converters differently.** In float, codes are stored in an `int` and truncated (up to 1 code); fixed point rounds (up to 1/2 code). The fixed-point `yConvCoeff` (`dig2ctrl_type`, 11 bits) adds a gain error of up to 1.5 codes at full scale.
+- **`zonotopeVolume` precision in fixed point.** `elim_type` has 9 fractional bits (LSB 2^-9). The normalized initial volume of the buck is 0.02, so volumes carry about 10% error and fall below `vol_type`'s LSB after a few hundred steps of passive learning. The minimum-volume selection of the strip intersection then works on noise.
+- **Passive learning on the pendulum is degenerate.** σ = 0 makes every strip zero-width, so the zonotope's volume is 0 after the first step, in float too.
 
 ## Conventions
 

@@ -1,0 +1,13 @@
+# Closed-loop acceptance limits (scmpc_test closedloop --record).
+# Pendulum, BALANCED, 10 runs, float and fixed (NRMLZ + CONVERSIONS_MODE).
+# Each value is the recorded one plus a margin: 25% for continuous metrics,
+# one run for violation counts. Edit by hand to tighten or relax.
+runs 10
+rms_u_fixed_minus_float 0.14494
+rms_y_fixed_minus_float 0.0255109
+rmse_fixed 0.849404
+rmse_float 0.836506
+runs_viol_dy_fixed 3
+runs_viol_dy_float 2
+runs_viol_y_fixed 1
+runs_viol_y_float 1

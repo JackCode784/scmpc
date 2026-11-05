@@ -1,0 +1,57 @@
+{
+    // Test tasks for cpp/ScenarioMPC_ARX: Terminal > Run Task... (or Ctrl+Shift+P, "Tasks: Run Task").
+    // FIXED configurations need the ap_types headers: set the environment variable
+    // SCMPC_AP_INCLUDE to their include/ directory before starting VS Code
+    // (or edit "SCMPC_AP_INCLUDE" below). See tests/README.md.
+    "version": "2.0.0",
+    "options": {
+        "env": {
+            "SCMPC_AP_INCLUDE": "${env:SCMPC_AP_INCLUDE}"
+        }
+    },
+    "tasks": [
+        {
+            "label": "tests: build harness",
+            "type": "shell",
+            "command": "g++ -std=c++17 -O2 -o tests/scmpc_test tests/harness/scmpc_test.cpp",
+            "problemMatcher": "$gcc",
+            "presentation": { "reveal": "silent" }
+        },
+        {
+            "label": "tests: unit (working tree)",
+            "type": "shell",
+            "command": "${workspaceFolder}/tests/scmpc_test unit",
+            "dependsOn": "tests: build harness",
+            "problemMatcher": []
+        },
+        {
+            "label": "tests: regress (working tree vs a revision)",
+            "type": "shell",
+            "command": "${workspaceFolder}/tests/scmpc_test regress ${input:oldRev} WORKTREE ${input:regressOptions}",
+            "dependsOn": "tests: build harness",
+            "problemMatcher": []
+        },
+        {
+            "label": "tests: closed loop (working tree)",
+            "type": "shell",
+            "command": "${workspaceFolder}/tests/scmpc_test closedloop",
+            "dependsOn": "tests: build harness",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "oldRev",
+            "type": "promptString",
+            "description": "Revision to compare the working tree against (branch, tag or commit)",
+            "default": "HEAD"
+        },
+        {
+            "id": "regressOptions",
+            "type": "pickString",
+            "description": "Options",
+            "options": ["", "--quick", "--ignore-header", "--quick --ignore-header"],
+            "default": ""
+        }
+    ]
+}

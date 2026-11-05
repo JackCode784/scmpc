@@ -126,7 +126,8 @@ dist/
 Thumbs.db
 
 # Editors / IDEs
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 .idea/
 *.swp
 *~
@@ -306,3 +307,8 @@ vitis/scmpc-controller2026/scmpc-controller2026/
 # last-run-failed marker
 vitis/scmpc-controller2026/compile_commands.json
 vitis/scmpc-controller2026/.hls.failed
+
+# Test harness (tests/README.md): build outputs and the compiled tool
+tests/build/
+tests/scmpc_test
+tests/scmpc_test.exe
