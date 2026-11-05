@@ -259,20 +259,22 @@ Currently, the agreed upcoming work is to:
 ---
 
 Some additional tweaks and features that would be needed are:
-- [ ] Change name of some variables (e.g. `yHist` $\rightarrow$ `yHistCtrl`).
+- [x] Change name of some variables (e.g. `yHist` $\rightarrow$ `yHistCtrl`).
 - [x] Add the sampling time $T_s$ to C.
 - [ ] Automatic test setups for C code;
 - [ ] Automatic workflow for Vitis fixed point simulations, synthesis and implementation;
 - [ ] Automatic derivation of "good" hyperparameters values ($Q, R, \alpha, I, N_y, N_u, S$) for a system (by grid search if no optimal values are theoretically possible, MATLAB or C++);
-- [ ] Difference between "true" plant and controller's plant model.
-- [ ] Refactor: use structs instead of defines and macros to merge together and set same-topic hyperparameters ($Q, R, \alpha, I, N_y, N_u, S$ number of runs, number of simulation steps, etc.) and the various operation modes' parameters, as well as system constraints and properties.
+- [ ] Scale definition of new systems (e.g. every system could describe a `struct/namespace` with constraints, dimensions, noise, initial conditions, initial zonotope, sampling time, everything in `system_configs.h`). 
+- [ ] Give the possibility, for each system, to define a "true" plant and the controller's ARX model (already done with the pendulum).
+- [ ] Refactor: use `struct/namespace` instead of defines and macros to merge together and set same-topic hyperparameters ($Q, R, \alpha, I, N_y, N_u, S$, number of simulation steps, etc.) and the various operation modes' parameters, as well as system constraints and properties.
 - [x] Compute logarithms instead of writing them by hand.
-- [ ] Cost function: independent and separated input/output contributions, maybe even separate nominal system (always constrained and tracking) and scenarios.
+- [x] Cost function: independent and separated input/output contributions
+- [ ] Separate nominal system (always constrained and tracking) and scenarios contributions, so that only scenarios cost/constraint violations can be turned on and off, with `#ifdef`s if more Vitis-friendly.
 - [ ] Automatic definition of per-system `pragma`s.
-- [ ] Re-order experiments (i.e. attempts and some researches) in appropriate directories.
+- [x] Re-order experiments (i.e. attempts and some researches) in appropriate directories.
 - [ ] Alignment between MATLAB and C++ (e.g., use `patternsearch` instead of `yalmip` and stop using `CORA` for zonotope representation - it's not really needed).
 - [x] Use `constexpr` instead of `#define` for the system dimensions (`na`, `nb`, `nd` (formerly `nk`), `nGens`, `nTheta`, `nOpt`): they are scoped and typed, and give the same hardware. Only what the preprocessor itself must see stays a macro: `ACTIVE_SYSTEM` and the system ids, the mode flags, and the arguments of `HLS_PRAGMA(...)`.
 - [x] Write the per-system initial values (`THETA_NOMINAL_UNNORM`, `GENERATORS_UNNORM`, `THETA_TRUE_INIT`, `Y_HIST_UNNORM`, `U_HIST_UNNORM`) as `constexpr double` arrays, read directly by `initControllerState` and `plant.h`. This removes the macro lists and the `*_TABLE` copies in `setup.h`, and a `static_assert` can check each array's length. Do it together with the renaming of point 1.
 - [x] Derive the initial warm start (`U_PREV_UNNORM`) from the initial input history instead of giving it per system: it must be the same operating point anyway, and its length `NhorU` is a tuning parameter, not a property of the system.
 - [ ] Per-system tuning parameters ($N_y, N_u, S, I$ and the weight exponents `log2Q`, `log2P`, `log2R`) in their own file (e.g. `tuning.h`), separate from the system models in `system_configs.h`, with a global default. Per-system `log2R` is also what the buck converters' fixed-point build needs.
-- [ ] Compile-time computation of $D_G$ and keep it as a separate variable (diagnostics, denormalized zonotopes over time,...).
+- [x] Compile-time computation of $D_G$ and keep it as a separate variable (diagnostics, denormalized zonotopes over time,...).
