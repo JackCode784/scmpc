@@ -133,15 +133,9 @@ static bool initControllerState()
     {
         const int i = UNC_MAP.full[k];
         #ifdef NRMLZ
-        double Dg = 0.0;
-        for (int j = 0; j < nGens; j++)
-        {
-            const double g = generatorsInit[i][j];
-            Dg += (g < 0.0) ? -g : g;
-        }
         thetaCenter[k] = 0.0;
         for (int j = 0; j < nGens; j++)
-            thetaGens[k][j] = generatorsInit[i][j] / Dg;
+            thetaGens[k][j] = generatorsInit[i][j] / DgInit.Dg[k];
         #else
         thetaCenter[k] = thetaNominalInit[i];
         for (int j = 0; j < nGens; j++)

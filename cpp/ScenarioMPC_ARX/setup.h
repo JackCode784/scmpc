@@ -319,6 +319,9 @@ struct UncertainMap
     int red [nTheta];   /* [i] -> reduced index, or -1 if i is certain   */
 };
 
+/* Interval Hull diagonal matrix becomes only the diagonal vector */
+struct IntervalHull { double Dg[nUnc]; };
+
 constexpr UncertainMap makeUncertainMap()
 {
     UncertainMap m{};
@@ -333,8 +336,28 @@ constexpr UncertainMap makeUncertainMap()
     return m;
 }
 
+constexpr IntervalHull computeIntervalHull()
+{
+    IntervalHull ih = {};
+
+    for (int k = 0; k < nUnc; k++)
+    {
+        const int i = UNC_MAP.full[k];
+        double Dg = 0.0;
+        for (int j = 0; j < nGens; j++)
+        {
+            const double g = generatorsInit[i][j];
+            Dg += (g < 0.0) ? -g : g;
+        }
+        ih.Dg[k] = Dg;
+    }
+
+    return ih;
+}
+
 constexpr UncertainMap UNC_MAP = makeUncertainMap();
 constexpr int nUnc = UNC_MAP.n;
+constexpr IntervalHull DgInit = computeIntervalHull();
 
 static_assert(nUnc >= 1,
     "Every row of generatorsInit is zero: the model is fully known, so there "
