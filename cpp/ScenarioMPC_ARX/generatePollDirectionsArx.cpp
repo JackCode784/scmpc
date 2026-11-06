@@ -84,7 +84,7 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 			/* BUG: B[i][j] = 0 at least when i = j = 0 --- should be -256 */
 			// B[i][j] = (direction_type)(hls::round(mesh[i] * H[i][j]));	// old, needs mesh[nOpt] defined, don't know if it works
 			// B[i][j] = H[i][j] << (frameMeshDiff[i]+MADS_C);	// doesn't work
-			B[i][j] = H[i][j] * (1 << frameMeshDiff[i]+MADS_C);	// this works
+			B[i][j] = H[i][j] * (1 << (frameMeshDiff[i]+MADS_C));	// this works
 			directions[i][j] = B[i][j];
 			directions[i][j + nOpt] = -B[i][j];
 			
@@ -144,12 +144,12 @@ void generateHouseholderMatrix(const rand_type v[nOpt], householder_type H[nOpt]
 		H_f[i][i] = H[i][i].to_double();
 		#endif
 		
-		// Saturates householder matrix entries (use householderClamp for previous code)
+		// Saturates householder matrix entries (use mads::householderClamp for previous code)
 		for(int j = 0; j < nOpt; j++)
 		{
 			// Saturates householder matrix entries
-			H[i][j] = (H[i][j] > householderClamp) ? householder_type(householderClamp) :
-						((H[i][j] < -householderClamp) ? householder_type(-householderClamp) : H[i][j]);
+			H[i][j] = (H[i][j] > mads::householderClamp) ? householder_type(mads::householderClamp) :
+						((H[i][j] < -mads::householderClamp) ? householder_type(-mads::householderClamp) : H[i][j]);
 			// H[i][j] /= hMax[j];
 			#ifdef DEBUG_PRINT
 			H_f[i][j] = H[i][j].to_double();

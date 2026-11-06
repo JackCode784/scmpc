@@ -537,16 +537,15 @@ static_assert(log2P < output_weight_type::iwidth && output_weight_type::iwidth -
 namespace mads
 {
     constexpr int iter = 10;        /* MADS iterations per controller call     */
-    constexpr int frameExpStep = 1;     /* frame-size update base                  */
-    constexpr int pollScaleStep = 1;            /* frame-size exponent step  (integer > 0) */
+    constexpr int frameExpStep = 1; /* frame-size update step. frameExp += frameExpStep on success, frameExpStep > 0 */
 
     /**
-    * householderClamp = 2^{-MADS_C}: pre-computed scaling factor for the mesh update.
-    * In FIXED mode this is exactly 0.5 = 2^{-1}, needing only 1 integer bit,
-    * so a 1-bit ap_ufixed is used to save multiplier resources.
-    * If MADS_C changes, update householderClamp and its type consistently.
+    * householderClamp = 2^{-gamma}: pre-computed scaling factor for the mesh update.
+    * If gamma changes, householderClamp updates.
     */
-    static const householder_type householderClamp = householder_type(pow2(-pollScaleStep));
+    constexpr int gamma = 1;        /* (integer > 0) */
+    static const householder_type householderClamp = householder_type(pow2(-gamma));
+    static_assert(gamma >= 0, "gamma must be non negative.");
     
     constexpr int frameExpMin = -20;   /* frameExp minimum value */
 
@@ -558,7 +557,7 @@ namespace mads
 }
 constexpr int MADS_ITER = mads::iter;
 constexpr int TAU       = mads::frameExpStep; 
-constexpr int MADS_C    = mads::pollScaleStep; 
+constexpr int MADS_C    = mads::gamma; 
 constexpr int FRAME_EXP_MIN = mads::frameExpMin;
 
 
