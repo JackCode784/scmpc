@@ -413,24 +413,46 @@ extern norm_input_type  uHistCtrl[nb + nd - 1];
 /* ======================================================================
    MPC PARAMETERS
    ====================================================================== */
+namespace mpc
+{
+    /** Prediction horizon N: controller optimises over the next N steps. */
+    constexpr int predHrzn = 15;
 
-/** Prediction horizon N: controller optimises over the next N steps. */
-constexpr int Nhor  = 15;
+    /**
+     * Control horizon Nu <= N: the input sequence u(k), ..., u(k+Nu-1) is
+     * optimised; u is held constant from step Nu to N ("input blocking").
+     */
+    constexpr int ctrlHrzn = 3;
 
-/**
- * Control horizon Nu <= N: the input sequence u(k), ..., u(k+Nu-1) is
- * optimised; u is held constant from step Nu to N ("input blocking").
- */
-constexpr int NhorU = 3;
+    /* ======================================================================
+        MPC COST-FUNCTION WEIGHTS
+        ======================================================================
+        Stage cost per step:  l(y, u) = weightQ*(y - y_ref)^2 + weightR*u^2
+        Terminal cost:        V_f(y)   = weightP*(y(k+N) - y_ref)^2
+        ====================================================================== */
+    constexpr int log2Q = 4;
+    constexpr int log2P = 4;
+    constexpr int log2R = 2;
+}
 
-/**
- * Number of uncertainty scenarios Nscen, EXCLUDING the nominal system.
- * The cost is evaluated on Nscen + 1 models simultaneously.
- * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
- */
+namespace scen
+{
+    /**
+     * Number of uncertainty scenarios Nscen, EXCLUDING the nominal system.
+     * The cost is evaluated on Nscen + 1 models simultaneously.
+     * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
+     */
+    constexpr int log2Nscen = 4;
+    constexpr int Nscen = 1 << log2Nscen;
+}
+
+
+constexpr int Nhor  = mpc::predHrzn;
+constexpr int NhorU = mpc::ctrlHrzn;
+
 constexpr double pow2(int e) { return e >= 0 ? double(1LL << e) : 1.0 / double(1LL << -e); }
-constexpr int log2Nscen = 4;
-constexpr int Nscen = 1 << log2Nscen;
+constexpr int log2Nscen = scen::log2Nscen;
+constexpr int Nscen = scen::Nscen;
 
 static_assert(log2Nscen >= 0,
     "Number of scenarios must be a positive integer.");
@@ -492,9 +514,9 @@ extern norm_input_type uOptPrev[NhorU];
    Stage cost per step:  l(y, u) = weightQ*(y - y_ref)^2 + weightR*u^2
    Terminal cost:        V_f(y)   = weightP*(y(k+N) - y_ref)^2
    ====================================================================== */
-constexpr int log2Q = 4;
-constexpr int log2P = 4;
-constexpr int log2R = 2;
+constexpr int log2Q = mpc::log2Q;
+constexpr int log2P = mpc::log2P;
+constexpr int log2R = mpc::log2R;
 
 static const output_weight_type weightQ = pow2(log2Q);   /* stage   output weight  */
 static const output_weight_type weightP = pow2(log2P);   /* terminal output weight */
@@ -512,10 +534,23 @@ static_assert(log2P < output_weight_type::iwidth && output_weight_type::iwidth -
    Sizes are stored in log-scale (frameIdx, meshIdx) as integers for
    efficient hardware arithmetic.
    ====================================================================== */
-constexpr int MADS_ITER = 10;   /* MADS iterations per controller call     */
-constexpr int TAU       = 1;   /* frame-size update base                  */
-constexpr int MADS_C    = 1;   /* frame-size exponent step  (integer > 0) */
-constexpr int FRAME_EXP_MIN = -20; /* frameExp minimum value */
+namespace mads
+{
+    constexpr int madsIter = 10;       /* MADS iterations per controller call     */
+    constexpr int frameUpdateBase = 1; /* frame-size update base                  */
+    constexpr int madsC = 1;           /* frame-size exponent step  (integer > 0) */
+    constexpr int frameExpMin = -20;   /* frameExp minimum value */
+
+    /** D0[j]: initial log2 frame-size exponent for optimisation variable j.
+     * Initial frame size = tau^D0[j].  More negative -> finer initial mesh.
+     * HLS hint: #pragma HLS ARRAY_PARTITION variable=D0 complete dim=1
+     */
+    constexpr int d0 = -8;              
+}
+constexpr int MADS_ITER = mads::madsIter;
+constexpr int TAU       = mads::frameUpdateBase; 
+constexpr int MADS_C    = mads::madsC; 
+constexpr int FRAME_EXP_MIN = mads::frameExpMin;
 
 /*
  * expC = 2^{-MADS_C}: pre-computed scaling factor for the mesh update.
@@ -527,7 +562,7 @@ constexpr int FRAME_EXP_MIN = -20; /* frameExp minimum value */
   static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5;
 //   static const norm_input_type expC = 0.5;
 #else
-  static const householder_type expC = 0.5;
+  static const householder_type expC = pow2(-MADS_C);
 #endif
 
 /*
@@ -535,7 +570,7 @@ constexpr int FRAME_EXP_MIN = -20; /* frameExp minimum value */
  * Initial frame size = tau^D0[j].  More negative -> finer initial mesh.
  * HLS hint: #pragma HLS ARRAY_PARTITION variable=D0 complete dim=1
  */
-static const mesh_exp_type D0_VAL = -8; // used in MADSARX, frameIdx init
+static const mesh_exp_type D0_VAL = mesh_exp_type(mads::d0); // used in MADSARX, frameIdx init
 // static const mesh_exp_type D0[nOpt] = { -8, -8, -8 }; // not used
 
 /* ======================================================================
