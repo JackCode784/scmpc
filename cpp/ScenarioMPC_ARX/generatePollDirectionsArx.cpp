@@ -27,9 +27,9 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 
 	#ifdef PRAGMAS
 	/*
-	 * This function runs once per MADS iteration (MADS_ITER=7 times per
+	 * This function runs once per MADS iteration (mads::iter=7 times per
 	 * controller() call), far less often than costFunctionArx (called
-	 * MADS_ITER*2*nOpt times), so full unrolling below is affordable here.
+	 * mads::iter*2*nOpt times), so full unrolling below is affordable here.
 	 * nOpt <= a handful for any realistic control horizon, so every array
 	 * is small enough to become individual registers rather than BRAM.
 	 */
@@ -64,7 +64,7 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 		
 		#ifndef FIXED
 		mesh_type mesh = 1;
-		for (int j = 0; j < frameMeshDiff[i] + MADS_C; j++)
+		for (int j = 0; j < frameMeshDiff[i] + mads::gamma; j++)
 			mesh *= 2;
 
 		for (int j = 0; j < nOpt; j++)
@@ -83,8 +83,8 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 		{
 			/* BUG: B[i][j] = 0 at least when i = j = 0 --- should be -256 */
 			// B[i][j] = (direction_type)(hls::round(mesh[i] * H[i][j]));	// old, needs mesh[nOpt] defined, don't know if it works
-			// B[i][j] = H[i][j] << (frameMeshDiff[i]+MADS_C);	// doesn't work
-			B[i][j] = H[i][j] * (1 << (frameMeshDiff[i]+MADS_C));	// this works
+			// B[i][j] = H[i][j] << (frameMeshDiff[i]+mads::gamma);	// doesn't work
+			B[i][j] = H[i][j] * (1 << (frameMeshDiff[i]+mads::gamma));	// this works
 			directions[i][j] = B[i][j];
 			directions[i][j + nOpt] = -B[i][j];
 			

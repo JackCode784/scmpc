@@ -212,7 +212,7 @@ typedef ap_ufixed<16,0>                         frac_type;
 typedef ap_uint<16>                         u16_type;
 
 /* Data type for weightQ, weightP. FIXED applies them as
- * shifts by log2Q/log2P (costFunctionArx), so they must be powers of two. 
+ * shifts by mpc::log2Q/mpc::log2P (costFunctionArx), so they must be powers of two. 
  * 8 bits so that the value itself (e.g. 16) is held
  * and can be checked: the former ap_ufixed<3,3> wrapped 16 around to 0. */
 typedef ap_ufixed<8,8> output_weight_type;
@@ -303,9 +303,9 @@ typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> strip_center_type;
 /* Input weight weightR in normalized units.
  * FIXED multiplies by it (costFunctionArx), like floating point does. */
 #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* weightR = 2^log2R */
+typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* weightR = 2^mpc::log2R */
 #else
-typedef ap_ufixed<3,0> input_weight_type; /* weightR = 2^log2R */
+typedef ap_ufixed<3,0> input_weight_type; /* weightR = 2^mpc::log2R */
 #endif
 
 /**

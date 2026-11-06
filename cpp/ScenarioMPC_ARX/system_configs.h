@@ -341,7 +341,7 @@ constexpr double uHistInit[nb+nd-1] ={ 0, 0};
  *
  * WHAT ACTUALLY HAPPENS IN CLOSED LOOP (measured, floating point,
  * NRMLZ/FIXED/CONVERSIONS_MODE all undefined - see setup.h's TARGET
- * SELECTION block - Nscen=4, MADS_ITER=7, the project's real values;
+ * SELECTION block - scen::nScen=4, mads::iter=7, the project's real values;
  * mean/max taken over simulation steps 200-300, i.e. 100+ steps after
  * the reference step, once the closed loop has settled into its
  * long-run behaviour rather than a transient):
@@ -353,32 +353,32 @@ constexpr double uHistInit[nb+nd-1] ={ 0, 0};
  *   stable out to 1200 steps.
  *
  *   USE_SCENS_CONSTR defined (the codebase's actual default: also
- *   check cost[1] against Nscen=4 parameter draws sampled at random
+ *   check cost[1] against scen::nScen=4 parameter draws sampled at random
  *   from the SAME zonotope every prediction step - see
  *   costFunctionArx.cpp/generateScenarios.cpp): output settles at
  *   y ~= 5.6-5.75 (12-15% over YMAX) - roughly HALF the exceedance of
  *   the certainty-equivalent case, a real and substantial improvement,
  *   but NOT a full elimination.
  *
- * WHY NOT A FULL ELIMINATION AT Nscen=4
+ * WHY NOT A FULL ELIMINATION AT scen::nScen=4
  * -----------------------------------------
  * This is sample-based, not exact worst-case, robustness: scenarios
  * are redrawn at random every call rather than fixed at the zonotope's
- * vertices, so whether a given call's Nscen*Nhor=20 draws happen to
+ * vertices, so whether a given call's scen::nScen*mpc::predHrzn=20 draws happen to
  * sample close to the b=3 vertex varies call to call, and
  * progressiveBarrierPollingArx's mesh resets to a small fixed size
  * (D0_VAL, setup.h) at the start of every controller() call, so MADS
  * can only make a small, local correction per call rather than jump
  * straight to the fully-robust input. The residual gap is a SAMPLE
  * BUDGET effect, not a broken mechanism: repeating this exact
- * experiment with Nscen bumped to 16 (in an isolated, non-committed
- * build - Nscen is a shared setup.h constant, changing it here would
+ * experiment with scen::nScen bumped to 16 (in an isolated, non-committed
+ * build - scen::nScen is a shared setup.h constant, changing it here would
  * also change SYSTEM_BUCK_LOSS's hardware area) reduced the exceedance
- * to ~2%; Nscen=64 reduced it to ~3 violations out of 100 samples
+ * to ~2%; scen::nScen=64 reduced it to ~3 violations out of 100 samples
  * checked, essentially eliminating it. This confirms the mechanism
  * converges toward the idealized worst-case-robust result as the
  * scenario budget grows - it is simply underpowered, not incorrect, at
- * the Nscen=4 budget this project's hardware profiles are sized for.
+ * the scen::nScen=4 budget this project's hardware profiles are sized for.
  *
  * SCOPE: validated in floating point with NRMLZ, FIXED and
  * CONVERSIONS_MODE all undefined - CTRL_MODE_SCMPC only.

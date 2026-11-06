@@ -19,7 +19,7 @@
  *   nGens                      - number of active generator columns
  *   yHistCtrl      [na]        - output history y(k−1), ..., y(k-na)
  *   uHistCtrl      [nb+nd-1]   - input  history u(k−1), ..., u(k-nb-nd+1)
- *   uOptPrev   [NhorU]         - last step's MADS solution u*(k−1), ...,
+ *   uOptPrev   [mpc::ctrlHrzn]         - last step's MADS solution u*(k−1), ...,
  *                                u*(k−1+NhorU−1), kept ONLY to seed the
  *                                next warm start (see Step 1b/7b below) -
  *                                not part of the ARX regressor, unlike uHistCtrl.
@@ -79,7 +79,7 @@ norm_input_type  uHistCtrl[nb + nd - 1];
  * all-zero default here caused floating-point simulation to oscillate
  * and never settle for the whole run, not just its first few samples).
  */
-norm_input_type  uOptPrev[NhorU];
+norm_input_type  uOptPrev[mpc::ctrlHrzn];
 
 #ifdef DELAY_COMPENSATION
 /*
@@ -151,7 +151,7 @@ static bool initControllerState()
     #endif
     for (int i = 0; i < na; i++)         yHistCtrl[i]    = yGain * yHistInit[i]     + yOff;
     for (int i = 0; i < nb + nd - 1; i++) uHistCtrl[i]    = uGain * uHistInit[i]     + uOff;
-    for (int i = 0; i < NhorU; i++)      uOptPrev[i] = uGain * uHistInit[0] + uOff;
+    for (int i = 0; i < mpc::ctrlHrzn; i++)      uOptPrev[i] = uGain * uHistInit[0] + uOff;
     #ifdef DELAY_COMPENSATION
     uAppliedCtrl = uGain * uHistInit[0] + uOff;
     #endif
@@ -192,7 +192,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
 	 * partitioning turns each into individual registers instead of a
 	 * single-/dual-port BRAM, which is required for those unrolled
 	 * accesses to happen in parallel and is affordable here because
-	 * nTheta, nGens, na, nb+nd-1 and NhorU are all <= 6 for every
+	 * nTheta, nGens, na, nb+nd-1 and mpc::ctrlHrzn are all <= 6 for every
 	 * ACTIVE_SYSTEM.
 	 */
 	#pragma HLS ARRAY_PARTITION variable=thetaCenter complete dim=1
@@ -231,33 +231,33 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /*
      * Previously this held uHistCtrl[0] constant across the whole horizon
      * ("freeze current input"), which is a poor guess whenever yref is
-     * moving: MADS then spends its limited MADS_ITER budget fighting its
+     * moving: MADS then spends its limited mads::iter budget fighting its
      * way away from a flat start instead of refining an already-good
      * trajectory, which is one of the reasons DELTAYNORM (the output-rate
      * constraint) gets violated on transients - see updateConstraintViolation.cpp.
      *
-     * Instead, shift uOptPrev = u*(k-1), ..., u*(k-1+NhorU-1) - the full
+     * Instead, shift uOptPrev = u*(k-1), ..., u*(k-1+mpc::ctrlHrzn-1) - the full
      * sequence MADS returned on the previous call - by one step: entry i
      * becomes the previous call's entry i+1 (it was one step further into
      * the future, now it is one step closer), and the last entry is
      * repeated (zero-order hold past the end of the previous horizon,
      * the standard choice when no better prediction is available there).
      *
-     * Edge case NhorU == 1 (nOpt == 1): the shift loop below has trip
-     * count NhorU-1 == 0, so it never executes (no out-of-bounds access
+     * Edge case mpc::ctrlHrzn == 1 (nOpt == 1): the shift loop below has trip
+     * count mpc::ctrlHrzn-1 == 0, so it never executes (no out-of-bounds access
      * to uOptPrev[i+1]), and the line after it degenerates to
      * uOptNorm[0] = uOptPrev[0], i.e. "reuse last step's only value" -
      * correct and in-bounds.
      */
-    norm_input_type uOptNorm[NhorU];
-    for (int i = 0; i < NhorU - 1; i++)
+    norm_input_type uOptNorm[mpc::ctrlHrzn];
+    for (int i = 0; i < mpc::ctrlHrzn - 1; i++)
     {
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
         uOptNorm[i] = uOptPrev[i + 1];
     }
-    uOptNorm[NhorU - 1] = uOptPrev[NhorU - 1]; // repeat last entry
+    uOptNorm[mpc::ctrlHrzn - 1] = uOptPrev[mpc::ctrlHrzn - 1]; // repeat last entry
 
     /* ------------------------------------------------------------------ */
     /*  Step 2 - [PL mode] Zonotope update                                */
@@ -464,13 +464,13 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * flow visible to the HLS scheduler.  The values are the most recent
      * ones: updated by step 2 in PL mode, or fixed at init in SCMPC mode.
      */
-    theta_type thetaScenarios[Nscen][nUnc];
+    theta_type thetaScenarios[scen::nScen][nUnc];
     #ifdef PRAGMAS
     /*
      * Declared here (its point of storage), not inside generateScenarios
-     * or computeArxOutput. costFunctionArx's Nhor loop is pipelined below
-     * with its inner Nscen loop unrolled (see costFunctionArx.cpp), so at
-     * every pipeline stage all Nscen rows of thetaScenarios are read in
+     * or computeArxOutput. costFunctionArx's mpc::predHrzn loop is pipelined below
+     * with its inner scen::nScen loop unrolled (see costFunctionArx.cpp), so at
+     * every pipeline stage all scen::nScen rows of thetaScenarios are read in
      * the same cycle: complete partitioning in both dimensions is what
      * makes that possible without BRAM port contention.
      */
@@ -487,10 +487,10 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * The scenarios and the centre stay fixed for this whole call, so the
      * normalization is folded into their coefficients once here, instead
      * of inside each of the 43 costFunctionArx calls' predictions (see
-     * computeArxCoeffs). Row Nscen is the nominal (thetaCenter) predictor.
+     * computeArxCoeffs). Row scen::nScen is the nominal (thetaCenter) predictor.
      */
-    arx_coeff_type arxCoeff [Nscen+1][nTheta];
-    arx_coeff_type arxOffset[Nscen+1];
+    arx_coeff_type arxCoeff [scen::nScen+1][nTheta];
+    arx_coeff_type arxOffset[scen::nScen+1];
     #ifdef PRAGMAS
     /* Same reason as thetaScenarios above: every row is read in the same
      * cycle by costFunctionArx's unrolled scenario/prediction logic. */
@@ -534,7 +534,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /* ------------------------------------------------------------------ */
     /*  Step 7b - Save this solution as next call's warm-start seed       */
     /* ------------------------------------------------------------------ */
-    for (int i = 0; i < NhorU; i++)
+    for (int i = 0; i < mpc::ctrlHrzn; i++)
     {
         #ifdef PRAGMAS
         #pragma HLS UNROLL
@@ -562,8 +562,8 @@ digital_input_type controller(const digital_output_type yCurrDig,
     #ifdef DEBUG_PRINT
     double yHistCtrl_f[na], uHistCtrl_f[nb+nd-1];
     double uOptDig_f = uOptDig.to_double();
-    double uOptNorm_f[NhorU];
-    for(int i = 0; i < NhorU; i++) uOptNorm_f[i] = uOptNorm[i].to_double();
+    double uOptNorm_f[mpc::ctrlHrzn];
+    for(int i = 0; i < mpc::ctrlHrzn; i++) uOptNorm_f[i] = uOptNorm[i].to_double();
     for(int i = 0; i < na; i++) yHistCtrl_f[i] = yHistCtrl[i].to_double();
     for(int i = 0; i < nb+nd-1; i++) uHistCtrl_f[i] = uHistCtrl[i].to_double();
     #endif

@@ -1,7 +1,7 @@
 #include "setup.h"
 
 // Uses MADS alg to compute optimal input sequence for ARX system
-void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], const norm_output_type yInit[na], const norm_output_type yref, const arx_coeff_type arxCoeff[Nscen+1][nTheta], const arx_coeff_type arxOffset[Nscen+1])
+void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], const norm_output_type yInit[na], const norm_output_type yref, const arx_coeff_type arxCoeff[scen::nScen+1][nTheta], const arx_coeff_type arxOffset[scen::nScen+1])
 {
 	#ifdef DEBUG_PRINT
 	double frameExp_f[nOpt], meshExp_f[nOpt], cost_f[2];
@@ -54,7 +54,7 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], c
 	#endif
 
 	/*
-	 * MADS iterates MADS_ITER times, after an iteration -1 that only
+	 * MADS iterates mads::iter times, after an iteration -1 that only
 	 * evaluates the starting point uOpt: it is placed in pollMatrix column
 	 * 0 and evaluated, alone, by the same costFunctionArx call as the poll
 	 * points (startOnly), which sets cost[] - the same numbers as calling
@@ -67,7 +67,7 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], c
 	 * algorithm's own outer loop. Iteration iter+1's poll matrix depends
 	 * on frameExp as updated by progressiveBarrierPollingArx at the END
 	 * of iteration iter, so the iterations are a true sequential
-	 * recurrence, not a candidate for either directive - MADS_ITER=7
+	 * recurrence, not a candidate for either directive - mads::iter=7
 	 * physical copies of the whole poll-and-evaluate datapath would be
 	 * both wrong (each needs the previous one's result) and far too
 	 * large to fit. PIPELINE off documents that this is a deliberate
@@ -77,7 +77,7 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], c
 	 * used to be, it applies to the enclosing function instead.
 	 */
 	#endif
-	for (int iter = -1; iter < MADS_ITER; iter++)
+	for (int iter = -1; iter < mads::iter; iter++)
 	{
 		#ifdef PRAGMAS
 		#pragma HLS PIPELINE off
@@ -109,7 +109,7 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], c
 				#pragma HLS UNROLL
 				#endif
 				/* Old method: HLS unfriendly because of break */
-				// if (frameExp[i] < FRAME_EXP_MIN)
+				// if (frameExp[i] < mads::frameExpMin)
 				// {
 				// 	break;
 				// }
@@ -123,7 +123,7 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], c
 				// }
 
 				/* Alternative to break statement */
-				if(frameExp[i] >= FRAME_EXP_MIN) meshExp[i] = (frameExp[i] < 0) ? (frameExp[i] << 1) : frameExp[i];
+				if(frameExp[i] >= mads::frameExpMin) meshExp[i] = (frameExp[i] < 0) ? (frameExp[i] << 1) : frameExp[i];
 
 				#ifdef DEBUG_PRINT
 				frameExp_f[i] = frameExp[i].to_double();

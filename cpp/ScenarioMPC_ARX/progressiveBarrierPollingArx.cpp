@@ -10,8 +10,8 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 								const norm_output_type yref, 
 								const norm_input_type pollMatrix[nOpt][2 * nOpt], 
 								mesh_exp_type frameExp[nOpt], 
-								const arx_coeff_type arxCoeff[Nscen+1][nTheta],
-								const arx_coeff_type arxOffset[Nscen+1],
+								const arx_coeff_type arxCoeff[scen::nScen+1][nTheta],
+								const arx_coeff_type arxOffset[scen::nScen+1],
 								const bool startOnly)
 {
 	#ifdef PRAGMAS
@@ -34,7 +34,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 	double frameExp_f[nOpt];
 	double yref_f = yref.to_double();
 	double yPast_f[na], uPast_f[nUKnown];
-	double arxCoeff_f[Nscen+1][nTheta], arxOffset_f[Nscen+1];
+	double arxCoeff_f[scen::nScen+1][nTheta], arxOffset_f[scen::nScen+1];
 
 	for(int i = 0; i < nOpt; i++) 
 	{
@@ -42,7 +42,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 		for(int j = 0; j < 2*nOpt; j++) pollMatrix_f[i][j] = pollMatrix[i][j].to_double();
 	}
 
-	for(int i = 0; i < Nscen+1; i++) { arxOffset_f[i] = arxOffset[i].to_double(); for(int j = 0; j < nTheta; j++) arxCoeff_f[i][j] = arxCoeff[i][j].to_double(); }
+	for(int i = 0; i < scen::nScen+1; i++) { arxOffset_f[i] = arxOffset[i].to_double(); for(int j = 0; j < nTheta; j++) arxCoeff_f[i][j] = arxCoeff[i][j].to_double(); }
 	for(int i = 0; i < na; i++) yPast_f[i] = yPast[i].to_double();
 	for(int i = 0; i < nUKnown; i++) uPast_f[i] = uPast[i].to_double();
 	#endif
@@ -204,7 +204,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 				#ifdef PRAGMAS
 				#pragma HLS UNROLL
 				#endif
-				frameExp[i] = frameExp[i] + TAU;
+				frameExp[i] = frameExp[i] + mads::frameExpStep;
 
 				#ifdef DEBUG_PRINT
 				frameExp_f[i] = frameExp[i].to_double();
@@ -219,7 +219,7 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
 			#ifdef PRAGMAS
 			#pragma HLS UNROLL
 			#endif
-			frameExp[i] = frameExp[i] - TAU;
+			frameExp[i] = frameExp[i] - mads::frameExpStep;
 			
 			#ifdef DEBUG_PRINT
 			frameExp_f[i] = frameExp[i].to_double();

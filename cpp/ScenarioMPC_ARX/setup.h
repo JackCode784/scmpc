@@ -19,7 +19,7 @@
  * VITIS HLS 2026.1 COMPATIBILITY NOTES
  * --------------------------------------
  * * "constexpr int" is fully supported (C++14 mode).  Used for all
- *   integer algorithm parameters (Nhor, NhorU, na, nb, nTheta, nd, nOpt, etc.).
+ *   integer algorithm parameters (mpc::predHrzn, mpc::ctrlHrzn, na, nb, nTheta, nd, nOpt, etc.).
  * * "static const <type>" is used for fixed-point constants because
  *   ap_fixed<> does not have a constexpr constructor.
  * * static_assert is used for invariant checks; it produces a clean
@@ -110,13 +110,13 @@
 /**
  * HLS pragma profile (Vitis HLS 2026.1, xc7z020-clg484-1, 10 ns clock).
  *
- * Where the time goes. controller() runs MADS: 1 + MADS_ITER*2*nOpt cost
- * evaluations (61 for the pendulum: Nhor 15, NhorU 3, Nscen 16,
- * MADS_ITER 10). Each evaluation (costFunctionArx) runs Nhor prediction
+ * Where the time goes. controller() runs MADS: 1 + mads::iter*2*nOpt cost
+ * evaluations (61 for the pendulum: mpc::predHrzn 15, mpc::ctrlHrzn 3, scen::nScen 16,
+ * mads::iter 10). Each evaluation (costFunctionArx) runs mpc::predHrzn prediction
  * steps, a recurrence, and in each step one prediction per model: the
- * Nscen scenarios plus the nominal model, independent of each other. Every
+ * scen::nScen scenarios plus the nominal model, independent of each other. Every
  * other part of controller() runs once per call and is small. So the
- * profiles differ in exactly two places: how the Nscen+1 models of a step
+ * profiles differ in exactly two places: how the scen::nScen+1 models of a step
  * share a prediction datapath, and how the 2*nOpt poll evaluations of a
  * MADS iteration share costFunctionArx. All three compute the same
  * numbers (C simulation is identical); only the hardware schedule
@@ -126,30 +126,30 @@
  *                           models one after the other (model loop
  *                           PIPELINE off), the nTheta products of a
  *                           prediction on ONE multiplier (term loop rolled).
- *                           Estimate: Nhor*(Nscen+1)*L evaluation cycles,
+ *                           Estimate: mpc::predHrzn*(scen::nScen+1)*L evaluation cycles,
  *                           L ~ 10-15 cycles per sequential prediction:
  *                           ~2e5 cycles per call, ~2 ms of the 10 ms period.
  *   PRAGMA_PROFILE_BALANCED one costFunctionArx instance, model loop
  *                           PIPELINE II=1: a new model enters the same
  *                           datapath every cycle, so a step takes about
- *                           Nscen+1 cycles plus the pipeline depth D (~10).
- *                           Estimate: 61*Nhor*(Nscen+1+D) ~ 2.5e4 cycles
+ *                           scen::nScen+1 cycles plus the pipeline depth D (~10).
+ *                           Estimate: 61*mpc::predHrzn*(scen::nScen+1+D) ~ 2.5e4 cycles
  *                           (~0.25 ms), with little more area than AREA:
  *                           pipeline registers and nTheta multipliers.
  *   PRAGMA_PROFILE_LATENCY  minimum latency. As BALANCED, plus the 2*nOpt
  *                           poll evaluations of each MADS iteration run in
  *                           parallel on 2*nOpt costFunctionArx instances:
- *                           (1 + MADS_ITER) evaluation times per call.
+ *                           (1 + mads::iter) evaluation times per call.
  *                           Estimate: ~5e3 cycles (~50 us), with about
  *                           2*nOpt times BALANCED's cost-function area.
  * The estimates are mine, from the loop structure; replace them with the
  * synthesis report's numbers.
  *
  * Why not the former profiles. They were measured on the buck converter
- * (Nhor 5, Nscen 4) with Vitis HLS 2021.1. LATENCY fully unrolled both
- * cost-function loops: Nhor*(Nscen+1) = 255 predictions for the pendulum,
+ * (mpc::predHrzn 5, scen::nScen 4) with Vitis HLS 2021.1. LATENCY fully unrolled both
+ * cost-function loops: mpc::predHrzn*(scen::nScen+1) = 255 predictions for the pendulum,
  * ~4 DSPs each, against 220 DSPs on this device, so it cannot fit.
- * BALANCED unrolled the Nscen loop, but its Nscen+1 results are summed
+ * BALANCED unrolled the scen::nScen loop, but its scen::nScen+1 results are summed
  * into saturating accumulators one after the other (a saturating add is
  * not associative, so the tool cannot regroup it into a tree): with 17
  * models that chain was slower than streaming them through one
@@ -170,7 +170,7 @@
  *     pseudoRandArx); INLINE on small leaf functions and INLINE off on
  *     costFunctionArx (so ALLOCATION, not automatic inlining, sets its
  *     instance count); PIPELINE off on the loops that are recurrences (the
- *     MADS iteration loop, the Nhor prediction loop) and LOOP_FLATTEN off
+ *     MADS iteration loop, the mpc::predHrzn prediction loop) and LOOP_FLATTEN off
  *     on the model loop. The explicit "off" forms matter with recent tool
  *     versions, which pipeline loops and inline small functions on their
  *     own when nothing says otherwise.
@@ -286,6 +286,9 @@
   #error "Unrecognized CTRL_MODE!"
 #endif
 
+/* General utility function for comuting powers of two */
+constexpr double pow2(int e) { return e >= 0 ? double(1LL << e) : 1.0 / double(1LL << -e); }
+
 /* ======================================================================
    UNCERTAIN PARAMETERS - the zonotope's own dimension nUnc <= nTheta
    ======================================================================
@@ -390,7 +393,7 @@ static_assert(nGens >= nUnc,
      Updated each step inside controller().
 
    uOptPrev - MADS warm-start seed, NOT part of the ARX regressor
-     uOptPrev[0..NhorU-1] = u*(k-1), ..., u*(k-1+NhorU-1), i.e. the full
+     uOptPrev[0..mpc::ctrlHrzn-1] = u*(k-1), ..., u*(k-1+mpc::ctrlHrzn-1), i.e. the full
      control sequence MADS returned on the PREVIOUS call. controller()
      shifts this by one step (dropping the already-applied first entry
      and repeating the last one) to seed uOptNorm for the current call,
@@ -406,7 +409,7 @@ extern theta_type  thetaCenter[nUnc];
 extern theta_type  thetaGens  [nUnc][nGens];
 extern norm_output_type yHistCtrl[na];
 extern norm_input_type  uHistCtrl[nb + nd - 1];
-/* uOptPrev[NhorU] is declared extern further below, once NhorU itself
+/* uOptPrev[mpc::ctrlHrzn] is declared extern further below, once mpc::ctrlHrzn itself
  * has been defined (see "MPC PARAMETERS" section). */
 
 
@@ -433,34 +436,40 @@ namespace mpc
     constexpr int log2Q = 4;
     constexpr int log2P = 4;
     constexpr int log2R = 2;
+
+    /* ======================================================================
+    MPC COST-FUNCTION WEIGHTS
+    ======================================================================
+    Stage cost per step:  l(y, u) = weightQ*(y - y_ref)^2 + weightR*u^2
+    Terminal cost:        V_f(y)   = weightP*(y(k+N) - y_ref)^2
+    ====================================================================== */
+    static const output_weight_type weightQ = pow2(mpc::log2Q);   /* stage   output weight  */
+    static const output_weight_type weightP = pow2(mpc::log2P);   /* terminal output weight */
 }
+
+#ifdef FIXED
+static_assert(mpc::log2Q < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= mpc::log2Q, "weightQ weight matrix does not fit fixed point type.");
+static_assert(mpc::log2P < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= mpc::log2P, "weightP weight matrix does not fit fixed point type.");
+#endif
 
 namespace scen
 {
     /**
-     * Number of uncertainty scenarios Nscen, EXCLUDING the nominal system.
-     * The cost is evaluated on Nscen + 1 models simultaneously.
+     * Number of uncertainty scenarios scen::nScen, EXCLUDING the nominal system.
+     * The cost is evaluated on scen::nScen + 1 models simultaneously.
      * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
      */
     constexpr int log2nScen = 4;
     constexpr int nScen = 1 << log2nScen;
 }
 
-
-constexpr int Nhor  = mpc::predHrzn;
-constexpr int NhorU = mpc::ctrlHrzn;
-
-constexpr double pow2(int e) { return e >= 0 ? double(1LL << e) : 1.0 / double(1LL << -e); }
-constexpr int log2Nscen = scen::log2nScen;
-constexpr int Nscen = scen::nScen;
-
-static_assert(log2Nscen >= 0,
+static_assert(scen::log2nScen >= 0,
     "Number of scenarios must be a positive integer.");
-static_assert(NhorU <= Nhor,
-    "Control horizon NhorU must not exceed prediction horizon Nhor.");
-static_assert(Nhor >= nd, 
+static_assert(mpc::ctrlHrzn <= mpc::predHrzn,
+    "Control horizon mpc::ctrlHrzn must not exceed prediction horizon mpc::predHrzn.");
+static_assert(mpc::predHrzn >= nd, 
     "Prediction horizon must be at least system delay.");
-static_assert(Nhor - nd >= NhorU - 1,
+static_assert(mpc::predHrzn - nd >= mpc::ctrlHrzn - 1,
     "Control horizon is longer than maximum.");
 
 /*
@@ -492,39 +501,21 @@ constexpr int DC_STEPS = 1;
 constexpr int DC_STEPS = 0;
 #endif
 constexpr int nUKnown = nb + nd - 2 + DC_STEPS;
-static_assert(Nhor - nd - DC_STEPS >= NhorU - 1,
-    "With DELAY_COMPENSATION the last decision u(k+NhorU) must still reach the horizon: Nhor >= NhorU + nd.");
+static_assert(mpc::predHrzn - nd - DC_STEPS >= mpc::ctrlHrzn - 1,
+    "With DELAY_COMPENSATION the last decision u(k+mpc::ctrlHrzn) must still reach the horizon: mpc::predHrzn >= mpc::ctrlHrzn + nd.");
 
 /** Number of scalar optimisation variables (= Nu for a SISO system). */
-constexpr int nOpt = NhorU;
+constexpr int nOpt = mpc::ctrlHrzn;
 
 #if defined(PRAGMAS) && defined(PRAGMA_PARALLEL_POLLS)
 static_assert(PRAGMA_COSTFUNC_INSTANCES == 2 * nOpt,
-    "PRAGMA_PROFILE_LATENCY: set PRAGMA_COSTFUNC_INSTANCES (setup.h) to 2*NhorU, one costFunctionArx per poll point.");
+    "PRAGMA_PROFILE_LATENCY: set PRAGMA_COSTFUNC_INSTANCES (setup.h) to 2*mpc::ctrlHrzn, one costFunctionArx per poll point.");
 #endif
 
 /** MADS warm-start seed - see "CONTROLLER STATE" comment above.
  *  Declared here, rather than alongside thetaCenter/yHistCtrl/uHistCtrl, because
- *  its size depends on NhorU, which is only just defined above. */
-extern norm_input_type uOptPrev[NhorU];
-
-/* ======================================================================
-   MPC COST-FUNCTION WEIGHTS
-   ======================================================================
-   Stage cost per step:  l(y, u) = weightQ*(y - y_ref)^2 + weightR*u^2
-   Terminal cost:        V_f(y)   = weightP*(y(k+N) - y_ref)^2
-   ====================================================================== */
-constexpr int log2Q = mpc::log2Q;
-constexpr int log2P = mpc::log2P;
-constexpr int log2R = mpc::log2R;
-
-static const output_weight_type weightQ = pow2(log2Q);   /* stage   output weight  */
-static const output_weight_type weightP = pow2(log2P);   /* terminal output weight */
-
-#ifdef FIXED
-static_assert(log2Q < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= log2Q, "weightQ weight matrix does not fit fixed point type.");
-static_assert(log2P < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= log2P, "weightP weight matrix does not fit fixed point type.");
-#endif
+ *  its size depends on mpc::ctrlHrzn, which is only just defined above. */
+extern norm_input_type uOptPrev[mpc::ctrlHrzn];
 
 /* ======================================================================
    MADS SOLVER PARAMETERS
@@ -545,7 +536,6 @@ namespace mads
     */
     constexpr int gamma = 1;        /* (integer > 0) */
     static const householder_type householderClamp = householder_type(pow2(-gamma));
-    static_assert(gamma >= 0, "gamma must be non negative.");
     
     constexpr int frameExpMin = -20;   /* frameExp minimum value */
 
@@ -555,19 +545,10 @@ namespace mads
      */
     constexpr int d0 = -8;              
 }
-constexpr int MADS_ITER = mads::iter;
-constexpr int TAU       = mads::frameExpStep; 
-constexpr int MADS_C    = mads::gamma; 
-constexpr int FRAME_EXP_MIN = mads::frameExpMin;
 
+static_assert(mads::gamma >= 0, "gamma must be non negative.");
 
-/*
- * D0[j]: initial log2 frame-size exponent for optimisation variable j.
- * Initial frame size = tau^D0[j].  More negative -> finer initial mesh.
- * HLS hint: #pragma HLS ARRAY_PARTITION variable=D0 complete dim=1
- */
 static const mesh_exp_type D0_VAL = mesh_exp_type(mads::d0); // used in MADSARX, frameIdx init
-// static const mesh_exp_type D0[nOpt] = { -8, -8, -8 }; // not used
 
 /* ======================================================================
    ADC / DAC CONVERTER PARAMETERS
@@ -618,9 +599,13 @@ static const norm_output_type YNORMMIN = double(yNormGain)*double(YMIN) + double
 static const norm_input_type UNORMMAX = double(uNormGain)*double(UMAX) + double(uNormOffset);
 static const norm_input_type UNORMMIN = double(uNormGain)*double(UMIN) + double(uNormOffset);
 
-static const input_weight_type weightR = pow2(log2R);
+namespace mpc
+{
+    static const input_weight_type weightR = pow2(mpc::log2R);
+}
+
 #ifdef FIXED
-static_assert(log2R < input_weight_type::iwidth && input_weight_type::iwidth - input_weight_type::width <= log2R, "weightR weight matrix does not fit fixed point type.");
+static_assert(mpc::log2R < input_weight_type::iwidth && input_weight_type::iwidth - input_weight_type::width <= mpc::log2R, "weightR weight matrix does not fit fixed point type.");
 #endif
 
 /* Normalization, use "normalized" noise in output strip */
@@ -743,7 +728,10 @@ static StripCoeffs computeStripCoeffs()
 static const StripCoeffs stripCoeffs = computeStripCoeffs();
 #else
 const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
-static const input_weight_type weightR = pow2(log2R) * ((double(YMAXPHYS) - double(YMINPHYS)) * (double(YMAXPHYS) - double(YMINPHYS))) / ((double(UMAXPHYS) - double(UMINPHYS)) * (double(UMAXPHYS) - double(UMINPHYS))); /* unnormalized stage input weight */
+namespace mpc
+{
+    static const input_weight_type weightR = pow2(mpc::log2R) * ((double(YMAXPHYS) - double(YMINPHYS)) * (double(YMAXPHYS) - double(YMINPHYS))) / ((double(UMAXPHYS) - double(UMINPHYS)) * (double(UMAXPHYS) - double(UMINPHYS))); /* unnormalized stage input weight */
+}
 static const norm_output_type YNORMMAXPHYS = YMAXPHYS;
 static const norm_output_type YNORMMINPHYS = YMINPHYS;
 static const norm_input_type UNORMMAXPHYS = UMAXPHYS;
@@ -814,12 +802,12 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na],
                                   const arx_coeff_type   offset);
 
 /** Effective ARX coefficients/offset (normalization folded in) for the
- *  Nscen scenarios (rows 0..Nscen-1) and the zonotope centre (row Nscen);
+ *  scen::nScen scenarios (rows 0..scen::nScen-1) and the zonotope centre (row scen::nScen);
  *  computed once per controller() call. */
-void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
+void computeArxCoeffs(const theta_type thetaScenarios[scen::nScen][nUnc],
                       const theta_type thetaNominal  [nUnc],
-                      arx_coeff_type   coeff         [Nscen+1][nTheta],
-                      arx_coeff_type   offset        [Nscen+1]);
+                      arx_coeff_type   coeff         [scen::nScen+1][nTheta],
+                      arx_coeff_type   offset        [scen::nScen+1]);
 
 /* --- MPC cost function ------------------------------------------------ */
 
@@ -830,8 +818,8 @@ void costFunctionArx(cost_type              cost[2],
                      const norm_input_type  currU          [nOpt],
                      const norm_input_type  uPast          [nUKnown],
                      const norm_output_type yref,
-                     const arx_coeff_type   arxCoeff       [Nscen+1][nTheta],
-                     const arx_coeff_type   arxOffset      [Nscen+1]);
+                     const arx_coeff_type   arxCoeff       [scen::nScen+1][nTheta],
+                     const arx_coeff_type   arxOffset      [scen::nScen+1]);
 
 /* --- MADS poll-step --------------------------------------------------- */
 
@@ -851,10 +839,10 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt],
 /* --- Scenario generation --------------------------------------------- */
 
 /**
- * Fill thetaScenarios[0..Nscen-1] with Nscen parameter vectors drawn
+ * Fill thetaScenarios[0..scen::nScen-1] with scen::nScen parameter vectors drawn
  * uniformly at random from  Z = { center + gens*ξ  :  ||ξ||inf <= 1 }.
  *
- * @param thetaScenarios [out] Nscen * nTheta array of scenario vectors.
+ * @param thetaScenarios [out] scen::nScen * nTheta array of scenario vectors.
  * @param center         [in]  Zonotope centre, length nTheta.
  * @param gens           [in]  Generator matrix, nTheta * nGens
  *                              (row-major); only the first nGen columns
@@ -863,19 +851,19 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt],
  *                              (= nTheta after interval-hull reduction;
  *                              may be larger for the initial zonotope).
  */
-void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
+void generateScenarios(theta_type       thetaScenarios[scen::nScen][nUnc],
                        const theta_type center        [nUnc],
                        const theta_type gens          [nUnc][nGens]);
 
 /* --- MADS main loop --------------------------------------------------- */
 
-/** Run MADS_ITER iterations and return the optimal input sequence. */
+/** Run mads::iter iterations and return the optimal input sequence. */
 void MADSARX(norm_input_type uOpt[nOpt], 
             const norm_input_type uInit[nUKnown], 
             const norm_output_type yInit[na], 
             const norm_output_type yref, 
-            const arx_coeff_type arxCoeff[Nscen+1][nTheta],
-            const arx_coeff_type arxOffset[Nscen+1]);
+            const arx_coeff_type arxCoeff[scen::nScen+1][nTheta],
+            const arx_coeff_type arxOffset[scen::nScen+1]);
 
 /** Evaluate all 2*nOpt poll candidates; update the best feasible point
  *  via the progressive barrier strategy. startOnly: evaluate only
@@ -888,8 +876,8 @@ void progressiveBarrierPollingArx(cost_type bestCost[2],
                                     const norm_output_type yref, 
                                     const norm_input_type pollMatrix[nOpt][2 * nOpt], 
                                     mesh_exp_type frameExp[nOpt], 
-                                    const arx_coeff_type arxCoeff[Nscen+1][nTheta],
-                                    const arx_coeff_type arxOffset[Nscen+1],
+                                    const arx_coeff_type arxCoeff[scen::nScen+1][nTheta],
+                                    const arx_coeff_type arxOffset[scen::nScen+1],
                                     const bool startOnly);
 
 /* --- Pseudo-random generation (three overloads) ----------------------- */

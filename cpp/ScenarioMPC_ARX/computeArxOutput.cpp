@@ -57,7 +57,7 @@ norm_output_type computeArxOutput(const norm_output_type yPast[na],
 /* computeArxCoeffs
 Fold the normalization into the ARX coefficients, once per controller()
 call, for every parameter vector costFunctionArx will predict with: the
-Nscen scenarios (rows 0..Nscen-1) and the zonotope centre (row Nscen).
+scen::nScen scenarios (rows 0..scen::nScen-1) and the zonotope centre (row scen::nScen).
 
 The normalized prediction used to be evaluated, per term, as
     sample*theta*myInvDmDg + qmyInvDmDg*theta + sample*myInvDmc0
@@ -80,10 +80,10 @@ coeff[i] = myInvDmc0[i], its exact nominal coefficient). The i-loop is
 fully unrolled, so UNC_MAP.red[i] is a constant and the choice costs no
 hardware.
 */
-void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
+void computeArxCoeffs(const theta_type thetaScenarios[scen::nScen][nUnc],
                       const theta_type thetaNominal  [nUnc],
-                      arx_coeff_type   coeff         [Nscen+1][nTheta],
-                      arx_coeff_type   offset        [Nscen+1])
+                      arx_coeff_type   coeff         [scen::nScen+1][nTheta],
+                      arx_coeff_type   offset        [scen::nScen+1])
 {
     #ifdef PRAGMAS
     #pragma HLS INLINE
@@ -94,18 +94,18 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
     #if defined(USE_SCENS_COST) || defined(USE_SCENS_CONSTR)
     constexpr int firstRow = 0;
     #else
-    constexpr int firstRow = Nscen;
+    constexpr int firstRow = scen::nScen;
     #endif
 
     /*
      * Row loop never unrolled: it runs once per controller() call (vs.
-     * 1 + MADS_ITER*2*nOpt costFunctionArx calls), and unrolling it would
-     * build (Nscen+1)*nTheta multiply-adds. One row's multipliers are
+     * 1 + mads::iter*2*nOpt costFunctionArx calls), and unrolling it would
+     * build (scen::nScen+1)*nTheta multiply-adds. One row's multipliers are
      * shared by all rows: one row at a time in AREA (PIPELINE off), one
      * new row per clock cycle in BALANCED and LATENCY (PIPELINE II=1; the
      * rows are independent).
      */
-    for(int l = firstRow; l < Nscen+1; l++)
+    for(int l = firstRow; l < scen::nScen+1; l++)
     {
         #ifdef PRAGMAS
         PRAGMA_MODEL_LOOP   /* setup.h: PIPELINE off, or PIPELINE II=1 */
@@ -118,7 +118,7 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
             #endif
             const int k = UNC_MAP.red[i];
             coeff[l][i] = (k < 0)      ? theta_type(thetaNominalInit[i]) :
-                          (l < Nscen)  ? thetaScenarios[l][k] : thetaNominal[k];
+                          (l < scen::nScen)  ? thetaScenarios[l][k] : thetaNominal[k];
         }
         offset[l] = 0;
         #else
@@ -130,7 +130,7 @@ void computeArxCoeffs(const theta_type thetaScenarios[Nscen][nUnc],
             #endif
             const int k = UNC_MAP.red[i];
             theta_type th = (k < 0)     ? theta_type(0) :
-                            (l < Nscen) ? thetaScenarios[l][k] : thetaNominal[k];
+                            (l < scen::nScen) ? thetaScenarios[l][k] : thetaNominal[k];
             coeff[l][i] = stripCoeffs.myInvDmDg[i] * th + stripCoeffs.myInvDmc0[i];
             off += stripCoeffs.qmyInvDmDg[i] * th;
         }

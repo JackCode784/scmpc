@@ -47,10 +47,10 @@
 #include "setup.h"
 
 /**
- * Fill thetaScenarios[0..Nscen-1] with Nscen parameter vectors drawn
+ * Fill thetaScenarios[0..scen::nScen-1] with scen::nScen parameter vectors drawn
  * uniformly at random from  Z = { center + gens·ξ  :  ‖ξ‖∞ ≤ 1 }.
  *
- * @param thetaScenarios [out]  Nscen × nUnc array of scenario vectors.
+ * @param thetaScenarios [out]  scen::nScen × nUnc array of scenario vectors.
  * @param center         [in]   Zonotope centre, length nUnc.
  * @param gens           [in]   Generator matrix, nUnc rows × nGens columns,
  *                               stored row-major: gens[i][j] is the i-th
@@ -66,7 +66,7 @@
  * These allow all nGens columns of gens and all entries of center to be
  * read in a single clock cycle, enabling full pipelining of the inner loop.
  */
-void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
+void generateScenarios(theta_type       thetaScenarios[scen::nScen][nUnc],
                        const theta_type center        [nUnc],
                        const theta_type gens          [nUnc][nGens])
 {
@@ -95,13 +95,13 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
     #pragma HLS ARRAY_PARTITION variable=coeffs complete dim=1
     #endif
 
-    for (int i = 0; i < Nscen; i++)
+    for (int i = 0; i < scen::nScen; i++)
     {
         #ifdef PRAGMAS
         /*
          * NOT unrolled: pseudoRandArx(coeffs) advances the single shared
          * xorshift32 state (see pseudoRand.cpp), so scenario i+1's random
-         * draw genuinely depends on scenario i's - the Nscen iterations
+         * draw genuinely depends on scenario i's - the scen::nScen iterations
          * cannot be computed in parallel.
          * NOT pipelined either: at II=1, all nGens xorshift steps of one
          * scenario (3 shift-XOR layers each) form the loop-carried path
@@ -109,7 +109,7 @@ void generateScenarios(theta_type       thetaScenarios[Nscen][nUnc],
          * nGens = 3, against 7.3 ns available at 10 ns (Vitis HLS 2026.1).
          * Sequential, the draw loop inside pseudoRandArx pipelines at one
          * xorshift step per cycle; this runs once per controller() call,
-         * so the extra ~Nscen*nGens cycles are ~0.3% of its latency.
+         * so the extra ~scen::nScen*nGens cycles are ~0.3% of its latency.
          */
         #pragma HLS PIPELINE off
         #endif

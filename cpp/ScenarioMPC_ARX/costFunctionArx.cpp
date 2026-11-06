@@ -14,24 +14,24 @@
  * where:
  *   ypred_nom(k+1)       - one-step prediction using the nominal parameter
  *                       vector thetaCenter (the current zonotope centre),
- *                       via its effective coefficients arxCoeff[Nscen] /
- *                       arxOffset[Nscen] (rows 0..Nscen-1 are the
+ *                       via its effective coefficients arxCoeff[scen::nScen] /
+ *                       arxOffset[scen::nScen] (rows 0..scen::nScen-1 are the
  *                       scenarios' - see computeArxCoeffs)
- *   scenariosContrib  - mean squared error over all Nscen uncertainty
+ *   scenariosContrib  - mean squared error over all scen::nScen uncertainty
  *                       scenarios, included only in PL/AL modes to penalise
  *                       poor performance across the uncertainty set
  *
- * The input cost term \DeltaU^2*weightR is included for steps k = 0 ... NhorU-1,
+ * The input cost term \DeltaU^2*weightR is included for steps k = 0 ... mpc::ctrlHrzn-1,
  * based on the use of delay compensation the considered inputs for the cost
  * contribution change (starting from u_k without DC, from u_{k+1} with DC).
  *
  * CONTROL vs PREDICTION HORIZON
  * ------------------------------
- * currU has nOpt = NhorU entries: u(0), ..., u(NhorU-1).
- * For steps k >= NhorU the last applied input u(NhorU-1) is held constant
+ * currU has nOpt = mpc::ctrlHrzn entries: u(0), ..., u(mpc::ctrlHrzn-1).
+ * For steps k >= mpc::ctrlHrzn the last applied input u(mpc::ctrlHrzn-1) is held constant
  * ("input blocking" / zero-order hold beyond the control horizon).
  * uSamples[0] is not re-assigned in the tail loop; it retains the value
- * set at k = NhorU-1, which is currU[NhorU-1].  This is correct.
+ * set at k = mpc::ctrlHrzn-1, which is currU[mpc::ctrlHrzn-1].  This is correct.
  *
  * CONSTRAINT VIOLATION
  * ---------------------
@@ -41,13 +41,13 @@
  *
  * HLS NOTES (pragma profiles: setup.h, PRAGMA_PROFILE)
  * ----------
- * Structure. Per call: Nhor prediction steps k (a genuine recurrence:
+ * Structure. Per call: mpc::predHrzn prediction steps k (a genuine recurrence:
  * step k+1 needs the outputs of step k), and in each step one "model loop"
- * over the Nscen scenarios plus the nominal model (row Nscen of arxCoeff,
+ * over the scen::nScen scenarios plus the nominal model (row scen::nScen of arxCoeff,
  * arxOffset and yPastCurr). The models are independent of each other
  * within a step: each reads and writes only its own yPastCurr row. The
  * nominal model used to have its own copy of the prediction code after
- * the scenario loop; it is now the loop's last iteration (l = Nscen), so
+ * the scenario loop; it is now the loop's last iteration (l = scen::nScen), so
  * there is a single prediction datapath, with the same additions in the
  * same order as before.
  *
@@ -58,7 +58,7 @@
  * - uSamples: ARRAY_PARTITION complete, every profile (nb+nd-1
  *   registers, shifted by an unrolled loop).
  * - yPastCurr: ARRAY_PARTITION complete on dim 2 only, plus BIND_STORAGE
- *   LUTRAM, every profile: na small RAMs (one per past sample) of Nscen+1
+ *   LUTRAM, every profile: na small RAMs (one per past sample) of scen::nScen+1
  *   words (one per model), so the model loop reads row l through a RAM
  *   address, not a multiplexer over registers. This is what lets the
  *   model loop pipeline: on registers, the tool cannot tell that
@@ -69,8 +69,8 @@
  *   scalars. On a RAM it can (below). Each RAM sees one read and one write
  *   per iteration (ram_2p). The rows are not initialized: at k = 0 every
  *   model reads the measured history yPast instead (same values as the
- *   former copy loop, without Nscen+1 RAM writes).
- * - UNROLL on the small na/nb/nOpt/Nscen+1 copy and shift loops, every
+ *   former copy loop, without scen::nScen+1 RAM writes).
+ * - UNROLL on the small na/nb/nOpt/scen::nScen+1 copy and shift loops, every
  *   profile: they are wiring and registers, not arithmetic.
  * - k loop: PIPELINE off, every profile. Its recurrence (k+1 needs k)
  *   gives nothing to overlap, and an earlier attempt to pipeline it
@@ -83,8 +83,8 @@
  *                        hardware (no pipeline registers).
  *     BALANCED, LATENCY: PIPELINE II=1. A new model enters the same
  *                        datapath every clock cycle, so a step takes about
- *                        Nscen+1 cycles plus the pipeline depth instead of
- *                        (Nscen+1) times the full prediction latency. The
+ *                        scen::nScen+1 cycles plus the pipeline depth instead of
+ *                        (scen::nScen+1) times the full prediction latency. The
  *                        datapath is not duplicated. DEPENDENCE ... false
  *                        on yPastCurr tells the tool what is true here:
  *                        iterations of this loop never touch the same row.
@@ -119,7 +119,7 @@
  * norm_output_type (two differences of norm_output_type values). */
 cost_type constraintViolation(const norm_output_type yCurr, const norm_output_type yPast);   /* updateConstraintViolation.cpp */
 constexpr int ceilLog2(long long v) { return (v <= 1) ? 0 : 1 + ceilLog2((v + 1) / 2); }
-constexpr long long VIOL_SUM_MAX = 512 + (long long)(Nscen + 1) * Nhor * (2LL << norm_output_type::iwidth);
+constexpr long long VIOL_SUM_MAX = 512 + (long long)(scen::nScen + 1) * mpc::predHrzn * (2LL << norm_output_type::iwidth);
 constexpr int VIOL_ACC_I = ceilLog2(VIOL_SUM_MAX + 1);
 typedef ap_ufixed<VIOL_ACC_I + cost_type::width - cost_type::iwidth, VIOL_ACC_I, AP_TRN, AP_WRAP> ViolAcc;
 
@@ -132,12 +132,12 @@ typedef ap_ufixed<VIOL_ACC_I + cost_type::width - cost_type::iwidth, VIOL_ACC_I,
  * and the parity of s + P is lsb(s) XOR lsb(P). So P, P + 1 and the two
  * comparisons are computed from the square alone, outside the
  * recurrence; the loop keeps lsb(s) -> select -> one addition. No clamp:
- * the sum is below Nscen * (2^iwidth of err_type)^2 (static_assert). */
+ * the sum is below scen::nScen * (2^iwidth of err_type)^2 (static_assert). */
 constexpr int SQ_FRAC   = 2 * (err_type::width - err_type::iwidth);
 constexpr int COST_FRAC = cost_type::width - cost_type::iwidth;
 constexpr int SQ_DROP   = SQ_FRAC - COST_FRAC;   /* bits rounded off per addition */
 static_assert(SQ_DROP > 0, "ScenAcc assumes err_type^2 has more fractional bits than cost_type.");
-static_assert((long long)Nscen << (2 * err_type::iwidth) < (1LL << cost_type::iwidth),
+static_assert((long long)scen::nScen << (2 * err_type::iwidth) < (1LL << cost_type::iwidth),
     "ScenAcc assumes the scenario error sum cannot saturate cost_type.");
 struct ScenAcc
 {
@@ -174,8 +174,8 @@ void costFunctionArx(cost_type              cost[2],
                      const norm_input_type  currU          [nOpt],
                      const norm_input_type  uPast          [nUKnown],
                      const norm_output_type yref,
-                     const arx_coeff_type   arxCoeff       [Nscen+1][nTheta],
-                     const arx_coeff_type   arxOffset      [Nscen+1])
+                     const arx_coeff_type   arxCoeff       [scen::nScen+1][nTheta],
+                     const arx_coeff_type   arxOffset      [scen::nScen+1])
 {
     #ifdef PRAGMAS
     /* One RTL module in every profile (see HLS NOTES) */
@@ -184,7 +184,7 @@ void costFunctionArx(cost_type              cost[2],
 
     #ifdef DEBUG_PRINT
     double cost_f[2];
-    double yPastCurr_f[Nscen+1][na], uSamples_f[nb+nd-1];
+    double yPastCurr_f[scen::nScen+1][na], uSamples_f[nb+nd-1];
     double currU_f[nOpt], yNext_f;
     double input_cost_term_f, output_cost_term_f, scenariosContrib_f;
     double err_nom_f, err_s_f;
@@ -207,16 +207,16 @@ void costFunctionArx(cost_type              cost[2],
 
     /*
      * Per-model output history: yPastCurr[l] = [y_l(k-1), ..., y_l(k-na)]
-     * for scenario l (l < Nscen) and the nominal model (l = Nscen).
+     * for scenario l (l < scen::nScen) and the nominal model (l = scen::nScen).
      * uSamples = [u(k), u(k-1), ..., u(k-nb-nd+1)], shared by all models:
      *   uSamples[0]   = u(k)       <= set from currU[k] or held constant
      *   uSamples[1]   = u(k-1)
      *   ...
      */
-    norm_output_type yPastCurr[Nscen+1][na];
+    norm_output_type yPastCurr[scen::nScen+1][na];
     norm_input_type  uSamples [nb + nd - 1];
     #ifdef PRAGMAS
-    /* yPastCurr: na RAMs of Nscen+1 words, rows not initialized - the
+    /* yPastCurr: na RAMs of scen::nScen+1 words, rows not initialized - the
      * first step reads yPast instead (HLS NOTES) */
     #pragma HLS ARRAY_PARTITION variable=yPastCurr complete dim=2
     #pragma HLS BIND_STORAGE    variable=yPastCurr type=ram_2p impl=lutram
@@ -247,28 +247,28 @@ void costFunctionArx(cost_type              cost[2],
         }
     }
 
-    /* Rows the model loop runs over: the Nscen scenarios (only when they
-     * are used) and the nominal model, row Nscen (always). */
+    /* Rows the model loop runs over: the scen::nScen scenarios (only when they
+     * are used) and the nominal model, row scen::nScen (always). */
     #if defined(USE_SCENS_COST) || defined(USE_SCENS_CONSTR)
     constexpr int firstRow = 0;
     #else
-    constexpr int firstRow = Nscen;
+    constexpr int firstRow = scen::nScen;
     #endif
 
     /* ------------------------------------------------------------------ */
-    /*  Prediction loop  k = 0, 1, ..., Nhor - 1                           */
+    /*  Prediction loop  k = 0, 1, ..., mpc::predHrzn - 1                           */
     /* ------------------------------------------------------------------ */
     /*
      * With j = k - DC_STEPS (DC_STEPS = 1 with DELAY_COMPENSATION, whose
      * first step uses the known input u(k) already in uSamples[0]):
-     *   * 0 <= j < NhorU : uSamples[0] = currU[j] (within control horizon)
-     *   * j >= NhorU     : uSamples[0] unchanged  (zero-order hold)
-     *   * k < Nhor-1  : stage weight weightQ
-     *   * k = Nhor-1  : terminal weight weightP, no input cost
+     *   * 0 <= j < mpc::ctrlHrzn : uSamples[0] = currU[j] (within control horizon)
+     *   * j >= mpc::ctrlHrzn     : uSamples[0] unchanged  (zero-order hold)
+     *   * k < mpc::predHrzn-1  : stage weight weightQ
+     *   * k = mpc::predHrzn-1  : terminal weight weightP, no input cost
      */
 
     /* Input cost contribution computed separately. */
-    /* Samples after NhorU-1 have zero cost contribution.
+    /* Samples after mpc::ctrlHrzn-1 have zero cost contribution.
        uPast[0] always contains the last known input sample (either u_{k-1} or u_k), which
        should be subtracted from currU[0] (either u_k or u_{k+1}). Then only
        currU must be considered for cost contribution. */
@@ -276,7 +276,7 @@ void costFunctionArx(cost_type              cost[2],
     #ifdef DEBUG_PRINT
     input_cost_term_f = ((currU_f[0] - uPast[0].to_double()) * (currU_f[0] - uPast[0].to_double())) * weightR.to_double();
     #endif
-    for(int j = 1; j < NhorU; j++)
+    for(int j = 1; j < mpc::ctrlHrzn; j++)
     {
         #ifdef PRAGMAS
         /* nOpt terms, independent: wiring and multipliers, not a loop */
@@ -293,7 +293,7 @@ void costFunctionArx(cost_type              cost[2],
     }
 
     /* Output (scenarios) predictions and cost contributions. */
-    for (int k = 0; k < Nhor; k++)
+    for (int k = 0; k < mpc::predHrzn; k++)
     {
         #ifdef PRAGMAS
         /* Every profile: genuine recurrence, nothing to overlap (HLS NOTES) */
@@ -301,11 +301,11 @@ void costFunctionArx(cost_type              cost[2],
         #endif
 
         /* --- Set current input ---------------------------------------- */
-        if (k >= DC_STEPS && k - DC_STEPS < NhorU)
+        if (k >= DC_STEPS && k - DC_STEPS < mpc::ctrlHrzn)
             uSamples[0] = currU[k - DC_STEPS];
 
         #ifdef DEBUG_PRINT
-        for(int i = 0; i < Nscen+1; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = (k == 0) ? yPast[j].to_double() : yPastCurr[i][j].to_double();
+        for(int i = 0; i < scen::nScen+1; i++) for(int j = 0; j < na; j++) yPastCurr_f[i][j] = (k == 0) ? yPast[j].to_double() : yPastCurr[i][j].to_double();
         for(int i = 0; i < nb+nd-1; i++) uSamples_f[i] = uSamples[i].to_double();
         #endif
 
@@ -315,7 +315,7 @@ void costFunctionArx(cost_type              cost[2],
         #endif
         cost_type        scenariosContrib = 0;
         norm_output_type yNext_nom        = 0;
-        for (int l = firstRow; l < Nscen + 1; l++)
+        for (int l = firstRow; l < scen::nScen + 1; l++)
         {
             #ifdef PRAGMAS
             #pragma HLS LOOP_FLATTEN off
@@ -349,7 +349,7 @@ void costFunctionArx(cost_type              cost[2],
             yNext_f = yNext.to_double();
             #endif
 
-            if (l < Nscen)
+            if (l < scen::nScen)
             {
                 #ifdef USE_SCENS_COST
                 err_type err_s = yNext - yref;
@@ -400,14 +400,14 @@ void costFunctionArx(cost_type              cost[2],
         #endif
 
         #ifdef USE_SCENS_COST
-        /* Divide by Nscen to get the mean squared error across scenarios.
+        /* Divide by scen::nScen to get the mean squared error across scenarios.
          * In software: floating-point division.
-         * In hardware: right-shift by log2Nscen (exact only if Nscen is a
+         * In hardware: right-shift by scen::log2nScen (exact only if scen::nScen is a
          * power of 2). */
         #ifndef FIXED
-        scenariosContrib /= Nscen;
+        scenariosContrib /= scen::nScen;
         #else
-        scenariosContrib >>= log2Nscen;
+        scenariosContrib >>= scen::log2nScen;
         #endif
         #endif
 
@@ -418,14 +418,14 @@ void costFunctionArx(cost_type              cost[2],
         scenariosContrib_f = scenariosContrib.to_double();
         err_nom_f = err_nom.to_double();
         output_cost_term_f = (err_nom_f * err_nom_f + scenariosContrib_f);
-        output_cost_term_f *= (k < Nhor - 1) ? weightQ.to_double() : weightP.to_double();
+        output_cost_term_f *= (k < mpc::predHrzn - 1) ? weightQ.to_double() : weightP.to_double();
         #endif
 
         /* Select stage weight weightQ or terminal weight weightP. */
         #ifndef FIXED
-        costTrack += (((k < Nhor - 1) ? weightQ : weightP) * (err_nom * err_nom + scenariosContrib));
+        costTrack += (((k < mpc::predHrzn - 1) ? weightQ : weightP) * (err_nom * err_nom + scenariosContrib));
         #else
-        costTrack += (err_nom * err_nom + scenariosContrib) << ((k < Nhor - 1) ? log2Q : log2P);
+        costTrack += (err_nom * err_nom + scenariosContrib) << ((k < mpc::predHrzn - 1) ? mpc::log2Q : mpc::log2P);
         #endif
 
         #ifdef DEBUG_PRINT
