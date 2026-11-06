@@ -442,8 +442,8 @@ namespace scen
      * The cost is evaluated on Nscen + 1 models simultaneously.
      * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
      */
-    constexpr int log2Nscen = 4;
-    constexpr int Nscen = 1 << log2Nscen;
+    constexpr int log2nScen = 4;
+    constexpr int nScen = 1 << log2nScen;
 }
 
 
@@ -451,8 +451,8 @@ constexpr int Nhor  = mpc::predHrzn;
 constexpr int NhorU = mpc::ctrlHrzn;
 
 constexpr double pow2(int e) { return e >= 0 ? double(1LL << e) : 1.0 / double(1LL << -e); }
-constexpr int log2Nscen = scen::log2Nscen;
-constexpr int Nscen = scen::Nscen;
+constexpr int log2Nscen = scen::log2nScen;
+constexpr int Nscen = scen::nScen;
 
 static_assert(log2Nscen >= 0,
     "Number of scenarios must be a positive integer.");
@@ -536,9 +536,18 @@ static_assert(log2P < output_weight_type::iwidth && output_weight_type::iwidth -
    ====================================================================== */
 namespace mads
 {
-    constexpr int madsIter = 10;       /* MADS iterations per controller call     */
-    constexpr int frameUpdateBase = 1; /* frame-size update base                  */
-    constexpr int madsC = 1;           /* frame-size exponent step  (integer > 0) */
+    constexpr int iter = 10;        /* MADS iterations per controller call     */
+    constexpr int frameExpStep = 1;     /* frame-size update base                  */
+    constexpr int pollScaleStep = 1;            /* frame-size exponent step  (integer > 0) */
+
+    /**
+    * householderClamp = 2^{-MADS_C}: pre-computed scaling factor for the mesh update.
+    * In FIXED mode this is exactly 0.5 = 2^{-1}, needing only 1 integer bit,
+    * so a 1-bit ap_ufixed is used to save multiplier resources.
+    * If MADS_C changes, update householderClamp and its type consistently.
+    */
+    static const householder_type householderClamp = householder_type(pow2(-pollScaleStep));
+    
     constexpr int frameExpMin = -20;   /* frameExp minimum value */
 
     /** D0[j]: initial log2 frame-size exponent for optimisation variable j.
@@ -547,23 +556,11 @@ namespace mads
      */
     constexpr int d0 = -8;              
 }
-constexpr int MADS_ITER = mads::madsIter;
-constexpr int TAU       = mads::frameUpdateBase; 
-constexpr int MADS_C    = mads::madsC; 
+constexpr int MADS_ITER = mads::iter;
+constexpr int TAU       = mads::frameExpStep; 
+constexpr int MADS_C    = mads::pollScaleStep; 
 constexpr int FRAME_EXP_MIN = mads::frameExpMin;
 
-/*
- * expC = 2^{-MADS_C}: pre-computed scaling factor for the mesh update.
- * In FIXED mode this is exactly 0.5 = 2^{-1}, needing only 1 integer bit,
- * so a 1-bit ap_ufixed is used to save multiplier resources.
- * If MADS_C changes, update expC and its type consistently.
- */
-#ifdef FIXED
-  static const ap_ufixed<1, 0, AP_TRN, AP_WRAP> expC = 0.5;
-//   static const norm_input_type expC = 0.5;
-#else
-  static const householder_type expC = pow2(-MADS_C);
-#endif
 
 /*
  * D0[j]: initial log2 frame-size exponent for optimisation variable j.

@@ -144,12 +144,12 @@ void generateHouseholderMatrix(const rand_type v[nOpt], householder_type H[nOpt]
 		H_f[i][i] = H[i][i].to_double();
 		#endif
 		
-		// Saturates householder matrix entries (use expC for previous code)
+		// Saturates householder matrix entries (use householderClamp for previous code)
 		for(int j = 0; j < nOpt; j++)
 		{
 			// Saturates householder matrix entries
-			H[i][j] = (H[i][j] > expC) ? householder_type(expC) :
-						((H[i][j] < -expC) ? householder_type(-expC) : H[i][j]);
+			H[i][j] = (H[i][j] > householderClamp) ? householder_type(householderClamp) :
+						((H[i][j] < -householderClamp) ? householder_type(-householderClamp) : H[i][j]);
 			// H[i][j] /= hMax[j];
 			#ifdef DEBUG_PRINT
 			H_f[i][j] = H[i][j].to_double();
