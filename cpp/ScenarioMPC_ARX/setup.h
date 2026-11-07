@@ -568,7 +568,7 @@ static_assert(mads::d0 >= -(1 << (mesh_exp_type::width - 1)) && mads::frameExpMi
 namespace dig
 {
     constexpr int nBits = 12;                   // dig converter number of bits
-    constexpr int adcMax   = pow2(nBits)-1;     // maximum digital code value
+    constexpr int adcMax   = (1 << nBits) - 1;  // maximum digital code value
     constexpr int adcMin   = 0;                 // minimum digital code value
     constexpr int adcRange = adcMax - adcMin;   // max - min digital codes
 
