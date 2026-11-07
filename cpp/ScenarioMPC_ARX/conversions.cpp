@@ -6,19 +6,19 @@
 */
 digital_output_type ADConvertY(const output_type yAn)
 {
-	digital_output_type yDig = adc::yADCGain * yAn + adc::yBias;
+	digital_output_type yDig = dig::yADCGain * yAn + dig::yBias;
 	#ifndef FIXED
 	/* Emulate DAC saturation when using floating point */
-	yDig = (yDig < adc::adcMin) ? adc::adcMin : 
-	(yDig > adc::adcMax) ? adc::adcMax : yDig;
+	yDig = (yDig < dig::adcMin) ? dig::adcMin : 
+	(yDig > dig::adcMax) ? dig::adcMax : yDig;
 	#endif
 
 	#ifdef DEBUG_PRINT
-	float YADCGain_f = adc::yADCGain.to_float();
+	float YADCGain_f = dig::yADCGain.to_float();
 	float yAn_f = yAn.to_float();
-	float YBias_f = adc::yBias.to_float();
+	float YBias_f = dig::yBias.to_float();
 	float yDig_f = yDig.to_float();
-	float YADCGAINF = float(adc::adcRange) / (YMAXPHYS - YMINPHYS).to_float(); /* cross-check of adc::yADCGain: the ADC spans the PHYSICAL range */
+	float YADCGAINF = float(dig::adcRange) / (YMAXPHYS - YMINPHYS).to_float(); /* cross-check of dig::yADCGain: the ADC spans the PHYSICAL range */
 	#endif
 
 	return yDig;
@@ -26,12 +26,12 @@ digital_output_type ADConvertY(const output_type yAn)
 
 input_type DAConvertU(const digital_input_type uDig)
 {
-	input_type uAn = (uDig - adc::uBias) * adc::uDACGain;
+	input_type uAn = (uDig - dig::uBias) * dig::uDACGain;
 	
 	#ifdef DEBUG_PRINT
-	float UDACGainf = adc::uDACGain.to_float();
+	float UDACGainf = dig::uDACGain.to_float();
 	float UDigf = uDig.to_float();
-	float UBiasf = adc::uBias.to_float();
+	float UBiasf = dig::uBias.to_float();
 	float uAn_f = uAn.to_float();
 	#endif
 
@@ -68,14 +68,14 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl)
 	#endif
 	digital_input_type uDig = uConvCoeff*uCtrl + uConvOffset;
 	#if !defined(FIXED) && defined(CONVERSIONS_MODE)
-	/* Emulate ADC saturation when using floating point. adc::adcMin/adc::adcMax
+	/* Emulate ADC saturation when using floating point. dig::adcMin/dig::adcMax
 	 * only exist under CONVERSIONS_MODE (setup.h); without it,
 	 * digital_input_type == input_type (types.h) and there is no ADC
 	 * code to saturate - the old #ifndef FIXED alone made "FIXED off +
 	 * CONVERSIONS_MODE off" (pure floating-point, no ADC/DAC modelling)
-	 * fail to compile with "adc::adcMin was not declared in this scope". */
-	uDig = (uDig < adc::adcMin) ? adc::adcMin :
-			(uDig > adc::adcMax) ? adc::adcMax :
+	 * fail to compile with "dig::adcMin was not declared in this scope". */
+	uDig = (uDig < dig::adcMin) ? dig::adcMin :
+			(uDig > dig::adcMax) ? dig::adcMax :
 			uDig;
 	#endif
 
@@ -111,11 +111,11 @@ input_type denormalizeU(norm_input_type uNorm)
 // output_type DAConvertY(const digital_output_type yDig)
 // {
 // 	//  	#ifdef FIXED
-// 	//  	float YDACGainf = adc::yDACGain.to_float();
+// 	//  	float YDACGainf = dig::yDACGain.to_float();
 // 	//  	float yDigf = yDig.to_float();
-// 	//  	float YBiasf = adc::yBias.to_float();
+// 	//  	float YBiasf = dig::yBias.to_float();
 // 	//  #endif
-// 	output_type yAn = (yDig - adc::yBias) * adc::yDACGain;
+// 	output_type yAn = (yDig - dig::yBias) * dig::yDACGain;
 // 	return yAn;
 // }
 
@@ -123,10 +123,10 @@ input_type denormalizeU(norm_input_type uNorm)
 // digital_input_type ADConvertU(const input_type uAn)
 // {
 // 	// 	#ifdef FIXED
-// 	// 	float UADCGainf = adc::uADCGain.to_float();
+// 	// 	float UADCGainf = dig::uADCGain.to_float();
 // 	// 	float uAnf = uAn.to_float();
-// 	// 	float UBiasf = adc::uBias.to_float();
+// 	// 	float UBiasf = dig::uBias.to_float();
 // 	// #endif
-// 	digital_input_type uDig = adc::uADCGain * uAn + adc::uBias;
+// 	digital_input_type uDig = dig::uADCGain * uAn + dig::uBias;
 // 	return uDig;
 // }

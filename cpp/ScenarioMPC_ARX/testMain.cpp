@@ -167,7 +167,7 @@ int main(void)
      * uApplied contains u(k) computed by the controller at step k-1.*/
     input_type uApplied = uHistInit[0];
     #if defined(CONVERSIONS_MODE) && defined(DELAY_COMPENSATION)
-    digital_input_type uAppliedDig = adc::uADCGain * uApplied + adc::uBias;
+    digital_input_type uAppliedDig = dig::uADCGain * uApplied + dig::uBias;
     #endif
 
     /* Measurement noise, uniform in [-SIGMA_UNNORM, SIGMA_UNNORM] */

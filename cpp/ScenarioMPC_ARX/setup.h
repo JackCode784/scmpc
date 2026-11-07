@@ -553,12 +553,12 @@ static_assert(mads::d0 >= -(1 << (mesh_exp_type::width - 1)) && mads::frameExpMi
    the physical domain used by the algorithm.
 
    Output channel:
-     y_dig = adc::yADCGain * (y_an - adc::yBias)         [ADC: analogue -> digital]
-     y_an  = adc::yDACGain *  y_dig + adc::yBias          [DAC: digital -> analogue]
+     y_dig = dig::yADCGain * (y_an - dig::yBias)         [ADC: analogue -> digital]
+     y_an  = dig::yDACGain *  y_dig + dig::yBias          [DAC: digital -> analogue]
 
    Input channel:
-     u_dig = adc::uADCGain * (u_an - UBias_an)       (adc::uBias maps midscale -> 0)
-     u_an  = adc::uDACGain *  u_dig + UBias_an
+     u_dig = dig::uADCGain * (u_an - UBias_an)       (dig::uBias maps midscale -> 0)
+     u_an  = dig::uDACGain *  u_dig + UBias_an
 
    In software mode the gains are derived from UMINPHYS/UMAXPHYS/YMINPHYS/YMAXPHYS.
    In fixed-point mode they are explicit literals (ap_fixed<> prevents
@@ -567,7 +567,7 @@ static_assert(mads::d0 >= -(1 << (mesh_exp_type::width - 1)) && mads::frameExpMi
 #ifdef CONVERSIONS_MODE
 namespace dig
 {
-    constexpr int nBits = 12;                   // adc converter number of bits
+    constexpr int nBits = 12;                   // dig converter number of bits
     constexpr int adcMax   = pow2(nBits)-1;     // maximum digital code value
     constexpr int adcMin   = 0;                 // minimum digital code value
     constexpr int adcRange = adcMax - adcMin;   // max - min digital codes
@@ -748,15 +748,15 @@ static const norm_input_type UNORMMIN = UMIN;
     conversions functions. */
 #ifdef CONVERSIONS_MODE
     #ifdef NRMLZ
-    static const dig2ctrl_type yConvCoeff = double(yNormGain)*double(adc::yDACGain);
-    static const ctrl2dig_type uConvCoeff = double(adc::uADCGain)*double(uNormGainInverse);
-    static const norm_output_type yConvOffset = double(yNormOffset) - double(adc::yDACGain)*double(adc::yBias)*double(yNormGain);
-    static const digital_input_type uConvOffset = double(adc::uBias) - double(uNormOffset)*double(uNormGainInverse)*double(adc::uADCGain);
+    static const dig2ctrl_type yConvCoeff = double(yNormGain)*double(dig::yDACGain);
+    static const ctrl2dig_type uConvCoeff = double(dig::uADCGain)*double(uNormGainInverse);
+    static const norm_output_type yConvOffset = double(yNormOffset) - double(dig::yDACGain)*double(dig::yBias)*double(yNormGain);
+    static const digital_input_type uConvOffset = double(dig::uBias) - double(uNormOffset)*double(uNormGainInverse)*double(dig::uADCGain);
     #else
-    static const dig2ctrl_type yConvCoeff = adc::yDACGain;
-    static const ctrl2dig_type uConvCoeff = adc::uADCGain;
-    static const norm_output_type yConvOffset = double(-adc::yBias)*double(adc::yDACGain);
-    static const digital_input_type uConvOffset = adc::uBias;
+    static const dig2ctrl_type yConvCoeff = dig::yDACGain;
+    static const ctrl2dig_type uConvCoeff = dig::uADCGain;
+    static const norm_output_type yConvOffset = double(-dig::yBias)*double(dig::yDACGain);
+    static const digital_input_type uConvOffset = dig::uBias;
     #endif
     #else
     #ifdef NRMLZ
