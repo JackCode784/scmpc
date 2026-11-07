@@ -241,7 +241,7 @@ void costFunctionArx(cost_type              cost[2],
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        if (currU[i] < UNORMMIN || currU[i] > UNORMMAX)
+        if (currU[i] < nrmlz::uNormMin || currU[i] > nrmlz::uNormMax)
         {
             costViol = 512; // power of two
         }

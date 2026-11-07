@@ -86,7 +86,7 @@ typedef ap_fixed<WORD_LENGTH,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
    typedef ap_ufixed<21,0> strip_q_coeff_c0_type;  // qmyInvDmc0
 
    typedef ap_fixed<WORD_LENGTH,-2> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
-   typedef ap_fixed<WORD_LENGTH,4,AP_RND_CONV,AP_SAT> output_strip_offset_type; // [-my*SIGMA_UNNORM-YNORMMAXPHYS,my*SIGMA_UNNORM+YNORMMAXPHYS]
+   typedef ap_fixed<WORD_LENGTH,4,AP_RND_CONV,AP_SAT> output_strip_offset_type; // [-my*SIGMA_UNNORM-nrmlz::yNormMaxPhys,my*SIGMA_UNNORM+nrmlz::yNormMaxPhys]
    typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> proj_type; // |cproj| <= nTheta*0.44, |gproj| <=  
    typedef ap_fixed<WORD_LENGTH,11,AP_RND_CONV,AP_SAT> proj_inv_type; // inverse of proj_type
    typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> support_strip_offset_type; // sum of nGen + 1 proj_type variables
@@ -161,9 +161,9 @@ typedef ap_fixed<WORD_LENGTH,3+2,AP_RND_CONV,AP_SAT> det_type;
 typedef ap_fixed<WORD_LENGTH,9,AP_RND_CONV,AP_SAT> elim_type;
 /* Normalization gains: 2/(YMAXPHYS-YMINPHYS), 2/(UMAXPHYS-UMINPHYS) and
  * its inverse (the buck types hold 0.2, 2 and 0.5 and cannot hold these). */
-typedef ap_ufixed<WORD_LENGTH,1> y_norm_coeff_type;      // yNormGain = 1.1111
-typedef ap_ufixed<WORD_LENGTH,0> u_norm_coeff_type;      // uNormGain = 0.3333
-typedef ap_ufixed<WORD_LENGTH,2> u_norm_inv_coeff_type;  // uNormGainInverse = 3
+typedef ap_ufixed<WORD_LENGTH,1> y_norm_coeff_type;      // nrmlz::yNormGain = 1.1111
+typedef ap_ufixed<WORD_LENGTH,0> u_norm_coeff_type;      // nrmlz::uNormGain = 0.3333
+typedef ap_ufixed<WORD_LENGTH,2> u_norm_inv_coeff_type;  // nrmlz::uNormGainInverse = 3
       #ifdef CONVERSIONS_MODE
       /* Normalization+conversion products are system-independent (see the
        * buck block): 2/4095 and 4095/2. */
@@ -272,7 +272,7 @@ typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_output_type;
 /* ADC/DAC over [-0.9, 0.9] rad and [-3, 3]: the buck types overflow on
  * dig::yADCGain = 2275 (max 511) and dig::uDACGain = 1.47e-3 (max 9.8e-4), and
  * would round dig::uADCGain = 682.5 to an integer (a 0.07% gain error that
- * goes straight into uConvCoeff). */
+ * goes straight into conv::uConvCoeff). */
 typedef ap_ufixed<16,12> output_adc_coeff_type; // dig::yADCGain = 4095/1.8 = 2275
 typedef ap_ufixed<14,10> input_adc_coeff_type;  // dig::uADCGain = 4095/6 = 682.5 (exact)
 typedef ap_ufixed<20,-11> output_dac_coeff_type; // dig::yDACGain = 1.8/4095 = 4.396e-4 < 2^-11, 31 fractional bits
@@ -313,7 +313,7 @@ typedef ap_ufixed<3,0> input_weight_type; /* mpc::weightR = 2^mpc::log2R */
  * computed once per controller() call by computeArxCoeffs() (see
  * computeArxOutput.cpp for the derivation):
  *   coeff[i] = myInvDmDg[i]*theta[i] + myInvDmc0[i]
- *   offset   = sum_i qmyInvDmDg[i]*theta[i] + qmyInvDmc0 + yNormOffset
+ *   offset   = sum_i qmyInvDmDg[i]*theta[i] + qmyInvDmc0 + nrmlz::yNormOffset
  * so that a prediction is just  y = offset + sum_i sample[i]*coeff[i].
  *
  * Range: |coeff[i]| <= |myInvDmc0[i]| + myInvDmDg[i]*|theta[i]|, which

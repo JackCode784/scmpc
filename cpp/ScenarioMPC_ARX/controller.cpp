@@ -108,7 +108,7 @@ norm_input_type  uAppliedCtrl;
  *   generators  G[i][j] / Dg[i]       (each row scaled by its |row sum|)
  * Dg[i] > 0 for every uncertain row by definition, so this never divides
  * by zero. Every sample maps through the same affine maps as the live
- * signals:  y_n = yNormGain*y + yNormOffset,  u_n = uNormGain*u + uNormOffset.
+ * signals:  y_n = nrmlz::yNormGain*y + nrmlz::yNormOffset,  u_n = nrmlz::uNormGain*u + nrmlz::uNormOffset.
  * Without NRMLZ, the physical values are copied unchanged.
  *
  * CONSTRUCT: same idea as stripCoeffs in setup.h - an ordinary function
@@ -118,7 +118,7 @@ norm_input_type  uAppliedCtrl;
  * turning these five into struct members would change every use site
  * and every ARRAY_PARTITION pragma. It is defined after them in this
  * same translation unit, so it runs after their (zero) initialization,
- * and after setup.h's yNormGain/uNormGain/yNormOffset/uNormOffset
+ * and after setup.h's nrmlz::yNormGain/nrmlz::uNormGain/nrmlz::yNormOffset/nrmlz::uNormOffset
  * (same TU, declared earlier) - C++ orders initialization within one
  * translation unit. Vitis HLS has to fold it into the registers' reset
  * values exactly as it already does for every ap_fixed global
@@ -144,8 +144,8 @@ static bool initControllerState()
     }
 
     #ifdef NRMLZ
-    const double yGain = double(yNormGain), yOff = double(yNormOffset);
-    const double uGain = double(uNormGain), uOff = double(uNormOffset);
+    const double yGain = double(nrmlz::yNormGain), yOff = double(nrmlz::yNormOffset);
+    const double uGain = double(nrmlz::uNormGain), uOff = double(nrmlz::uNormOffset);
     #else
     const double yGain = 1.0, yOff = 0.0, uGain = 1.0, uOff = 0.0;
     #endif
@@ -233,7 +233,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
      * ("freeze current input"), which is a poor guess whenever yref is
      * moving: MADS then spends its limited mads::iter budget fighting its
      * way away from a flat start instead of refining an already-good
-     * trajectory, which is one of the reasons DELTAYNORM (the output-rate
+     * trajectory, which is one of the reasons nrmlz::deltaYNorm (the output-rate
      * constraint) gets violated on transients - see updateConstraintViolation.cpp.
      *
      * Instead, shift uOptPrev = u*(k-1), ..., u*(k-1+mpc::ctrlHrzn-1) - the full
@@ -293,8 +293,8 @@ digital_input_type controller(const digital_output_type yCurrDig,
     #endif
 
     /* In NRMLZ case, the inputs should be:
-        * yCurr -> yCurr - yNormOffset - ([yHistCtrl, uHistCtrl] - offsets) * yNormGain * ((i < na) ? 1 : normGainsRatio) * Dg * c0
-        * yHistCtrl, uHistCtrl -> ([yHistCtrl, uHistCtrl] - ioOffsets) * yNormGain * (i < na) ? 1 : normGainsRatio * Dg
+        * yCurr -> yCurr - nrmlz::yNormOffset - ([yHistCtrl, uHistCtrl] - offsets) * nrmlz::yNormGain * ((i < na) ? 1 : normGainsRatio) * Dg * c0
+        * yHistCtrl, uHistCtrl -> ([yHistCtrl, uHistCtrl] - ioOffsets) * nrmlz::yNormGain * (i < na) ? 1 : normGainsRatio * Dg
         * the rest is the same
         In brief, phi should become (phi_norm-q)*my*Dm^-1*Dg
         */
@@ -323,18 +323,18 @@ digital_input_type controller(const digital_output_type yCurrDig,
          * this subtract in as many cycles as the target clock needs. */
         #pragma HLS UNROLL
         #endif
-        phi[i] = (yHistCtrl[i] - yNormOffset);
+        phi[i] = (yHistCtrl[i] - nrmlz::yNormOffset);
     }
     for(int i = 0; i < nb; i++)
     {
         #ifdef PRAGMAS
         #pragma HLS UNROLL
         #endif
-        phi[i+na] = (uHistCtrl[i+nd-1] - uNormOffset);
+        phi[i+na] = (uHistCtrl[i+nd-1] - nrmlz::uNormOffset);
     }
 
     /* Use (\tilde{phi} - offsets) to multiply by my*Dm^-1*c0 */
-    stripCenter -= yNormOffset;
+    stripCenter -= nrmlz::yNormOffset;
     for(int i = 0; i < nTheta; i++)
     {
         #ifdef PRAGMAS
@@ -381,7 +381,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
     /*
      * Certain parameters (setup.h's UNC_MAP) are not in the zonotope, so
      * their contribution phi[i]*theta_i is known and moves into the strip
-     * centre:  |y - sum_certain phi_i*c0_i - phiUnc^T thetaUnc| <= sigma.
+     * centre:  |y - sum_certain phi_i*c0_i - phiUnc^T thetaUnc| <= nrmlz::sigma.
      * With NRMLZ this already happened above: the myInvDmc0 loop subtracts
      * every parameter's c0 part, certain ones included, and their
      * myInvDmDg[i] = 0 zeroes their phi entry.
@@ -410,7 +410,7 @@ digital_input_type controller(const digital_output_type yCurrDig,
         phiUnc[k] = phi[UNC_MAP.full[k]];
     }
 
-    boundStripZonotopeIntersectionNew(stripCenter, phiUnc, sigma,
+    boundStripZonotopeIntersectionNew(stripCenter, phiUnc, nrmlz::sigma,
                                     thetaCenter, thetaGens,
                                     newCenter, newGens);
 

@@ -122,7 +122,7 @@ void computeArxCoeffs(const theta_type thetaScenarios[scen::nScen][nUnc],
         }
         offset[l] = 0;
         #else
-        arx_coeff_type off = stripCoeffs.qmyInvDmc0 + yNormOffset;
+        arx_coeff_type off = stripCoeffs.qmyInvDmc0 + nrmlz::yNormOffset;
         for(int i = 0; i < nTheta; i++)
         {
             #ifdef PRAGMAS

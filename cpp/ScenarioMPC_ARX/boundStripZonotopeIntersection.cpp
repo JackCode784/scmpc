@@ -17,9 +17,9 @@
  *
  * STRIP REPRESENTATION
  * ---------------------
- * The strip  S = { theta : |h'theta - y| <= sigma }  is represented by two offsets:
- *   offset[0] = y + sigma   (upper bound of  h'theta)
- *   offset[1] = sigma - y   (upper bound of -h'theta, i.e. negative of lower bound)
+ * The strip  S = { theta : |h'theta - y| <= nrmlz::sigma }  is represented by two offsets:
+ *   offset[0] = y + nrmlz::sigma   (upper bound of  h'theta)
+ *   offset[1] = nrmlz::sigma - y   (upper bound of -h'theta, i.e. negative of lower bound)
  *
  * Given a zonotope Z = { c + Gξ : ‖ξ‖∞ ≤ 1 }, the support of Z along ±h is:
  *   supOffset[0] =  h'c + sum_j |h'g_j|   (max of  h'theta over Z)
@@ -42,12 +42,12 @@
  * Keep the candidate with the smallest volume.
  * If no candidate improves on the original, return the original unchanged.
  *
- * STRIP HALF-WIDTH: EPSILON vs sigma
+ * STRIP HALF-WIDTH: EPSILON vs nrmlz::sigma
  * ------------------------------------
  * EPSILON is the worst-case noise bound (deterministic upper bound on |e(k)|).
- * sigma is the noise standard deviation (a statistical parameter).
- * The strip MUST use EPSILON — using sigma would make the strip too narrow,
- * potentially excluding the true parameter theta* on noise realisations above sigma,
+ * nrmlz::sigma is the noise standard deviation (a statistical parameter).
+ * The strip MUST use EPSILON — using nrmlz::sigma would make the strip too narrow,
+ * potentially excluding the true parameter theta* on noise realisations above nrmlz::sigma,
  * which defeats the bounded-error guarantee.
  */
 
@@ -73,7 +73,7 @@
 //     // Lambda computation
 //     alg_type lambda[nTheta];
 //     alg_type tmp[nTheta][nTheta];
-//     alg_type div = (alg_type)sigma * (alg_type)sigma;
+//     alg_type div = (alg_type)nrmlz::sigma * (alg_type)nrmlz::sigma;
 
 //     for (int i = 0; i < nTheta; i++)
 //     {
@@ -117,7 +117,7 @@
 //     /* New generators */
 //     for (int i = 0; i < nTheta; i++)
 //     {
-//         newGens[i][nTheta] = (theta_type)(lambda[i] * (alg_type)sigma);
+//         newGens[i][nTheta] = (theta_type)(lambda[i] * (alg_type)nrmlz::sigma);
 
 //         for (int j = 0; j < nTheta; j++)
 //         {

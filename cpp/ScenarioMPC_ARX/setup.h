@@ -76,7 +76,7 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-//   #define FIXED            /* fixed point representation */
+  #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 #define USE_SCENS_COST      /* Enable scenarios cost contribution */
@@ -400,7 +400,7 @@ static_assert(nGens >= nUnc,
      instead of holding uHistCtrl[0] constant across the whole horizon. This
      gives MADS a much better starting point once the plant is tracking
      a moving reference, which reduces (without eliminating) transient
-     DELTAYNORM violations right after a reference step.
+     nrmlz::deltaYNorm violations right after a reference step.
 
      Initialized from uHistInit[0] (system_configs.h) so it is always 
      the same operating point as the input history.
@@ -438,11 +438,18 @@ namespace mpc
     constexpr int log2R = 2;
     static const output_weight_type weightQ = pow2(log2Q);   /* stage   output weight  */
     static const output_weight_type weightP = pow2(log2P);   /* terminal output weight */
+
+    #ifdef NRMLZ
+    static const input_weight_type weightR = pow2(mpc::log2R);
+    #else
+    static const input_weight_type weightR = pow2(mpc::log2R) * ((double(YMAXPHYS) - double(YMINPHYS)) * (double(YMAXPHYS) - double(YMINPHYS))) / ((double(UMAXPHYS) - double(UMINPHYS)) * (double(UMAXPHYS) - double(UMINPHYS))); /* unnormalized stage input weight */
+    #endif
 }
 
 #ifdef FIXED
 static_assert(mpc::log2Q < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= mpc::log2Q, "weightQ weight matrix does not fit fixed point type.");
 static_assert(mpc::log2P < output_weight_type::iwidth && output_weight_type::iwidth - output_weight_type::width <= mpc::log2P, "weightP weight matrix does not fit fixed point type.");
+static_assert(mpc::log2R < input_weight_type::iwidth && input_weight_type::iwidth - input_weight_type::width <= mpc::log2R, "weightR weight matrix does not fit fixed point type.");
 #endif
 
 namespace scen
@@ -546,6 +553,7 @@ static_assert(mads::gamma >= 0, "gamma must be non negative.");
 static_assert(mads::d0 >= -(1 << (mesh_exp_type::width - 1)) && mads::frameExpMin >= -(1 << (mesh_exp_type::width - 1)),
                 "MADS exponents do not fit mesh_exp_type.");
 #endif
+
 /* ======================================================================
    ADC / DAC CONVERTER PARAMETERS
    ======================================================================
@@ -553,64 +561,63 @@ static_assert(mads::d0 >= -(1 << (mesh_exp_type::width - 1)) && mads::frameExpMi
    the physical domain used by the algorithm.
 
    Output channel:
-     y_dig = dig::yADCGain * (y_an - dig::yBias)         [ADC: analogue -> digital]
-     y_an  = dig::yDACGain *  y_dig + dig::yBias          [DAC: digital -> analogue]
+     y_dig = dig::yADCGain * (y_an) + dig::yBias         [ADC: analogue -> digital]
+     y_an  = dig::yDACGain * (y_dig - dig::yBias)        [DAC: digital -> analogue]
 
    Input channel:
-     u_dig = dig::uADCGain * (u_an - UBias_an)       (dig::uBias maps midscale -> 0)
-     u_an  = dig::uDACGain *  u_dig + UBias_an
+     u_dig = dig::uADCGain * (u_an) + UBias       (dig::uBias maps midscale -> 0)
+     u_an  = dig::uDACGain * (u_dig - UBias)
 
    In software mode the gains are derived from UMINPHYS/UMAXPHYS/YMINPHYS/YMAXPHYS.
-   In fixed-point mode they are explicit literals (ap_fixed<> prevents
-   compile-time arithmetic on non-constexpr types).
    ====================================================================== */
 #ifdef CONVERSIONS_MODE
 namespace dig
 {
     constexpr int nBits = 12;                   // dig converter number of bits
-    constexpr int adcMax   = (1 << nBits) - 1;  // maximum digital code value
-    constexpr int adcMin   = 0;                 // minimum digital code value
-    constexpr int adcRange = adcMax - adcMin;   // max - min digital codes
+    constexpr int codeMax   = (1 << nBits) - 1;  // maximum digital code value
+    constexpr int codeMin   = 0;                 // minimum digital code value
+    constexpr int codeRange = codeMax - codeMin;   // max - min digital codes
 
-    static const output_adc_coeff_type yADCGain = adcRange / double(YMAXPHYS - YMINPHYS);
-    static const digital_output_type  yBias    = (double(adcMin)*double(YMAXPHYS) - double(adcMax)*double(YMINPHYS)) / double(YMAXPHYS - YMINPHYS);
-    constexpr double yDACGain = double(YMAXPHYS - YMINPHYS) / adcRange;
-    constexpr double uADCGain = adcRange / double(UMAXPHYS - UMINPHYS);
-    static const input_dac_coeff_type uDACGain = double(UMAXPHYS - UMINPHYS) / adcRange;
-    static const digital_input_type   uBias    = (adcMin*double(UMAXPHYS) - adcMax*double(UMINPHYS)) / double(UMAXPHYS - UMINPHYS);
+    static const output_adc_coeff_type yADCGain = codeRange / double(YMAXPHYS - YMINPHYS);
+    static const digital_output_type  yBias    = (codeMin*double(YMAXPHYS) - codeMax*double(YMINPHYS)) / double(YMAXPHYS - YMINPHYS);
+    static const double yDACGain = double(YMAXPHYS - YMINPHYS) / codeRange;
+    static const double uADCGain = codeRange / double(UMAXPHYS - UMINPHYS);
+    static const input_dac_coeff_type uDACGain = double(UMAXPHYS - UMINPHYS) / codeRange;
+    static const digital_input_type   uBias    = (codeMin*double(UMAXPHYS) - codeMax*double(UMINPHYS)) / double(UMAXPHYS - UMINPHYS);
 }
 #endif
 
-#ifdef NRMLZ
-/* Set these from user? */
-static const norm_output_type YNORMMAXPHYS = 1;
-static const norm_output_type YNORMMINPHYS = -1;
-static const norm_input_type UNORMMAXPHYS = 1;
-static const norm_input_type UNORMMINPHYS = -1;
-
-static const y_norm_coeff_type yNormGain = double(YNORMMAXPHYS - YNORMMINPHYS) / double(YMAXPHYS - YMINPHYS);
-static const u_norm_coeff_type uNormGain = double(UNORMMAXPHYS - UNORMMINPHYS) / double(UMAXPHYS - UMINPHYS);
-static const u_norm_inv_coeff_type uNormGainInverse = double(UMAXPHYS - UMINPHYS) / double(UNORMMAXPHYS - UNORMMINPHYS);
-static const norm_output_type yNormOffset = double(YNORMMINPHYS*YMAXPHYS - YNORMMAXPHYS*YMINPHYS) / double(YMAXPHYS - YMINPHYS);
-static const norm_input_type uNormOffset = double(UNORMMINPHYS*UMAXPHYS - UNORMMAXPHYS*UMINPHYS) / double(UMAXPHYS - UMINPHYS);
-
-static const norm_output_type YNORMMAX = double(yNormGain)*double(YMAX) + double(yNormOffset);
-static const norm_output_type YNORMMIN = double(yNormGain)*double(YMIN) + double(yNormOffset);
-static const norm_input_type UNORMMAX = double(uNormGain)*double(UMAX) + double(uNormOffset);
-static const norm_input_type UNORMMIN = double(uNormGain)*double(UMIN) + double(uNormOffset);
-
-namespace mpc
+namespace nrmlz
 {
-    static const input_weight_type weightR = pow2(mpc::log2R);
+    #ifdef NRMLZ
+    /* Set these from user? */
+    constexpr double yNormMaxPhys = 1;
+    constexpr double yNormMinPhys = -1;
+    constexpr double uNormMaxPhys = 1;
+    constexpr double uNormMinPhys = -1;
+    #else
+    static const double yNormMaxPhys = YMAXPHYS;
+    static const double yNormMinPhys = YMINPHYS;
+    static const double uNormMaxPhys = UMAXPHYS;
+    static const double uNormMinPhys = UMINPHYS;
+    #endif
+    
+    static const double yNormGain = (yNormMaxPhys - yNormMinPhys) / double(YMAXPHYS - YMINPHYS);
+    static const double uNormGain = (uNormMaxPhys - uNormMinPhys) / double(UMAXPHYS - UMINPHYS);
+    static const double uNormGainInverse = double(UMAXPHYS - UMINPHYS) / (uNormMaxPhys - uNormMinPhys);
+
+    static const norm_output_type yNormOffset = (yNormMinPhys*double(YMAXPHYS) - yNormMaxPhys*double(YMINPHYS)) / double(YMAXPHYS - YMINPHYS);
+    static const norm_input_type uNormOffset = (uNormMinPhys*double(UMAXPHYS) - uNormMaxPhys*double(UMINPHYS)) / double(UMAXPHYS - UMINPHYS);
+
+    static const norm_output_type yNormMax = yNormGain*double(YMAX) + double(yNormOffset);
+    static const norm_output_type yNormMin = yNormGain*double(YMIN) + double(yNormOffset);
+    static const norm_input_type uNormMax = uNormGain*double(UMAX) + double(uNormOffset);
+    static const norm_input_type uNormMin = uNormGain*double(UMIN) + double(uNormOffset);
+    
+    /* Normalization, use "normalized" noise in output strip */
+    const norm_noise_type sigma = yNormGain*double(SIGMA_UNNORM);
+    static const norm_output_type deltaYNorm = yNormGain * double(DELTAY);
 }
-
-#ifdef FIXED
-static_assert(mpc::log2R < input_weight_type::iwidth && input_weight_type::iwidth - input_weight_type::width <= mpc::log2R, "weightR weight matrix does not fit fixed point type.");
-#endif
-
-/* Normalization, use "normalized" noise in output strip */
-const norm_noise_type sigma = double(yNormGain)*double(SIGMA_UNNORM);
-static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
 
 /*
  * Strip-intersection normalization constants (Bravo et al. zonotope
@@ -628,16 +635,16 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  *        thetaCenter/thetaGens (see the note below for why).
  *   Dg[i] = sum_j |generatorsInit[i][j]| - Z0's interval-hull
  *           half-width in parameter i (row-sum of |generators|).
- *   Dm[i] = yNormGain for i<na, uNormGain for i>=na - per-parameter
+ *   Dm[i] = nrmlz::yNormGain for i<na, nrmlz::uNormGain for i>=na - per-parameter
  *           I/O normalization gain (block-diagonal in the MATLAB).
- *   q[i]  = yNormOffset for i<na, uNormOffset for i>=na.
+ *   q[i]  = nrmlz::yNormOffset for i<na, nrmlz::uNormOffset for i>=na.
  *
- *   myInvDmDg[i]  = (yNormGain/Dm[i]) * Dg[i]
- *   myInvDmc0[i]  = (yNormGain/Dm[i]) * thetaNominalInit[i]
+ *   myInvDmDg[i]  = (nrmlz::yNormGain/Dm[i]) * Dg[i]
+ *   myInvDmc0[i]  = (nrmlz::yNormGain/Dm[i]) * thetaNominalInit[i]
  *   qmyInvDmDg[i] = -q[i] * myInvDmDg[i]
  *   qmyInvDmc0    = -sum_i q[i] * myInvDmc0[i]
  *
- * For i<na, yNormGain/Dm[i] = yNormGain/yNormGain = 1, so those entries
+ * For i<na, nrmlz::yNormGain/Dm[i] = nrmlz::yNormGain/nrmlz::yNormGain = 1, so those entries
  * collapse to exactly Dg[i] / thetaNominalInit[i] with no gain
  * factor at all - which is why SYSTEM_BUCK_LOSS's first two (na=2)
  * hardcoded myInvDmDg/myInvDmc0 entries above used to just BE the
@@ -655,22 +662,22 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  * (a different .cpp file, via the extern declaration) could observe
  * them still zero, depending on link order. The function below instead
  * builds its own FUNCTION-LOCAL c0/G straight from the macros, so the
- * only things it depends on (yNormGain, uNormGain, yNormOffset,
- * uNormOffset, na) are ordinary same-translation-unit globals declared
+ * only things it depends on (nrmlz::yNormGain, nrmlz::uNormGain, nrmlz::yNormOffset,
+ * nrmlz::uNormOffset, na) are ordinary same-translation-unit globals declared
  * earlier in THIS file - C++ guarantees in-order initialization within
  * one translation unit, so that dependency is always safe.
  *
  * CONSTRUCT: an ordinary (non-constexpr - ap_fixed<> still has no
  * constexpr constructor) function, called exactly once, its result
  * assigned into "static const" variables - the same "compute via a
- * double expression at static-initialization time" idiom yNormGain/
- * uNormGain above already use, just generalised from one scalar to a
+ * double expression at static-initialization time" idiom nrmlz::yNormGain/
+ * nrmlz::uNormGain above already use, just generalised from one scalar to a
  * small aggregate of arrays by bundling them in a plain struct (structs
  * with array members ARE returnable/copyable by value in C++, unlike
  * bare arrays, so no std::array or other container is needed - keeping
  * this to the same plain-C-array style as everywhere else in the
  * codebase). All arithmetic is done in double via explicit casts,
- * exactly like yNormGain/uNormGain, so no ap_fixed rounding mode acts
+ * exactly like nrmlz::yNormGain/nrmlz::uNormGain, so no ap_fixed rounding mode acts
  * on any INTERMEDIATE step, only on the final assignment into each
  * struct member. The '<0.0 ? - : ' absolute value (rather than
  * std::abs, which would need a new #include) matches the same by-hand
@@ -690,7 +697,7 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  * environment) - accessing the struct directly removes the need to
  * rely on that reasoning at all, leaving only the same "static const
  * computed via a non-constexpr function" mechanism this file's
- * existing scalar constants (yNormGain, uNormGain, mpc::weightR, DELTAYNORM, ...)
+ * existing scalar constants (nrmlz::yNormGain, nrmlz::uNormGain, mpc::weightR, nrmlz::deltaYNorm, ...)
  * already depend on successfully.
  */
 struct StripCoeffs
@@ -709,8 +716,8 @@ static StripCoeffs computeStripCoeffs()
     for (int i = 0; i < nTheta; i++)
     {
         const bool   isY        = (i < na);
-        const double gainRatio  = isY ? 1.0 : double(yNormGain) / double(uNormGain);
-        const double qi         = isY ? double(yNormOffset)    : double(uNormOffset);
+        const double gainRatio  = isY ? 1.0 : double(nrmlz::yNormGain) / double(nrmlz::uNormGain);
+        const double qi         = isY ? double(nrmlz::yNormOffset)    : double(nrmlz::uNormOffset);
 
         const double myInvDmDg_i = gainRatio * DgInit.Dg[i];
         const double myInvDmc0_i = gainRatio * double(thetaNominalInit[i]);
@@ -726,32 +733,18 @@ static StripCoeffs computeStripCoeffs()
 }
 
 static const StripCoeffs stripCoeffs = computeStripCoeffs();
-#else
-const norm_noise_type sigma = SIGMA_UNNORM; // no normalization, use normal noise in output strip
-namespace mpc
-{
-    static const input_weight_type weightR = pow2(mpc::log2R) * ((double(YMAXPHYS) - double(YMINPHYS)) * (double(YMAXPHYS) - double(YMINPHYS))) / ((double(UMAXPHYS) - double(UMINPHYS)) * (double(UMAXPHYS) - double(UMINPHYS))); /* unnormalized stage input weight */
-}
-static const norm_output_type YNORMMAXPHYS = YMAXPHYS;
-static const norm_output_type YNORMMINPHYS = YMINPHYS;
-static const norm_input_type UNORMMAXPHYS = UMAXPHYS;
-static const norm_input_type UNORMMINPHYS = UMINPHYS;
-static const norm_output_type DELTAYNORM = DELTAY;
-static const norm_output_type YNORMMAX = YMAX;
-static const norm_output_type YNORMMIN = YMIN;
-static const norm_input_type UNORMMAX = UMAX;
-static const norm_input_type UNORMMIN = UMIN;
-#endif
 
 /* Choose appropriate coefficients based on the operation modes.
     These serve as coefficients and offsets for computing
     conversions functions. */
+namespace conv
+{
 #ifdef CONVERSIONS_MODE
     #ifdef NRMLZ
-    static const dig2ctrl_type yConvCoeff = double(yNormGain)*double(dig::yDACGain);
-    static const ctrl2dig_type uConvCoeff = double(dig::uADCGain)*double(uNormGainInverse);
-    static const norm_output_type yConvOffset = double(yNormOffset) - double(dig::yDACGain)*double(dig::yBias)*double(yNormGain);
-    static const digital_input_type uConvOffset = double(dig::uBias) - double(uNormOffset)*double(uNormGainInverse)*double(dig::uADCGain);
+    static const dig2ctrl_type yConvCoeff = double(nrmlz::yNormGain)*double(dig::yDACGain);
+    static const ctrl2dig_type uConvCoeff = double(dig::uADCGain)*double(nrmlz::uNormGainInverse);
+    static const norm_output_type yConvOffset = double(nrmlz::yNormOffset) - double(dig::yDACGain)*double(dig::yBias)*double(nrmlz::yNormGain);
+    static const digital_input_type uConvOffset = double(dig::uBias) - double(nrmlz::uNormOffset)*double(nrmlz::uNormGainInverse)*double(dig::uADCGain);
     #else
     static const dig2ctrl_type yConvCoeff = dig::yDACGain;
     static const ctrl2dig_type uConvCoeff = dig::uADCGain;
@@ -760,10 +753,10 @@ static const norm_input_type UNORMMIN = UMIN;
     #endif
     #else
     #ifdef NRMLZ
-    static const dig2ctrl_type yConvCoeff = yNormGain;
-    static const ctrl2dig_type uConvCoeff = uNormGainInverse;
-    static const norm_output_type yConvOffset = yNormOffset;
-    static const digital_input_type uConvOffset = double(-uNormOffset)*double(uNormGainInverse);
+    static const dig2ctrl_type yConvCoeff = nrmlz::yNormGain;
+    static const ctrl2dig_type uConvCoeff = nrmlz::uNormGainInverse;
+    static const norm_output_type yConvOffset = nrmlz::yNormOffset;
+    static const digital_input_type uConvOffset = double(-nrmlz::uNormOffset)*double(nrmlz::uNormGainInverse);
     #else
     static const dig2ctrl_type yConvCoeff = 1;
     static const ctrl2dig_type uConvCoeff = 1;
@@ -771,7 +764,7 @@ static const norm_input_type UNORMMIN = UMIN;
     static const digital_input_type uConvOffset = 0;
     #endif
 #endif
-
+}
 /* ======================================================================
    FUNCTION PROTOTYPES
    ====================================================================== */

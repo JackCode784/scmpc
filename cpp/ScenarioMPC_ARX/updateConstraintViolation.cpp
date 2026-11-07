@@ -2,8 +2,8 @@
 
 /**
  * Add to acc the output constraint violation of one predicted sample: how
- * far yCurr is outside [YNORMMIN, YNORMMAX], plus how far the step
- * yCurr - yPast exceeds +-DELTAYNORM (nothing when both constraints hold).
+ * far yCurr is outside [nrmlz::yNormMin, nrmlz::yNormMax], plus how far the step
+ * yCurr - yPast exceeds +-nrmlz::deltaYNorm (nothing when both constraints hold).
  *
  * FIXED: the two terms are summed first and added to acc ONCE, so that
  * costFunctionArx's pipelined model loop has a single addition in its
@@ -28,15 +28,15 @@ cost_type constraintViolation(const norm_output_type yCurr, const norm_output_ty
     #pragma HLS INLINE
     #endif
     cost_type viol = 0;
-    if (yCurr > YNORMMAX)
-        viol += (yCurr - YNORMMAX);
-    else if (yCurr < YNORMMIN)
-        viol += (YNORMMIN - yCurr);
+    if (yCurr > nrmlz::yNormMax)
+        viol += (yCurr - nrmlz::yNormMax);
+    else if (yCurr < nrmlz::yNormMin)
+        viol += (nrmlz::yNormMin - yCurr);
 
-    if(yCurr - yPast > DELTAYNORM)
-        viol += yCurr - yPast - DELTAYNORM;
-    else if(yCurr - yPast < -DELTAYNORM)
-        viol += yPast - yCurr - DELTAYNORM;
+    if(yCurr - yPast > nrmlz::deltaYNorm)
+        viol += yCurr - yPast - nrmlz::deltaYNorm;
+    else if(yCurr - yPast < -nrmlz::deltaYNorm)
+        viol += yPast - yCurr - nrmlz::deltaYNorm;
     return viol;
 }
 #endif
@@ -54,14 +54,14 @@ void addConstraintViolation(cost_type &acc, const norm_output_type yCurr, const 
     #ifdef FIXED
     acc += constraintViolation(yCurr, yPast);
     #else
-    if (yCurr > YNORMMAX)
-        acc += (yCurr - YNORMMAX);
-    else if (yCurr < YNORMMIN)
-        acc += (YNORMMIN - yCurr);
+    if (yCurr > nrmlz::yNormMax)
+        acc += (yCurr - nrmlz::yNormMax);
+    else if (yCurr < nrmlz::yNormMin)
+        acc += (nrmlz::yNormMin - yCurr);
 
-    if(yCurr - yPast > DELTAYNORM)
-        acc += yCurr - yPast - DELTAYNORM;
-    else if(yCurr - yPast < -DELTAYNORM)
-        acc += yPast - yCurr - DELTAYNORM;
+    if(yCurr - yPast > nrmlz::deltaYNorm)
+        acc += yCurr - yPast - nrmlz::deltaYNorm;
+    else if(yCurr - yPast < -nrmlz::deltaYNorm)
+        acc += yPast - yCurr - nrmlz::deltaYNorm;
     #endif
 }
