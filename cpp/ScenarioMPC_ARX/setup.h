@@ -430,21 +430,14 @@ namespace mpc
     /* ======================================================================
         MPC COST-FUNCTION WEIGHTS
         ======================================================================
-        Stage cost per step:  l(y, u) = weightQ*(y - y_ref)^2 + weightR*u^2
-        Terminal cost:        V_f(y)   = weightP*(y(k+N) - y_ref)^2
+        Stage cost per step:  l(y, u) = mpc::weightQ*(y - y_ref)^2 + mpc::weightR*(u(k)-u(k-1))^2
+        Terminal cost:        V_f(y)   = mpc::weightP*(y(k+N) - y_ref)^2
         ====================================================================== */
     constexpr int log2Q = 4;
     constexpr int log2P = 4;
     constexpr int log2R = 2;
-
-    /* ======================================================================
-    MPC COST-FUNCTION WEIGHTS
-    ======================================================================
-    Stage cost per step:  l(y, u) = weightQ*(y - y_ref)^2 + weightR*u^2
-    Terminal cost:        V_f(y)   = weightP*(y(k+N) - y_ref)^2
-    ====================================================================== */
-    static const output_weight_type weightQ = pow2(mpc::log2Q);   /* stage   output weight  */
-    static const output_weight_type weightP = pow2(mpc::log2P);   /* terminal output weight */
+    static const output_weight_type weightQ = pow2(log2Q);   /* stage   output weight  */
+    static const output_weight_type weightP = pow2(log2P);   /* terminal output weight */
 }
 
 #ifdef FIXED
@@ -521,8 +514,9 @@ extern norm_input_type uOptPrev[mpc::ctrlHrzn];
    MADS SOLVER PARAMETERS
    ======================================================================
    The Mesh Adaptive Direct Search (MADS) algorithm manages a frame size
-   updated multiple times in a single time step(success: +c, failure: -c).
-   Sizes are stored in log-scale (frameIdx, meshIdx) as integers for
+   updated multiple times in a single time step(success: mads::+frameExpStep, 
+   failure: -mads::frameExpStep).
+   Sizes are stored in log-scale (frameExp, meshExp) as integers for
    efficient hardware arithmetic.
    ====================================================================== */
 namespace mads
@@ -531,10 +525,12 @@ namespace mads
     constexpr int frameExpStep = 1; /* frame-size update step. frameExp += frameExpStep on success, frameExpStep > 0 */
 
     /**
-    * householderClamp = 2^{-gamma}: pre-computed scaling factor for the mesh update.
+    * householderClamp = 2^{-gamma}: pre-computed saturation bound for the
+    * housholder matrix With the 2^gamma factor in the poll step it matches 
+    * the paper’s [−1, 1].
     * If gamma changes, householderClamp updates.
     */
-    constexpr int gamma = 1;        /* (integer > 0) */
+    constexpr int gamma = 1;        /* (integer >= 0) */
     static const householder_type householderClamp = householder_type(pow2(-gamma));
     
     constexpr int frameExpMin = -20;   /* frameExp minimum value */
@@ -548,7 +544,7 @@ namespace mads
 
 static_assert(mads::gamma >= 0, "gamma must be non negative.");
 
-static const mesh_exp_type D0_VAL = mesh_exp_type(mads::d0); // used in MADSARX, frameIdx init
+static const mesh_exp_type D0_VAL = mesh_exp_type(mads::d0); // used in MADSARX, frameExp init
 
 /* ======================================================================
    ADC / DAC CONVERTER PARAMETERS
@@ -690,7 +686,7 @@ static const norm_output_type DELTAYNORM = double(yNormGain) * double(DELTAY);
  * environment) - accessing the struct directly removes the need to
  * rely on that reasoning at all, leaving only the same "static const
  * computed via a non-constexpr function" mechanism this file's
- * existing scalar constants (yNormGain, uNormGain, weightR, DELTAYNORM, ...)
+ * existing scalar constants (yNormGain, uNormGain, mpc::weightR, DELTAYNORM, ...)
  * already depend on successfully.
  */
 struct StripCoeffs
@@ -826,14 +822,14 @@ void costFunctionArx(cost_type              cost[2],
 /** Build 2*nOpt poll directions from a random unit vector and the
  *  current mesh/frame exponent vectors. */
 void generatePollDirectionsArx(const rand_type     randomVector[nOpt],
-                                const mesh_exp_type frameIdx    [nOpt],
-                                const mesh_exp_type meshIdx     [nOpt],
+                                const mesh_exp_type frameExp    [nOpt],
+                                const mesh_exp_type meshExp     [nOpt],
                                 direction_type      directions  [nOpt][2*nOpt]);
 
 /** Scale the poll directions into a full poll matrix. */
 void generatePollMatrixArx(const norm_input_type currU[nOpt], 
-                            const mesh_exp_type frameIdx[nOpt], 
-                            const mesh_exp_type meshIdx[nOpt],
+                            const mesh_exp_type frameExp[nOpt], 
+                            const mesh_exp_type meshExp[nOpt],
                             norm_input_type pollMatrix[nOpt][2 * nOpt]);
 
 /* --- Scenario generation --------------------------------------------- */

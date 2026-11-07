@@ -6,10 +6,10 @@
  * --------------
  * The MPC objective over a prediction horizon of N steps is:
  *
- *   J = sum_{k=0}^{N-2} [ (u(k)-u(k-1))^2 * weightR  +  weightQ*(ypred_nom(k+1) - y_ref)^2
- *                                      +  weightQ * scenariosContrib(k+1) ]
- *     +                  weightP*(ypred_nom(N) - y_ref)^2
- *     +                  weightQ * scenariosContrib(N)
+ *   J = sum_{k=0}^{N-2} [ (u(k)-u(k-1))^2 * mpc::weightR  +  mpc::weightQ*(ypred_nom(k+1) - y_ref)^2
+ *                                      +  mpc::weightQ * scenariosContrib(k+1) ]
+ *     +                  mpc::weightP*(ypred_nom(N) - y_ref)^2
+ *     +                  mpc::weightQ * scenariosContrib(N)
  *
  * where:
  *   ypred_nom(k+1)       - one-step prediction using the nominal parameter
@@ -21,7 +21,7 @@
  *                       scenarios, included only in PL/AL modes to penalise
  *                       poor performance across the uncertainty set
  *
- * The input cost term \DeltaU^2*weightR is included for steps k = 0 ... mpc::ctrlHrzn-1,
+ * The input cost term \DeltaU^2*mpc::weightR is included for steps k = 0 ... mpc::ctrlHrzn-1,
  * based on the use of delay compensation the considered inputs for the cost
  * contribution change (starting from u_k without DC, from u_{k+1} with DC).
  *
@@ -188,8 +188,8 @@ void costFunctionArx(cost_type              cost[2],
     double currU_f[nOpt], yNext_f;
     double input_cost_term_f, output_cost_term_f, scenariosContrib_f;
     double err_nom_f, err_s_f;
-    double outputWeight_f = weightQ.to_double();
-    double terminalOutputWeight_f = weightP.to_double();
+    double outputWeight_f = mpc::weightQ.to_double();
+    double terminalOutputWeight_f = mpc::weightP.to_double();
     double yref_f = yref.to_double();
     for(int i = 0; i < nOpt; i++) currU_f[i] = currU[i].to_double();
     #endif
@@ -263,8 +263,8 @@ void costFunctionArx(cost_type              cost[2],
      * first step uses the known input u(k) already in uSamples[0]):
      *   * 0 <= j < mpc::ctrlHrzn : uSamples[0] = currU[j] (within control horizon)
      *   * j >= mpc::ctrlHrzn     : uSamples[0] unchanged  (zero-order hold)
-     *   * k < mpc::predHrzn-1  : stage weight weightQ
-     *   * k = mpc::predHrzn-1  : terminal weight weightP, no input cost
+     *   * k < mpc::predHrzn-1  : stage weight mpc::weightQ
+     *   * k = mpc::predHrzn-1  : terminal weight mpc::weightP, no input cost
      */
 
     /* Input cost contribution computed separately. */
@@ -272,9 +272,9 @@ void costFunctionArx(cost_type              cost[2],
        uPast[0] always contains the last known input sample (either u_{k-1} or u_k), which
        should be subtracted from currU[0] (either u_k or u_{k+1}). Then only
        currU must be considered for cost contribution. */
-    costTrack += ((currU[0] - uPast[0]) * (currU[0] - uPast[0])) * weightR; // separately: it uses uPast
+    costTrack += ((currU[0] - uPast[0]) * (currU[0] - uPast[0])) * mpc::weightR; // separately: it uses uPast
     #ifdef DEBUG_PRINT
-    input_cost_term_f = ((currU_f[0] - uPast[0].to_double()) * (currU_f[0] - uPast[0].to_double())) * weightR.to_double();
+    input_cost_term_f = ((currU_f[0] - uPast[0].to_double()) * (currU_f[0] - uPast[0].to_double())) * mpc::weightR.to_double();
     #endif
     for(int j = 1; j < mpc::ctrlHrzn; j++)
     {
@@ -284,12 +284,12 @@ void costFunctionArx(cost_type              cost[2],
         #endif
 
         #ifdef DEBUG_PRINT
-        input_cost_term_f = (currU_f[j] - currU_f[j-1]) * (currU_f[j] - currU_f[j-1]) * weightR.to_double();
+        input_cost_term_f = (currU_f[j] - currU_f[j-1]) * (currU_f[j] - currU_f[j-1]) * mpc::weightR.to_double();
         #endif
         /* Multiply by R rather than shift, because a constant power-of-two 
             multiply is only wiring in hardware, while an ap_fixed right shift 
             keeps the operand's format and drops its low bits. */
-        costTrack += ((currU[j] - currU[j-1]) * (currU[j] - currU[j-1])) * weightR;
+        costTrack += ((currU[j] - currU[j-1]) * (currU[j] - currU[j-1])) * mpc::weightR;
     }
 
     /* Output (scenarios) predictions and cost contributions. */
@@ -418,12 +418,12 @@ void costFunctionArx(cost_type              cost[2],
         scenariosContrib_f = scenariosContrib.to_double();
         err_nom_f = err_nom.to_double();
         output_cost_term_f = (err_nom_f * err_nom_f + scenariosContrib_f);
-        output_cost_term_f *= (k < mpc::predHrzn - 1) ? weightQ.to_double() : weightP.to_double();
+        output_cost_term_f *= (k < mpc::predHrzn - 1) ? mpc::weightQ.to_double() : mpc::weightP.to_double();
         #endif
 
-        /* Select stage weight weightQ or terminal weight weightP. */
+        /* Select stage weight mpc::weightQ or terminal weight mpc::weightP. */
         #ifndef FIXED
-        costTrack += (((k < mpc::predHrzn - 1) ? weightQ : weightP) * (err_nom * err_nom + scenariosContrib));
+        costTrack += (((k < mpc::predHrzn - 1) ? mpc::weightQ : mpc::weightP) * (err_nom * err_nom + scenariosContrib));
         #else
         costTrack += (err_nom * err_nom + scenariosContrib) << ((k < mpc::predHrzn - 1) ? mpc::log2Q : mpc::log2P);
         #endif

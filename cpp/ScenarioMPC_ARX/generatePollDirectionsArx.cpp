@@ -8,7 +8,7 @@
 void generateHouseholderMatrix(const rand_type v[nOpt], householder_type H[nOpt][nOpt]);
 
 // Genearte a matrix of directions to be summed to the current point in MADS iteration
-void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_exp_type frameIdx[nOpt], const mesh_exp_type meshIdx[nOpt], direction_type directions[nOpt][2 * nOpt])
+void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_exp_type frameExp[nOpt], const mesh_exp_type meshExp[nOpt], direction_type directions[nOpt][2 * nOpt])
 {
 	#ifdef DEBUG_PRINT
 	double H_f[nOpt][nOpt];
@@ -57,7 +57,7 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 		#pragma HLS UNROLL
 		#endif
 
-		frameMeshDiff[i] = frameIdx[i] - meshIdx[i];
+		frameMeshDiff[i] = frameExp[i] - meshExp[i];
 		#ifdef DEBUG_PRINT
 		frameMeshDiff_f[i] = frameMeshDiff[i].to_double();
 		#endif
