@@ -536,16 +536,16 @@ namespace mads
     constexpr int frameExpMin = -20;   /* frameExp minimum value */
 
     /** D0[j]: initial log2 frame-size exponent for optimisation variable j.
-     * Initial frame size = tau^D0[j].  More negative -> finer initial mesh.
-     * HLS hint: #pragma HLS ARRAY_PARTITION variable=D0 complete dim=1
+     * Initial frame size = 2^d0.  More negative -> finer initial mesh.
      */
     constexpr int d0 = -8;              
 }
 
 static_assert(mads::gamma >= 0, "gamma must be non negative.");
-
-static const mesh_exp_type D0_VAL = mesh_exp_type(mads::d0); // used in MADSARX, frameExp init
-
+#ifdef FIXED
+static_assert(mads::d0 >= -(1 << (mesh_exp_type::width - 1)) && mads::frameExpMin >= -(1 << (mesh_exp_type::width - 1)),
+                "MADS exponents do not fit mesh_exp_type.");
+#endif
 /* ======================================================================
    ADC / DAC CONVERTER PARAMETERS
    ======================================================================

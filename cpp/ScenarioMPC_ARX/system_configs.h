@@ -367,7 +367,7 @@ constexpr double uHistInit[nb+nd-1] ={ 0, 0};
  * vertices, so whether a given call's scen::nScen*mpc::predHrzn=20 draws happen to
  * sample close to the b=3 vertex varies call to call, and
  * progressiveBarrierPollingArx's mesh resets to a small fixed size
- * (D0_VAL, setup.h) at the start of every controller() call, so MADS
+ * (mads::d0, setup.h) at the start of every controller() call, so MADS
  * can only make a small, local correction per call rather than jump
  * straight to the fully-robust input. The residual gap is a SAMPLE
  * BUDGET effect, not a broken mechanism: repeating this exact

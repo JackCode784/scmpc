@@ -46,7 +46,7 @@ void MADSARX(norm_input_type uOpt[nOpt], const norm_input_type uInit[nUKnown], c
 	#endif
 
 	for (int i = 0; i < nOpt; i++)
-		frameExp[i] = D0_VAL; // initialize frame exp
+		frameExp[i] = mads::d0; // initialize frame exp
 
 	#ifdef DEBUG_PRINT
 	for(int i = 0; i < nOpt; i++) frameExp_f[i] = frameExp[i].to_double();
