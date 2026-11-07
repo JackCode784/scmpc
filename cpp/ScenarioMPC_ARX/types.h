@@ -70,8 +70,8 @@ typedef ap_fixed<WORD_LENGTH,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
       /* Coefficients types for conversions functions */
       #ifdef CONVERSIONS_MODE
       /* No normalization, yes ADC/DAC conversions */
-      typedef output_dac_coeff_type dig2ctrl_type; // corresponds to YDACGain
-      typedef input_adc_coeff_type ctrl2dig_type; // corresponds to UADCGain
+      typedef output_dac_coeff_type dig2ctrl_type; // corresponds to adc::yDACGain
+      typedef input_adc_coeff_type ctrl2dig_type; // corresponds to adc::uADCGain
       #else
       /* No normalization, no ADC/DAC conversions */
       typedef ap_ufixed<1,1> dig2ctrl_type; // 1
@@ -270,13 +270,13 @@ typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_output_type;
 /* Conversions constants */
 #if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
 /* ADC/DAC over [-0.9, 0.9] rad and [-3, 3]: the buck types overflow on
- * YADCGain = 2275 (max 511) and UDACGain = 1.47e-3 (max 9.8e-4), and
- * would round UADCGain = 682.5 to an integer (a 0.07% gain error that
+ * adc::yADCGain = 2275 (max 511) and adc::uDACGain = 1.47e-3 (max 9.8e-4), and
+ * would round adc::uADCGain = 682.5 to an integer (a 0.07% gain error that
  * goes straight into uConvCoeff). */
-typedef ap_ufixed<16,12> output_adc_coeff_type; // YADCGain = 4095/1.8 = 2275
-typedef ap_ufixed<14,10> input_adc_coeff_type;  // UADCGain = 4095/6 = 682.5 (exact)
-typedef ap_ufixed<20,-11> output_dac_coeff_type; // YDACGain = 1.8/4095 = 4.396e-4 < 2^-11, 31 fractional bits
-typedef ap_ufixed<20,-9> input_dac_coeff_type;   // UDACGain = 6/4095 = 1.465e-3 < 2^-9, 29 fractional bits
+typedef ap_ufixed<16,12> output_adc_coeff_type; // adc::yADCGain = 4095/1.8 = 2275
+typedef ap_ufixed<14,10> input_adc_coeff_type;  // adc::uADCGain = 4095/6 = 682.5 (exact)
+typedef ap_ufixed<20,-11> output_dac_coeff_type; // adc::yDACGain = 1.8/4095 = 4.396e-4 < 2^-11, 31 fractional bits
+typedef ap_ufixed<20,-9> input_dac_coeff_type;   // adc::uDACGain = 6/4095 = 1.465e-3 < 2^-9, 29 fractional bits
 #else
 typedef ap_ufixed<10,9> output_adc_coeff_type; // 9 bits for 409.5
 typedef ap_ufixed<12,12> input_adc_coeff_type; // 12 bits for 4095.

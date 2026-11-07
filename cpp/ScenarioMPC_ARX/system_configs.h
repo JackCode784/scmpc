@@ -396,7 +396,7 @@ constexpr double uHistInit[nb+nd-1] ={ 0, 0};
  *     believes y(k-1) is once a violation is already underway,
  *     confounding the comparison above with an extra, unintended
  *     nonlinearity. (Fixed in passing: conversions.cpp's ctrlU2dig had
- *     a latent bug referencing ADC_MIN/ADC_MAX - only defined under
+ *     a latent bug referencing adc::adcMin/adc::adcMax - only defined under
  *     CONVERSIONS_MODE - whenever FIXED was undefined regardless of
  *     CONVERSIONS_MODE, making "FIXED off + CONVERSIONS_MODE off" fail
  *     to compile at all before this system needed it.)
