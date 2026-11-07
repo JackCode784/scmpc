@@ -570,9 +570,9 @@ static_assert(mads::d0 >= -(1 << (mesh_exp_type::width - 1)) && mads::frameExpMi
 
    In software mode the gains are derived from UMINPHYS/UMAXPHYS/YMINPHYS/YMAXPHYS.
    ====================================================================== */
-#ifdef CONVERSIONS_MODE
 namespace dig
 {
+    #ifdef CONVERSIONS_MODE
     constexpr int nBits = 12;                   // dig converter number of bits
     constexpr int codeMax   = (1 << nBits) - 1;  // maximum digital code value
     constexpr int codeMin   = 0;                 // minimum digital code value
@@ -584,8 +584,15 @@ namespace dig
     static const double uADCGain = codeRange / double(UMAXPHYS - UMINPHYS);
     static const input_dac_coeff_type uDACGain = double(UMAXPHYS - UMINPHYS) / codeRange;
     static const digital_input_type   uBias    = (codeMin*double(UMAXPHYS) - codeMax*double(UMINPHYS)) / double(UMAXPHYS - UMINPHYS);
+    #else
+    constexpr double yADCGain = 1.0;
+    constexpr double yDACGain = 1.0;
+    constexpr double yBias = 0.0;
+    constexpr double uADCGain = 1.0;
+    constexpr double uDACGain = 1.0;
+    constexpr double uBias = 0.0;
+    #endif
 }
-#endif
 
 namespace nrmlz
 {
@@ -739,31 +746,10 @@ static const StripCoeffs stripCoeffs = computeStripCoeffs();
     conversions functions. */
 namespace conv
 {
-#ifdef CONVERSIONS_MODE
-    #ifdef NRMLZ
     static const dig2ctrl_type yConvCoeff = double(nrmlz::yNormGain)*double(dig::yDACGain);
     static const ctrl2dig_type uConvCoeff = double(dig::uADCGain)*double(nrmlz::uNormGainInverse);
     static const norm_output_type yConvOffset = double(nrmlz::yNormOffset) - double(dig::yDACGain)*double(dig::yBias)*double(nrmlz::yNormGain);
     static const digital_input_type uConvOffset = double(dig::uBias) - double(nrmlz::uNormOffset)*double(nrmlz::uNormGainInverse)*double(dig::uADCGain);
-    #else
-    static const dig2ctrl_type yConvCoeff = dig::yDACGain;
-    static const ctrl2dig_type uConvCoeff = dig::uADCGain;
-    static const norm_output_type yConvOffset = double(-dig::yBias)*double(dig::yDACGain);
-    static const digital_input_type uConvOffset = dig::uBias;
-    #endif
-    #else
-    #ifdef NRMLZ
-    static const dig2ctrl_type yConvCoeff = nrmlz::yNormGain;
-    static const ctrl2dig_type uConvCoeff = nrmlz::uNormGainInverse;
-    static const norm_output_type yConvOffset = nrmlz::yNormOffset;
-    static const digital_input_type uConvOffset = double(-nrmlz::uNormOffset)*double(nrmlz::uNormGainInverse);
-    #else
-    static const dig2ctrl_type yConvCoeff = 1;
-    static const ctrl2dig_type uConvCoeff = 1;
-    static const norm_output_type yConvOffset = 0;
-    static const digital_input_type uConvOffset = 0;
-    #endif
-#endif
 }
 /* ======================================================================
    FUNCTION PROTOTYPES

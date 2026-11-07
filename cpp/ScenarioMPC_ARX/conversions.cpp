@@ -90,22 +90,20 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl)
 }
 
 
-#ifdef NRMLZ
-/** The following functions normalize (denormalize) output (input) samples
- * They're used iff NRMLZ is defined.
- */
-norm_output_type normalizeY(output_type yAn)
-{
-	norm_output_type yNorm = nrmlz::yNormGain * yAn + nrmlz::yNormOffset;
-	return yNorm;
-}
+// /** The following functions normalize (denormalize) output (input) samples
+//  * They're used iff NRMLZ is defined.
+//  */
+// norm_output_type normalizeY(output_type yAn)
+// {
+// 	norm_output_type yNorm = nrmlz::yNormGain * yAn + nrmlz::yNormOffset;
+// 	return yNorm;
+// }
 
-input_type denormalizeU(norm_input_type uNorm)
-{
-	input_type uAn = (uNorm - nrmlz::uNormOffset) * nrmlz::uNormGainInverse;
-	return uAn;
-}
-#endif
+// input_type denormalizeU(norm_input_type uNorm)
+// {
+// 	input_type uAn = (uNorm - nrmlz::uNormOffset) * nrmlz::uNormGainInverse;
+// 	return uAn;
+// }
 
 /* Not used on field, only for debugging */
 // output_type DAConvertY(const digital_output_type yDig)
