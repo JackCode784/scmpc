@@ -16,7 +16,9 @@ constexpr double UMAX = UMAXPHYS;
 constexpr double YMIN = YMINPHYS;
 constexpr double YMAX = YMAXPHYS;
 constexpr double SIGMA_UNNORM = 0.0;
-/* DELTAY, SIGMA_UNNORM - to be defined */
+/* No rate limit (this system predates the rate constraint): the whole
+ * output range, which no step inside [YMINPHYS, YMAXPHYS] can exceed. */
+constexpr double DELTAY = YMAXPHYS - YMINPHYS;
 
 /* Sampling time, logged in output files for printing time in seconds.
     This is just a conventional value, no sampling time was specified. */
@@ -31,4 +33,9 @@ constexpr double thetaTrueInit[nTheta] = {2.0, -1.0, 1.0}; // == thetaNominalIni
 /* cold start at physical 0, as for the other systems */
 constexpr double yHistInit[na] = {0, 0};
 constexpr double uHistInit[nb + nd - 1] = {0, 0};
+
+#ifdef FIXED
+#error "SYSTEM_SIMPLE has no fixed-point types (system_configs.h): floating point only."
+#endif
+
 #endif

@@ -16,7 +16,9 @@ constexpr double UMAX = UMAXPHYS;
 constexpr double YMIN = YMINPHYS;
 constexpr double YMAX = YMAXPHYS;
 constexpr double SIGMA_UNNORM = 0.20;
-/* DELTAY missing */
+/* No rate limit (this system predates the rate constraint): the whole
+ * output range, which no step inside [YMINPHYS, YMAXPHYS] can exceed. */
+constexpr double DELTAY = YMAXPHYS - YMINPHYS;
 
 /* Sampling time, logged in output files for printing time in seconds.
     This is just a conventional value, no sampling time was specified. */
@@ -31,4 +33,9 @@ constexpr double generatorsInit[nTheta][nGens] = {
 constexpr double thetaTrueInit[nTheta] = {1.5540,  -0.7433,   1.0570,   0.4761};
 constexpr double yHistInit[na] = {0, 0};
 constexpr double uHistInit[nb+nd-1] = {0, 0};
+
+#ifdef FIXED
+#error "SYSTEM_BENCHMARK has no fixed-point types (system_configs.h): floating point only."
+#endif
+
 #endif

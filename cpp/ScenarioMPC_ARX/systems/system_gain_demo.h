@@ -117,7 +117,7 @@ constexpr double Ts = 10e-3;
  *     CONVERSIONS_MODE - whenever FIXED was undefined regardless of
  *     CONVERSIONS_MODE, making "FIXED off + CONVERSIONS_MODE off" fail
  *     to compile at all before this system needed it.)
- *   - FIXED-point/HLS synthesis support (bit widths in types.h) has
+ *   - FIXED-point/HLS synthesis support (fixed-point types) has
  *     not been added for this system - it exists to answer "is
  *     scenario MPC worth it", not to be synthesised.
  */
@@ -129,4 +129,9 @@ constexpr double generatorsInit[nTheta][nGens] = {
 constexpr double thetaTrueInit[nTheta] = {0.5, 3.0};
 constexpr double yHistInit[na] = {0};     // na=1
 constexpr double uHistInit[nb+nd-1] = {0, 0};  // nb+nd-1=2
+
+#ifdef FIXED
+#error "SYSTEM_GAIN_DEMO has no fixed-point types (system_configs.h): floating point only."
+#endif
+
 #endif

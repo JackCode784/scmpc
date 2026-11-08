@@ -38,6 +38,66 @@ static constexpr const double (&thetaTrueInit)[nTheta] = thetaNominalInit;
 constexpr double yHistInit[na] = {-0.78, -0.78};
 constexpr double uHistInit[nb+nd-1] = {0, 0};
 
+#ifdef FIXED
+/* ======================================================================
+   Fixed-point types (the ones that depend on the system; the others are
+   in types.h). Sized for NRMLZ (with or without CONVERSIONS_MODE),
+   CTRL_MODE_SCMPC - see the notes below.
+   ====================================================================== */
+#ifndef NRMLZ
+#error "SYSTEM_INVERTED_PENDULUM in FIXED needs NRMLZ: unnormalized, b = 7.5e-4 next to a1 = 2 would need ~25-bit parameters everywhere."
+#endif
+/* Physical angle. The sensor (ADC) only spans +-0.9 rad, but a run that
+ * violates the constraints can go further, and the test bench logs it in
+ * this type: +-4 rad covers a fall past +-pi. 15 fractional bits
+ * (3.1e-5 rad) are finer than one ADC step (1.8/4095 = 4.4e-4 rad). */
+typedef ap_fixed<WORD_LENGTH,3,AP_RND_CONV,AP_SAT> output_type;   // [-4, 4) rad
+/* Physical torque: SIGNED (the buck converters' input_type is unsigned). */
+typedef ap_fixed<WORD_LENGTH,3,AP_RND_CONV,AP_SAT> input_type;    // [-4, 4) for [-3, 3]
+typedef ap_fixed<WORD_LENGTH,0> noise_type;                       // SIGMA_UNNORM = 0
+/*
+ * Strip/normalization constants (setup.h's computeStripCoeffs), here:
+ *   myInvDmDg = [1.0e-6, 3.78e-4, 1.52e-3]    qmyInvDmDg = 0
+ *   myInvDmc0 = [2, -0.998821, 2.51e-3]       qmyInvDmc0 = 0
+ * (offsets are 0: the ranges are symmetric). The pendulum's uncertainty is
+ * tiny next to its coefficients - a2 = -0.998821 sits only 1.2e-3 from the
+ * marginally stable -1 - so these need far more fractional bits than the
+ * buck converters': the buck types (20/19 fractional bits) would carry
+ * myInvDmDg[1] at 0.25% and a2 at ~1e-6, i.e. ~0.1% of that margin.
+ */
+typedef ap_ufixed<24,-9> strip_coeff_type;      // myInvDmDg  < 2^-9 = 1.95e-3, 33 fractional bits
+typedef ap_ufixed<24,-9> strip_q_coeff_type;    // qmyInvDmDg (0 here)
+typedef ap_fixed<25,3> strip_coeff_c0_type;     // myInvDmc0: 2.0 needs 3 integer bits; 22 fractional bits (2.4e-7)
+typedef ap_ufixed<21,0> strip_q_coeff_c0_type;  // qmyInvDmc0 (0 here)
+/*
+ * The passive-learning types in types.h (phi_type, proj_type, ...) are the
+ * buck converters' ones: they compile in every CTRL_MODE, but are NOT
+ * sized or validated for the pendulum (its normalized regressor
+ * phi = sample*myInvDmDg is ~1e-3, far below what phi_type/proj_type
+ * resolve well). CTRL_MODE_SCMPC never uses them.
+ */
+#ifndef CONVERSIONS_MODE
+/* Normalization gains 2/(YMAXPHYS-YMINPHYS) and (UMAXPHYS-UMINPHYS)/2
+ * (the buck types hold 0.2 and 0.5 and cannot hold these). */
+typedef ap_ufixed<WORD_LENGTH,1> dig2ctrl_type;  // yNormGain = 1.1111
+typedef ap_ufixed<WORD_LENGTH,2> ctrl2dig_type;  // uNormGainInverse = 3
+#else
+/* ADC/DAC over [-0.9, 0.9] rad and [-3, 3] (test-bench converter model):
+ * the buck types overflow on yADCGain = 2275 (max 511) and
+ * uDACGain = 1.47e-3 (max 9.8e-4). */
+typedef ap_ufixed<16,12> output_adc_coeff_type; // yADCGain = 4095/1.8 = 2275
+typedef ap_ufixed<20,-9> input_dac_coeff_type;  // uDACGain = 6/4095 = 1.465e-3 < 2^-9, 29 fractional bits
+#endif
+/* Input weight weightR in normalized units.
+ * FIXED multiplies by it (costFunctionArx), like floating point does. */
+typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* weightR = 2^log2R */
+/* Cost accumulator: measured up to ~1600 over 20 random runs (float,
+ * scenarios on; weights 16) - the buck's 9 integer bits (max 512) would
+ * saturate it and make MADS candidates indistinguishable. 12 integer bits
+ * (max 4096), 20 fractional. */
+typedef ap_ufixed<32, 12, AP_RND_CONV, AP_SAT>  cost_type;
+#endif /* FIXED */
+
 #if USE_ARX == 0
 /* ----------------------------------------------------------------------
    Inverted pendulum: thetaddot = g/l*sin(theta) + u/(m*l^2), y = theta.
