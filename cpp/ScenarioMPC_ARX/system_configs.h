@@ -10,6 +10,7 @@
  *  SYSTEM_BUCK       (id 3)  na=2, nb=1, nd=2 - buck power converter
  *  SYSTEM_BUCK_LOSS  (id 4)  na=2, nb=1, nd=2 - buck power converter with loss resistance
  *  SYSTEM_GAIN_DEMO  (id 5)  na=1, nb=1, nd=2 - minimal demo: is scenario MPC worth it?
+ *  others... (see below).
  *
  * Why fixed-size arrays in the structs?
  * --------------------------------------
@@ -52,55 +53,15 @@
 #define SYSTEM_INVERTED_PENDULUM  7
 
 #include "types.h"
+/**
+ * Each system is defined by an header file with the same name.
+ * Each file contains system dimensions (na, nb, nd, nGens, nTheta = na + nb),
+ * input/output constraints (physical ones, *Phys, and desired ones without 
+ * any suffix) and initial conditions for input/output samples and uncertainty
+ * zonotope 
+ */
 
 /* ======================================================================
-   ARX MODEL DIMENSIONS  (compile-time constants)
-   ====================================================================== */
-#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-  constexpr int na      = 2;
-  constexpr int nb      = 1;
-  constexpr int nd      = 2;
-  constexpr int nGens   = 3;
-#elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-  constexpr int na      = 2;
-  constexpr int nb      = 2;
-  constexpr int nd      = 1;
-  constexpr int nGens   = 6;
-  #elif ACTIVE_SYSTEM == SYSTEM_MILANO
-  constexpr int na      = 3;
-  constexpr int nb      = 3;
-  constexpr int nd      = 1;
-  constexpr int nGens   = 6;
-  #elif ACTIVE_SYSTEM == SYSTEM_BUCK
-  constexpr int na      = 2;
-  constexpr int nb      = 1;
-  constexpr int nd      = 2;
-  constexpr int nGens   = 3;
-  #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-  constexpr int na      = 2;
-  constexpr int nb      = 1;
-  constexpr int nd      = 2;
-  constexpr int nGens   = 3;
-  #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-  constexpr int na      = 2;
-  constexpr int nb      = 1;
-  constexpr int nd      = 2;
-  constexpr int nGens   = 3;
-  #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
-  constexpr int na      = 1;
-  constexpr int nb      = 1;
-  constexpr int nd      = 2;
-  constexpr int nGens   = 2;
-  #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-  constexpr int   na    = 2;
-  constexpr int   nb    = 1;
-  constexpr int   nd    = 2;
-  constexpr int   nGens = 3;
-  #endif
-  constexpr int nTheta = na + nb;       /* total ARX parameter count */
-  
-  
-  /* ======================================================================
   INPUT / OUTPUT HARD CONSTRAINTS
   ======================================================================
   These are the box constraints used by the progressive barrier in MADSARX.
@@ -108,124 +69,8 @@
   They are repeated as separate constants because ap_fixed<> prevents
   deriving them from the config struct at compile time via constexpr.
   ====================================================================== */
-#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-static const input_type UMINPHYS = -0.3;
-static const input_type UMAXPHYS =  0.3;
-static const output_type YMINPHYS =  0.0;
-static const output_type YMAXPHYS =  8.0;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 0.0;
 
-/* Sampling time, logged in output files for printing time in seconds.
-    This is just a conventional value, no sampling time was specified. */
-constexpr double Ts = 10e-3;
-
-#elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-static const input_type UMINPHYS = -1.9;
-static const input_type UMAXPHYS =  1.9;
-static const output_type YMINPHYS = -10.0;
-static const output_type YMAXPHYS =  8.0;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 0.20;
-
-/* Sampling time, logged in output files for printing time in seconds.
-    This is just a conventional value, no sampling time was specified. */
-constexpr double Ts = 10e-3;
-
-#elif ACTIVE_SYSTEM == SYSTEM_MILANO
-static const input_type  UMINPHYS = -200.0;
-static const input_type  UMAXPHYS =  200.0;
-static const output_type YMINPHYS = -110.0;
-static const output_type YMAXPHYS =  110.0;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 4.4655;
-
-/* Sampling time, logged in output files for printing time in seconds.
-    This is just a conventional value, no sampling time was specified. */
-constexpr double Ts = 10e-3;
-
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 10;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const noise_type SIGMA_UNNORM = 0.2;
-constexpr double Ts = 1e-5;    // Sampling time, logged in output files for printing time in seconds
-
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 10;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const output_type DELTAY = 0.1;
-static const noise_type SIGMA_UNNORM = 0.02;
-constexpr double Ts = 1e-5;    // Sampling time, logged in output files for printing time in seconds
-
-#elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1.5;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 7;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = 5;
-static const output_type DELTAY = 100; /* effectively unconstrained: this demo is about the static YMAX bound, not the rate limit */
-static const noise_type SIGMA_UNNORM = 0.02;
-
-/* Sampling time, logged in output files for printing time in seconds.
-    This is just a conventional value, no sampling time was specified. */
-constexpr double Ts = 10e-3;
-
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-static const input_type  UMINPHYS = 0;
-static const input_type  UMAXPHYS = 1;
-static const output_type YMINPHYS = 0;
-static const output_type YMAXPHYS = 100;
-static const input_type  UMIN = UMINPHYS;
-static const input_type  UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = 85;
-static const output_type DELTAY = 5;
-static const noise_type SIGMA_UNNORM = 0.2;
-constexpr double Ts = 10e-3;    // Sampling time, logged in output files for printing time in seconds. Conventional value
-
-#elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-static const input_type UMINPHYS = -3;
-static const input_type UMAXPHYS = 3;
-static const output_type YMINPHYS = -0.9;
-static const output_type YMAXPHYS = 0.9;
-static const input_type UMIN = UMINPHYS;
-static const input_type UMAX = UMAXPHYS;
-static const output_type YMIN = YMINPHYS;
-static const output_type YMAX = YMAXPHYS;
-static const output_type DELTAY = 10e-3;
-static const noise_type SIGMA_UNNORM = 0.00;
-
-/* The plant derives l, m from Ts, changing it silently changes
-    since they are derived from theta params and Ts (l = Ts^2 * g / (theta[1] + 1)) */
-constexpr double Ts = 10e-3;    // Sampling time, logged in output files for printing time in seconds
-
-#endif
-
-/* ======================================================================
+ /* ======================================================================
    INITIAL ZONOTOPE AND INITIAL CONDITIONS - physical (unnormalized) units
    ======================================================================
    Per system, only physical values are given here:
@@ -243,184 +88,20 @@ constexpr double Ts = 10e-3;    // Sampling time, logged in output files for pri
    normalized zonotope and samples from these at static-initialization
    time (see there); without NRMLZ it copies them unchanged.
    ====================================================================== */
-#if ACTIVE_SYSTEM == SYSTEM_SIMPLE
-    constexpr double thetaNominalInit[nTheta] = {2.0, -1.0, 1.0};
-    constexpr double generatorsInit[nTheta][nGens] = {
-            { 0.0,  0.0,  0.0},
-            { 0.0,  0.0,  0.0},
-            { 0.0,  0.0,  0.5}};
-    constexpr double thetaTrueInit[nTheta] = {2.0, -1.0, 1.0}; // == thetaNominalInit
-    /* cold start at physical 0, as for the other systems */
-    constexpr double yHistInit[na] = {0, 0};
-    constexpr double uHistInit[nb+nd-1] = {0, 0};
+#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
+  #include "systems/system_simple.h"
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-    constexpr double thetaNominalInit[nTheta] = { 1.50,  -0.70,   1.00,   0.50};
-    constexpr double generatorsInit[nTheta][nGens] = {
-            {  0.080,  0.020,  0.005,  0.000,  0.010,  0.000 }, 
-            { -0.010,  0.060,  0.000,  0.008,  0.000,  0.005 }, 
-            {  0.000,  0.010,  0.070, -0.015,  0.000,  0.010 }, 
-            {  0.005,  0.000,  0.012,  0.055, -0.010,  0.000 }};
-    constexpr double thetaTrueInit[nTheta] = {1.5540,  -0.7433,   1.0570,   0.4761};
-    constexpr double yHistInit[na] = {0, 0};
-    constexpr double uHistInit[nb+nd-1] = {0, 0};
-#elif ACTIVE_SYSTEM == SYSTEM_MILANO
-    constexpr double thetaNominalInit[nTheta] = {    0.7921,  0.1524, -0.1668,  0.0842,  0.0442,  0.0860 };
-    constexpr double generatorsInit[nTheta][nGens] =  {
-            { -0.8959, -0.4594, -0.0026, -0.0027, -0.0187,  0.0080 },
-            {  1.3452, -0.1401,  0.0030,  0.0111, -0.0283,  0.0079 },
-            { -0.5326,  0.4275, -0.0051,  0.0289, -0.0362,  0.0077 },
-            { -0.0082,  0.0028,  0.0524,  0.0788,  0.0367,  0.0085 },
-            {  0.0859,  0.0502, -0.1015, -0.0126,  0.0271,  0.0086 },
-            {  0.0021,  0.1180,  0.0538, -0.0985,  0.0126,  0.0086 }};
-    constexpr double thetaTrueInit[nTheta] = {0.7921, 0.1524, -0.1668, 0.0842, 0.0442, 0.0860};
-    constexpr double yHistInit[na] = {0, 0, 0};
-    constexpr double uHistInit[nb+nd-1] = {0, 0, 0};
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK
-    constexpr double thetaNominalInit[nTheta] = { 1.8889, -0.9333, 0.4444};
-    constexpr double generatorsInit[nTheta][nGens] = {
-            { 0.0625,        0,         0},
-            {      0,   0.0606,         0},
-            {      0,        0,    0.2500}};
-    constexpr double thetaTrueInit[nTheta] = {1.8612, -0.9276, 0.6732};
-    constexpr double yHistInit[na] = {0, 0};
-    constexpr double uHistInit[nb+nd-1] = {0, 0};
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-constexpr double thetaNominalInit[nTheta] = {1.817972144631566,  -0.871463786797535,   0.457543557236585};
-constexpr double generatorsInit[nTheta][nGens] = {
-        {-0.093616869443703,   0.124811247863353,   0.003362744341625},
-        {0.057591158572667,  -0.117838849718767,   0.003770097120654}, 
-        {0.271071396611763,   0.068140402887871,   0.000360367556716}};
-constexpr double thetaTrueInit[nTheta] = {1.857831352244614, -0.933661885378246, 0.683201544134083};
-constexpr double yHistInit[na] = {0, 0};
-constexpr double uHistInit[nb+nd-1] = {0, 0};      // nb+nd-1=2
-#elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-constexpr double thetaNominalInit[nTheta] = {1.733749265658302,  -0.881912845894497,  14.298236163643255};
-constexpr double generatorsInit[nTheta][nGens] = {
-    {-0.068444143534821,   0.137725841350229,   0.004638817609457},
-    {-0.008278303729254,  -0.132496642357720,   0.004822306118286},
-    {7.403892173947610,   0.001125040669095,   0.000048274664814}};
-constexpr double thetaTrueInit[nTheta] = {1.753571428571429,  -0.894444444444444,  13.888888888888886};
-constexpr double yHistInit[na] ={ 0, 0};
-constexpr double uHistInit[nb+nd-1] ={ 0, 0};
-
-#elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
-/**
- * Minimal demonstration system: IS SCENARIO MPC WORTH IT?
- * ------------------------------------------------------------------
- * y(k) = a*y(k-1) + b*u(k-2)   (na=1, nb=1, nd=2 - a first-order ARX
- * with a two-step actuation delay, structurally identical to
- * SYSTEM_BUCK/SYSTEM_BUCK_LOSS's own (nb,nd)=(1,2), just na=1 instead
- * of na=2 for the simplest possible hand-checkable dynamics).
- *
- * theta = [a, b]. The zonotope is diagonal (independent per-parameter
- * uncertainty), exactly like SYSTEM_SIMPLE/SYSTEM_BUCK:
- *   thetaCenter = [a0, b0] = [0.5, 2.0]
- *   GENERATORS  = diag(deltaA, deltaB) = diag(0.05, 1.0)
- *   => a in [0.45, 0.55], b in [1.0, 3.0]
- *
- * thetaTrue = [0.5, 3.0]: 'a' sits EXACTLY at its nominal/center value
- * (ξ_a=0 - the pole is assumed known, only carried as a generator for
- * structural realism/non-singularity of the generator matrix, and to
- * keep matDet(thetaGens) - called unconditionally in testMain.cpp -
- * well-defined; it is deliberately NOT the source of the mismatch this
- * system demonstrates), while 'b' (the INPUT GAIN) sits EXACTLY at the
- * zonotope's vertex ξ_b=+1, i.e. the worst case the controller's own
- * uncertainty description claims is possible.
- *
- * THE IDEALIZED (STATIC) ARGUMENT
- * ---------------------------------
- * DC gain is b/(1-a): G_nominal = 2/0.5 = 4, G_true = 3/0.5 = 6 - the
- * true plant is 50% "stronger" than the model the controller nominally
- * trusts. With YMAX=5 and a reference that steps from 1.0 to 4.9 (see
- * testMain.cpp's generateReference, SYSTEM_GAIN_DEMO branch), a
- * controller that only ever evaluates thetaCenter would compute
- * u* = yref/G_nominal = 4.9/4 = 1.225 (within UMAX=1.5), predicting
- * y=4.9 - safely under YMAX. Applied to the TRUE plant, the actual
- * steady-state output would be G_true*u* = 6*1.225 = 7.35 - a 47%
- * breach the nominal-only controller never sees coming.
- *
- * WHAT ACTUALLY HAPPENS IN CLOSED LOOP (measured, floating point,
- * NRMLZ/FIXED/CONVERSIONS_MODE all undefined - see setup.h's TARGET
- * SELECTION block - scen::nScen=4, mads::iter=7, the project's real values;
- * mean/max taken over simulation steps 200-300, i.e. 100+ steps after
- * the reference step, once the closed loop has settled into its
- * long-run behaviour rather than a transient):
- *
- *   USE_SCENS_CONSTR undefined (constraint checked only against
- *   thetaCenter - certainty-equivalent MPC): output settles at a
- *   PERSISTENT y ~= 6.3-6.6 (26-32% over YMAX=5) - not a transient
- *   overshoot that decays, a genuine steady violation, confirmed
- *   stable out to 1200 steps.
- *
- *   USE_SCENS_CONSTR defined (the codebase's actual default: also
- *   check cost[1] against scen::nScen=4 parameter draws sampled at random
- *   from the SAME zonotope every prediction step - see
- *   costFunctionArx.cpp/generateScenarios.cpp): output settles at
- *   y ~= 5.6-5.75 (12-15% over YMAX) - roughly HALF the exceedance of
- *   the certainty-equivalent case, a real and substantial improvement,
- *   but NOT a full elimination.
- *
- * WHY NOT A FULL ELIMINATION AT scen::nScen=4
- * -----------------------------------------
- * This is sample-based, not exact worst-case, robustness: scenarios
- * are redrawn at random every call rather than fixed at the zonotope's
- * vertices, so whether a given call's scen::nScen*mpc::predHrzn=20 draws happen to
- * sample close to the b=3 vertex varies call to call, and
- * progressiveBarrierPollingArx's mesh resets to a small fixed size
- * (mads::d0, setup.h) at the start of every controller() call, so MADS
- * can only make a small, local correction per call rather than jump
- * straight to the fully-robust input. The residual gap is a SAMPLE
- * BUDGET effect, not a broken mechanism: repeating this exact
- * experiment with scen::nScen bumped to 16 (in an isolated, non-committed
- * build - scen::nScen is a shared setup.h constant, changing it here would
- * also change SYSTEM_BUCK_LOSS's hardware area) reduced the exceedance
- * to ~2%; scen::nScen=64 reduced it to ~3 violations out of 100 samples
- * checked, essentially eliminating it. This confirms the mechanism
- * converges toward the idealized worst-case-robust result as the
- * scenario budget grows - it is simply underpowered, not incorrect, at
- * the scen::nScen=4 budget this project's hardware profiles are sized for.
- *
- * SCOPE: validated in floating point with NRMLZ, FIXED and
- * CONVERSIONS_MODE all undefined - CTRL_MODE_SCMPC only.
- *   - NRMLZ is unsupported: setup.h's NRMLZ branch requires
- *     MATLAB-precomputed myInvDmDg/myInvDmc0/... constants (see
- *     setup.h, "Pre-computed in MATLAB") that only exist for
- *     SYSTEM_BUCK/SYSTEM_BUCK_LOSS and are irrelevant to
- *     CTRL_MODE_SCMPC anyway (they only feed the CTRL_MODE_PL/AL
- *     strip-intersection code path in controller.cpp).
- *   - CONVERSIONS_MODE should stay OFF for this system specifically:
- *     with it on, the 12-bit ADC's full-scale range is [YMIN,YMAX], so
- *     once the true output exceeds YMAX the SENSOR reading fed back to
- *     the controller saturates at the rail - a realistic effect in
- *     general, but here it quietly changes what the controller
- *     believes y(k-1) is once a violation is already underway,
- *     confounding the comparison above with an extra, unintended
- *     nonlinearity. (Fixed in passing: conversions.cpp's ctrlU2dig had
- *     a latent bug referencing dig::codeMin/dig::codeMax - only defined under
- *     CONVERSIONS_MODE - whenever FIXED was undefined regardless of
- *     CONVERSIONS_MODE, making "FIXED off + CONVERSIONS_MODE off" fail
- *     to compile at all before this system needed it.)
- *   - FIXED-point/HLS synthesis support (bit widths in types.h) has
- *     not been added for this system - it exists to answer "is
- *     scenario MPC worth it", not to be synthesised.
- */
-constexpr double thetaNominalInit[nTheta] = { 0.5, 2.0};
-constexpr double generatorsInit[nTheta][nGens] = {
-    {0.05, 0},
-    {0, 1.0}};
-constexpr double thetaTrueInit[nTheta] = {0.5, 3.0};
-constexpr double yHistInit[na] = {0};     // na=1
-constexpr double uHistInit[nb+nd-1] = {0, 0};  // nb+nd-1=2
-#elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-constexpr double thetaNominalInit[nTheta] = {2.000000000000000, -0.998821001683502, 0.000751434382693};
-constexpr double generatorsInit[nTheta][nGens] = {
-    {-0.000001, 0, 0},
-    {0, 1e-3 * -0.281338543972914, 1e-4 * -0.961862828825779},
-    {0, 1e-3 * -0.386439223972734, 1e-4 * 0.700262993444492}};
-static constexpr const double (&thetaTrueInit)[nTheta] = thetaNominalInit;
-//2.0000000000,   -0.998637500000000,   0.001205632716049
-//2.0, -0.999091666666667, 0.0003572245084590763
-//2.000000000000000,   -0.998637500000000,   0.001205632716049
-constexpr double yHistInit[na] = {-0.78, -0.78};
-constexpr double uHistInit[nb+nd-1] = {0, 0};
-#endif
+  #include "systems/system_benchmark.h"
+  #elif ACTIVE_SYSTEM == SYSTEM_MILANO
+  #include "systems/system_milano.h"
+  #elif ACTIVE_SYSTEM == SYSTEM_BUCK
+  #include "systems/system_buck.h"
+  #elif ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
+  #include "systems/system_buck.h"
+  #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
+  #include "systems/system_alberto.h"
+  #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
+  #include "systems/system_gain_demo.h"
+  #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
+  #include "systems/system_pendulum.h"
+  #endif

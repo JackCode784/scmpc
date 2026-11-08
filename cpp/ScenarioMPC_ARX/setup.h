@@ -76,7 +76,7 @@
    ====================================================================== */
 
 /** Hardware synthesis target.  Comment out for PC simulation. */
-  #define FIXED            /* fixed point representation */
+//   #define FIXED            /* fixed point representation */
 #define CONVERSIONS_MODE /* ADC/DAC conversions */
 #define NRMLZ               /* normalization */
 #define USE_SCENS_COST      /* Enable scenarios cost contribution */
