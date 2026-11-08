@@ -1,6 +1,5 @@
 /* Header file for SYSTEM_BUCK and SYSTEM_BUCK_LOSS */
 #pragma once
-#include "../setup.h"
 #if ACTIVE_SYSTEM == SYSTEM_BUCK || ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
 constexpr int na      = 2;
 constexpr int nb      = 1;

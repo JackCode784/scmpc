@@ -1,6 +1,5 @@
 /* Header file for SYSTEM_BENCHMARK */
 #pragma once
-#include "../setup.h"
 #if ACTIVE_SYSTEM == SYSTEM_BENCHMARK
 constexpr int na      = 2;
 constexpr int nb      = 2;

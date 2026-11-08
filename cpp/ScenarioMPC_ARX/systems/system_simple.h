@@ -1,6 +1,5 @@
 /* Header file for SYSTEM_SIMPLE */
 #pragma once
-#include "../setup.h"
 #if ACTIVE_SYSTEM == SYSTEM_SIMPLE
 constexpr int na = 2;
 constexpr int nb = 1;

@@ -11,23 +11,6 @@
  *  SYSTEM_BUCK_LOSS  (id 4)  na=2, nb=1, nd=2 - buck power converter with loss resistance
  *  SYSTEM_GAIN_DEMO  (id 5)  na=1, nb=1, nd=2 - minimal demo: is scenario MPC worth it?
  *  others... (see below).
- *
- * Why fixed-size arrays in the structs?
- * --------------------------------------
- * C++ (and ANSI C) require every struct member to have a size known at
- * compile time - it is impossible to write "theta_type c[nTheta]" inside
- * a struct because nTheta is a runtime value for a generic struct.
- * Vitis HLS adds a stronger constraint: it forbids ALL dynamic memory
- * allocation (no new/delete, no std::vector) because hardware circuits
- * must be fully sized at synthesis time.
- *
- * Generator-matrix shape for PL mode
- * ------------------------------------
- * The passive-learning (PL) strip-intersection step expands the generator
- * matrix from nTheta columns to nTheta+1 (a temporary wider zonotope).
- * The subsequent interval-hull reduction brings it back to nTheta columns
- * (a square matrix).  Therefore the PERSISTENT controller state always
- * holds a square nTheta*nTheta generator matrix.
  */
 
 #pragma once
@@ -66,8 +49,6 @@
   ======================================================================
   These are the box constraints used by the progressive barrier in MADSARX.
   They must be consistent with the ones for the ACTIVE_SYSTEM.
-  They are repeated as separate constants because ap_fixed<> prevents
-  deriving them from the config struct at compile time via constexpr.
   ====================================================================== */
 
  /* ======================================================================

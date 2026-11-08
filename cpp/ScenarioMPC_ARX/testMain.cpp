@@ -154,7 +154,7 @@ int main(void)
     /* ------------------------------------------------------------------ */
     /*  This run's true system, noise and a freshly reset controller      */
     /* ------------------------------------------------------------------ */
-    Plant plant;
+    ArxPlant plant;
     plantSampleTrue(plant, rng, testbench_settings::randomTruePlant);
     plantReset(plant);
     resetControllerState();
@@ -291,18 +291,18 @@ int main(void)
         fprintf(fp, "%f %f %f %f %f %f %f %f %f %f %e %e\n",
                 uAppliedLog[k].to_float(), yMeasLog[k].to_float(),
                 yref[k].to_float(),
-                UMIN.to_float(), UMAX.to_float(),
-                YMIN.to_float(), YMAX.to_float(),
-                DELTAY.to_float(),
+                double(UMIN), double(UMAX),
+                double(YMIN), double(YMAX),
+                double(DELTAY),
                 uAppliedDigLog[k].to_float(), yMeasDigLog[k].to_float(),
                 volumes[k].to_float()/volumes[0].to_float(), Ts);
 #elif defined(FIXED)
         fprintf(fp, "%f %f %f %f %f %f %f %f %e %e\n",
                 uAppliedLog[k].to_float(), yMeasLog[k].to_float(),
                 yref[k].to_float(),
-                UMIN.to_float(), UMAX.to_float(),
-                YMIN.to_float(), YMAX.to_float(),
-                DELTAY.to_float(),
+                double(UMIN), double(UMAX),
+                double(YMIN), double(YMAX),
+                double(DELTAY),
                 volumes[k].to_float()/volumes[0].to_float(), Ts);
 #elif defined(CONVERSIONS_MODE)
         fprintf(fp, "%f %f %f %f %f %f %f %f %d %d %e %e\n",

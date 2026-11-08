@@ -15,7 +15,7 @@
  *   different model altogether (the pendulum's nonlinear ODE). Keeping it
  *   here keeps test-bench code out of synthesized headers.
  *
- * INTERFACE - one Plant object per simulation run:
+ * INTERFACE - one ArxPlant object per simulation run:
  *   plantSampleTrue(p, rng, random)  this run's true parameters
  *   plantReset(p)                    physical initial conditions (*Init)
  *   plantNextOutput(p)               y(k), noise-free, physical units
@@ -76,15 +76,15 @@ struct TbRng
    robust controller is designed to handle. Certain parameters (all-zero
    generator rows) automatically keep their nominal value.
    ---------------------------------------------------------------------- */
-#if USE_ARX == 1
-struct Plant
+struct ArxPlant
 {
     double theta[nTheta];
     double yMeasHist[na];         /* y(k-1), ..., y(k-na)   (measured)          */
     double uHist[nb + nd - 1];    /* u(k-1), ..., u(k-nb-nd+1)                  */
+    double uEarly, uLate, fEarly; /* the last interval exactly: uEarly for fEarly*Ts, then uLate */
 };
 
-inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
+inline void plantSampleTrue(ArxPlant &p, TbRng &rng, bool random)
 {
     if (random)
     {
@@ -103,13 +103,13 @@ inline void plantSampleTrue(Plant &p, TbRng &rng, bool random)
     }
 }
 
-inline void plantReset(Plant &p)
+inline void plantReset(ArxPlant &p)
 {
     for (int i = 0; i < na; i++)          p.yMeasHist[i] = yHistInit[i];
     for (int i = 0; i < nb + nd - 1; i++) p.uHist[i] = uHistInit[i];
 }
 
-inline double plantNextOutput(Plant &p)
+inline double plantNextOutput(ArxPlant &p)
 {
     double y = 0.0;
     for (int i = 0; i < nTheta; i++)
@@ -117,23 +117,24 @@ inline double plantNextOutput(Plant &p)
     return y;
 }
 
-inline void plantPrintParams(const Plant &p, FILE *f, bool header)
+inline void plantPrintParams(const ArxPlant &p, FILE *f, bool header)
 {
     for (int i = 0; i < nTheta; i++)
         header ? fprintf(f, " theta%d", i + 1) : fprintf(f, " %.12g", p.theta[i]);
 }
+
 
 /** Common to every plant: shift in the measured output y(k) and the input
  *  of the interval [k*Ts, (k+1)*Ts) once the controller has run: uEarly for
  *  its first fraction fEarly, then u (fEarly = 0: u for the whole interval,
  *  the original test bench). The ARX regression uses the MEASURED (noisy)
  *  past outputs - an equation-error model, as before. */
-inline void plantPush(Plant &p, double yMeas, double uEarly, double u, double fEarly)
+inline void plantPush(ArxPlant &p, double yMeas, double uEarly, double u, double fEarly)
 {
     for (int i = na - 1; i > 0; i--)          p.yMeasHist[i] = p.yMeasHist[i - 1];
     p.yMeasHist[0] = yMeas;
     for (int i = nb + nd - 2; i > 0; i--)     p.uHist[i] = p.uHist[i - 1];
     /* one input per interval: its average */
-    // p.uHist[0] = (fEarly == 0.0) ? u : fEarly * uEarly + (1.0 - fEarly) * u;
+    p.uHist[0] = (fEarly == 0.0) ? u : fEarly * uEarly + (1.0 - fEarly) * u;
+    p.uEarly = uEarly; p.uLate = u; p.fEarly = fEarly;
 }
-#endif

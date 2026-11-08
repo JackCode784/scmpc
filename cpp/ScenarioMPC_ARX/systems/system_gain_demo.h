@@ -1,5 +1,4 @@
 #pragma once
-#include "../setup.h"
 #if ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
 constexpr int na      = 1;
 constexpr int nb      = 1;

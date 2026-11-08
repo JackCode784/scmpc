@@ -18,7 +18,7 @@ digital_output_type ADConvertY(const output_type yAn)
 	float yAn_f = yAn.to_float();
 	float YBias_f = dig::yBias.to_float();
 	float yDig_f = yDig.to_float();
-	float YADCGAINF = float(dig::codeRange) / (YMAXPHYS - YMINPHYS).to_float(); /* cross-check of dig::yADCGain: the ADC spans the PHYSICAL range */
+	float YADCGAINF = float(dig::codeRange) / (YMAXPHYS - YMINPHYS); /* cross-check of dig::yADCGain: the ADC spans the PHYSICAL range */
 	#endif
 
 	return yDig;

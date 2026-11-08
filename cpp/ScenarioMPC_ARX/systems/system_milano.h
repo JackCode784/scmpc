@@ -1,6 +1,5 @@
 /* Header file for SYSTEM_MILANO */
 #pragma once
-#include "../setup.h"
 #if ACTIVE_SYSTEM == SYSTEM_MILANO
 constexpr int na      = 3;
 constexpr int nb      = 3;

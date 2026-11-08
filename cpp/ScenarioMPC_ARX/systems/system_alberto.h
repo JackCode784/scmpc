@@ -1,6 +1,5 @@
 /* Header file for SYSTEM_BUCK_ALBERTO */
 #pragma once
-#include "../setup.h"
 #if ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
 
 constexpr int na      = 2;
