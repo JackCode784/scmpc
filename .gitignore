@@ -306,3 +306,9 @@ vitis/scmpc-controller2026/scmpc-controller2026/
 # last-run-failed marker
 vitis/scmpc-controller2026/compile_commands.json
 vitis/scmpc-controller2026/.hls.failed
+
+# grid search (gridsearch/README.md)
+gridsearch/build/
+gridsearch/results/
+gridsearch/grid_search
+gridsearch/grid_search.exe
