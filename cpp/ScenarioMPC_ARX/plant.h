@@ -34,6 +34,8 @@
  * inverted pendulum).
  */
 #pragma once
+#include "setup.h"
+#include "testbench_config.h"
 #include <cmath>
 #include <cstdio>
 #include <random>

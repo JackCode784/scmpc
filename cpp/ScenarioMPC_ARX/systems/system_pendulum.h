@@ -1,7 +1,4 @@
 /* Header file for pendulum system */
-#pragma once
-#include "../testbench_config.h"
-#include "../setup.h"
 #ifndef SYSTEM_TESTBENCH_PASS
 constexpr int   na    = 2;
 constexpr int   nb    = 1;
@@ -111,7 +108,7 @@ typedef ap_ufixed<32, 12, AP_RND_CONV, AP_SAT>  cost_type;
    single source of truth.
 
    A random true plant draws l and m uniformly in nominal*(1 +- REL_UNC);
-   with PLANT_MODEL == PLANT_MODEL_PHYSICS its output comes from the ARX model above
+   with PLANT_MODEL == PLANT_MODEL_PHYSICS its output comes from the non linear model
    with those l, m, with 1 from the nonlinear equation - the same physical
    population either way, so the two are directly comparable.
 
