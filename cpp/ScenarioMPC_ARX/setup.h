@@ -578,12 +578,12 @@ namespace dig
     constexpr int codeMin   = 0;                 // minimum digital code value
     constexpr int codeRange = codeMax - codeMin;   // max - min digital codes
 
-    static const output_adc_coeff_type yADCGain = codeRange / double(YMAXPHYS - YMINPHYS);
-    static const digital_output_type  yBias    = (codeMin*double(YMAXPHYS) - codeMax*double(YMINPHYS)) / double(YMAXPHYS - YMINPHYS);
-    static const double yDACGain = double(YMAXPHYS - YMINPHYS) / codeRange;
-    static const double uADCGain = codeRange / double(UMAXPHYS - UMINPHYS);
-    static const input_dac_coeff_type uDACGain = double(UMAXPHYS - UMINPHYS) / codeRange;
-    static const digital_input_type   uBias    = (codeMin*double(UMAXPHYS) - codeMax*double(UMINPHYS)) / double(UMAXPHYS - UMINPHYS);
+    static const output_adc_coeff_type yADCGain = codeRange / (YMAXPHYS - YMINPHYS);
+    static const digital_output_type  yBias    = (codeMin*YMAXPHYS - codeMax*YMINPHYS) / (YMAXPHYS - YMINPHYS);
+    constexpr double yDACGain = (YMAXPHYS - YMINPHYS) / codeRange;
+    constexpr double uADCGain = codeRange / (UMAXPHYS - UMINPHYS);
+    static const input_dac_coeff_type uDACGain = (UMAXPHYS - UMINPHYS) / codeRange;
+    static const digital_input_type   uBias    = (codeMin*UMAXPHYS - codeMax*UMINPHYS) / (UMAXPHYS - UMINPHYS);
     #else
     constexpr double yADCGain = 1.0;
     constexpr double yDACGain = 1.0;
@@ -603,27 +603,27 @@ namespace nrmlz
     constexpr double uNormMaxPhys = 1;
     constexpr double uNormMinPhys = -1;
     #else
-    static const double yNormMaxPhys = YMAXPHYS;
-    static const double yNormMinPhys = YMINPHYS;
-    static const double uNormMaxPhys = UMAXPHYS;
-    static const double uNormMinPhys = UMINPHYS;
+    constexpr double yNormMaxPhys = YMAXPHYS;
+    constexpr double yNormMinPhys = YMINPHYS;
+    constexpr double uNormMaxPhys = UMAXPHYS;
+    constexpr double uNormMinPhys = UMINPHYS;
     #endif
     
-    static const double yNormGain = (yNormMaxPhys - yNormMinPhys) / double(YMAXPHYS - YMINPHYS);
-    static const double uNormGain = (uNormMaxPhys - uNormMinPhys) / double(UMAXPHYS - UMINPHYS);
-    static const double uNormGainInverse = double(UMAXPHYS - UMINPHYS) / (uNormMaxPhys - uNormMinPhys);
+    constexpr double yNormGain = (yNormMaxPhys - yNormMinPhys) / (YMAXPHYS - YMINPHYS);
+    constexpr double uNormGain = (uNormMaxPhys - uNormMinPhys) / (UMAXPHYS - UMINPHYS);
+    constexpr double uNormGainInverse = (UMAXPHYS - UMINPHYS) / (uNormMaxPhys - uNormMinPhys);
 
-    static const norm_output_type yNormOffset = (yNormMinPhys*double(YMAXPHYS) - yNormMaxPhys*double(YMINPHYS)) / double(YMAXPHYS - YMINPHYS);
-    static const norm_input_type uNormOffset = (uNormMinPhys*double(UMAXPHYS) - uNormMaxPhys*double(UMINPHYS)) / double(UMAXPHYS - UMINPHYS);
+    static const norm_output_type yNormOffset = (yNormMinPhys*YMAXPHYS - yNormMaxPhys*YMINPHYS) / (YMAXPHYS - YMINPHYS);
+    static const norm_input_type uNormOffset = (uNormMinPhys*UMAXPHYS - uNormMaxPhys*UMINPHYS) / (UMAXPHYS - UMINPHYS);
 
-    static const norm_output_type yNormMax = yNormGain*double(YMAX) + double(yNormOffset);
-    static const norm_output_type yNormMin = yNormGain*double(YMIN) + double(yNormOffset);
-    static const norm_input_type uNormMax = uNormGain*double(UMAX) + double(uNormOffset);
-    static const norm_input_type uNormMin = uNormGain*double(UMIN) + double(uNormOffset);
+    static const norm_output_type yNormMax = yNormGain*YMAX + double(yNormOffset);
+    static const norm_output_type yNormMin = yNormGain*YMIN + double(yNormOffset);
+    static const norm_input_type uNormMax = uNormGain*UMAX + double(uNormOffset);
+    static const norm_input_type uNormMin = uNormGain*UMIN + double(uNormOffset);
     
     /* Normalization, use "normalized" noise in output strip */
-    const norm_noise_type sigma = yNormGain*double(SIGMA_UNNORM);
-    static const norm_output_type deltaYNorm = yNormGain * double(DELTAY);
+    const norm_noise_type sigma = yNormGain*SIGMA_UNNORM;
+    static const norm_output_type deltaYNorm = yNormGain * DELTAY;
 }
 
 /*
