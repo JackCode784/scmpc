@@ -259,6 +259,16 @@ static void exportSources(const Options &o, const std::string &rev, const fs::pa
         if (e.is_regular_file() && (ext == ".cpp" || ext == ".h"))
             fs::copy_file(e.path(), dest / e.path().filename());
     }
+    /* Headers in subdirectories (e.g. systems/), at the same relative path:
+     * they are included by relative path. passiveLearning/ is not part of the build. */
+    for (const auto &e : fs::recursive_directory_iterator(from))
+    {
+        const fs::path rel = fs::relative(e.path(), from);
+        if (!e.is_regular_file() || rel.parent_path().empty()) continue;
+        if (*rel.begin() == "passiveLearning" || e.path().extension() != ".h") continue;
+        fs::create_directories((dest / rel).parent_path());
+        fs::copy_file(e.path(), dest / rel);
+    }
     if (!tmp.empty()) fs::remove_all(tmp);
 }
 
