@@ -1,7 +1,6 @@
 /* Header file for pendulum system */
-#pragma once
-#include "../plant.h"
-#if ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
+#ifndef SYSTEM_MODEL_DONE
+#define SYSTEM_MODEL_DONE
 constexpr int   na    = 2;
 constexpr int   nb    = 1;
 constexpr int   nd    = 2;
@@ -97,8 +96,10 @@ typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* weightR = 2^log2R */
  * (max 4096), 20 fractional. */
 typedef ap_ufixed<32, 12, AP_RND_CONV, AP_SAT>  cost_type;
 #endif /* FIXED */
+#endif /* SYSTEM_MODEL_DONE */
 
-#if USE_ARX == 0
+#if defined(SCMPC_TESTBENCH) && !defined(SYSTEM_TESTBENCH_DONE)
+#define SYSTEM_TESTBENCH_DONE
 /* ----------------------------------------------------------------------
    Inverted pendulum: thetaddot = g/l*sin(theta) + u/(m*l^2), y = theta.
    ----------------------------------------------------------------------
@@ -166,8 +167,7 @@ inline void plantSampleTrue(PendulumPlant &p, TbRng &rng, bool random)
 
 inline void plantReset(PendulumPlant &p)
 {
-    for (int i = 0; i < na; i++)          p.yMeasHist[i] = yHistInit[i];
-    for (int i = 0; i < nb + nd - 1; i++) p.uHist[i] = uHistInit[i];
+    plantReset(static_cast<ArxPlant&>(p));
     /* State consistent with the output history: angle y(-1), velocity
      * from the last two samples. */
     p.x[0] = yHistInit[0];
@@ -184,7 +184,7 @@ inline double plantNextOutput(PendulumPlant &p)
     const int nEarly = int(std::lround(p.fEarly * PENDULUM_EULER_SUBSTEPS));
     for (int s = 0; s < PENDULUM_EULER_SUBSTEPS; s++)
     {
-        const double uHold = (s < nEarly) ? p.uEarly : p.uHist[0];
+        const double uHold = (s < nEarly) ? p.uEarly : p.uLate;
         const double angle = p.x[0], vel = p.x[1];
         p.x[0] = angle + h * vel;
         p.x[1] = vel + h * (PEND_G / p.l * std::sin(angle) + uHold / (p.m * p.l * p.l));
@@ -198,6 +198,8 @@ inline void plantPrintParams(const PendulumPlant &p, FILE *f, bool header)
     else        { for (int i = 0; i < nTheta; i++) fprintf(f, " %.12g", p.theta[i]); fprintf(f, " %.6g %.6g", p.l, p.m); }
 }
 
+#if PLANT_MODEL == PLANT_MODEL_PHYSICS
+using Plant = PendulumPlant;
+#define PLANT_TAG "nl"
 #endif
-
 #endif

@@ -42,3 +42,7 @@ namespace testbench_settings
 
 static_assert(testbench_settings::computeDelayFraction >= 0.0 && testbench_settings::computeDelayFraction < 1.0,
     "testbench_settings::computeDelayFraction must be in [0, 1): a latency of a full period or more misses the next sample.");
+
+#define PLANT_MODEL_ARX      0   // controller's ARX structure, true theta: every system has it
+#define PLANT_MODEL_PHYSICS  1   // the system's own model, if it has one
+#define PLANT_MODEL          PLANT_MODEL_PHYSICS

@@ -33,10 +33,6 @@
  * version of the functions below, selected by #if ACTIVE_SYSTEM (see the
  * inverted pendulum).
  */
-#pragma once
-
-#include "setup.h"
-#include "system_configs.h"
 #include <cmath>
 #include <cstdio>
 #include <random>
@@ -59,13 +55,6 @@ struct TbRng
 /* ======================================================================
    PLANT
    ====================================================================== */
-#define USE_ARX  0
-
-#if USE_ARX == 0
-#define PLANT_TAG "nl"
-#else
-#define PLANT_TAG "arx"
-#endif
 
 /* ----------------------------------------------------------------------
    Default: ARX plant with the controller's structure.
@@ -107,6 +96,9 @@ inline void plantReset(ArxPlant &p)
 {
     for (int i = 0; i < na; i++)          p.yMeasHist[i] = yHistInit[i];
     for (int i = 0; i < nb + nd - 1; i++) p.uHist[i] = uHistInit[i];
+    p.fEarly = 0.0;
+    p.uEarly = uHistInit[0];
+    p.uLate = uHistInit[0];
 }
 
 inline double plantNextOutput(ArxPlant &p)
@@ -138,3 +130,10 @@ inline void plantPush(ArxPlant &p, double yMeas, double uEarly, double u, double
     p.uHist[0] = (fEarly == 0.0) ? u : fEarly * uEarly + (1.0 - fEarly) * u;
     p.uEarly = uEarly; p.uLate = u; p.fEarly = fEarly;
 }
+
+#define SCMPC_TESTBENCH
+#include SYSTEM_FILE      /* second pass: the system's test-bench section */
+#ifndef PLANT_TAG         /* no model of its own for this PLANT_MODEL: the ARX plant */
+  using Plant = ArxPlant;
+  #define PLANT_TAG "arx"
+#endif

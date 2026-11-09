@@ -87,25 +87,26 @@ constexpr int WORD_LENGTH = 18;
    The active system. Its file comes BEFORE types.h: types.h's aliases
    (norm_output_type without NRMLZ, ...) refer to the system's types.
    ====================================================================== */
-#if   ACTIVE_SYSTEM == SYSTEM_SIMPLE
-  #include "systems/system_simple.h"
+#if ACTIVE_SYSTEM == SYSTEM_SIMPLE
+#define SYSTEM_FILE "systems/system_simple.h"
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
-  #include "systems/system_benchmark.h"
+#define SYSTEM_FILE "systems/system_benchmark.h"
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
-  #include "systems/system_milano.h"
+#define SYSTEM_FILE "systems/system_milano.h"
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK || ACTIVE_SYSTEM == SYSTEM_BUCK_LOSS
-  #include "systems/system_buck.h"
+#define SYSTEM_FILE "systems/system_buck.h"
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK_ALBERTO
-  #include "systems/system_alberto.h"
+#define SYSTEM_FILE "systems/system_alberto.h"
 #elif ACTIVE_SYSTEM == SYSTEM_GAIN_DEMO
-  #include "systems/system_gain_demo.h"
+#define SYSTEM_FILE "systems/system_gain_demo.h"
 #elif ACTIVE_SYSTEM == SYSTEM_INVERTED_PENDULUM
-  #include "systems/system_pendulum.h"
+#define SYSTEM_FILE "systems/system_pendulum.h"
 #else
-  #error "Unrecognized ACTIVE_SYSTEM."
+#error "Unrecognized ACTIVE_SYSTEM."
 #endif
 
 #include "types.h"
+#include SYSTEM_FILE
 
 /* ======================================================================
    Consistency of the system's constants (all constexpr double)

@@ -154,7 +154,7 @@ int main(void)
     /* ------------------------------------------------------------------ */
     /*  This run's true system, noise and a freshly reset controller      */
     /* ------------------------------------------------------------------ */
-    ArxPlant plant;
+    Plant plant;
     plantSampleTrue(plant, rng, testbench_settings::randomTruePlant);
     plantReset(plant);
     resetControllerState();
@@ -461,7 +461,8 @@ inline void generateReference(output_type yref[], int nSim)
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
     for(int i = 0; i < nSim; i++) yref[i] = (i <  nSim / 2) ? (output_type)-1.2 : (output_type)1.2;
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
-    for (int k = 0; k < nSim; k++) yref[k] = (output_type)100.0 * (output_type)pseudoRandArx();
+    TbRng rng(testbench_settings::testbenchSeed);
+    for (int k = 0; k < nSim; k++) yref[k] = (output_type)100.0 * (output_type)rng.uniform();
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
     for(int i = 0; i < nSim; i++) yref[i] = (i < 75) ? 3 :
                                             (i < 150) ? 4 :
