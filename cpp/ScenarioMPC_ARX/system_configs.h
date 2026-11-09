@@ -105,8 +105,8 @@ constexpr int WORD_LENGTH = 18;
 #error "Unrecognized ACTIVE_SYSTEM."
 #endif
 
-#include "types.h"
 #include SYSTEM_FILE
+#include "types.h"
 
 /* ======================================================================
    Consistency of the system's constants (all constexpr double)

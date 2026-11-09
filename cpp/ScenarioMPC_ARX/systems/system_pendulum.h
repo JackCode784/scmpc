@@ -1,4 +1,7 @@
 /* Header file for pendulum system */
+#pragma once
+#include "../testbench_config.h"
+#include "../setup.h"
 #ifndef SYSTEM_MODEL_DONE
 #define SYSTEM_MODEL_DONE
 constexpr int   na    = 2;
@@ -112,7 +115,7 @@ typedef ap_ufixed<32, 12, AP_RND_CONV, AP_SAT>  cost_type;
    single source of truth.
 
    A random true plant draws l and m uniformly in nominal*(1 +- REL_UNC);
-   with USE_ARX 0 its output comes from the ARX model above
+   with PLANT_MODEL == PLANT_MODEL_PHYSICS its output comes from the ARX model above
    with those l, m, with 1 from the nonlinear equation - the same physical
    population either way, so the two are directly comparable.
 
@@ -123,7 +126,6 @@ typedef ap_ufixed<32, 12, AP_RND_CONV, AP_SAT>  cost_type;
    affect y(k), which the one-step Euler model (nd = 2) cannot represent -
    a genuine model mismatch the robust controller has to absorb.
    ---------------------------------------------------------------------- */
-/** 1: true output from the nonlinear equation; 0: from the ARX model. */
 constexpr double PEND_G     = 9.81;   /* [m/s^2]                               */
 constexpr double PEND_REL_UNC = 0.2;  /* l, m drawn in nominal*(1 +- 0.2)      */
 constexpr int    PENDULUM_EULER_SUBSTEPS = 100;
@@ -179,7 +181,7 @@ inline void plantReset(PendulumPlant &p)
 inline double plantNextOutput(PendulumPlant &p)
 {
     const double h = Ts / PENDULUM_EULER_SUBSTEPS;
-    /* Zero-order hold of u(k-1) = u[0], after uEarly for the first fEarly
+    /* Zero-order hold of uEarly for the first fEarly, then uLate
      * of the interval (controller latency, testbench_settings::computeDelayFraction) */
     const int nEarly = int(std::lround(p.fEarly * PENDULUM_EULER_SUBSTEPS));
     for (int s = 0; s < PENDULUM_EULER_SUBSTEPS; s++)

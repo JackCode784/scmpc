@@ -461,7 +461,7 @@ inline void generateReference(output_type yref[], int nSim)
 #elif ACTIVE_SYSTEM == SYSTEM_BENCHMARK
     for(int i = 0; i < nSim; i++) yref[i] = (i <  nSim / 2) ? (output_type)-1.2 : (output_type)1.2;
 #elif ACTIVE_SYSTEM == SYSTEM_MILANO
-    TbRng rng(testbench_settings::testbenchSeed);
+    TbRng rng(testbench_settings::testbenchSeed+1);
     for (int k = 0; k < nSim; k++) yref[k] = (output_type)100.0 * (output_type)rng.uniform();
 #elif ACTIVE_SYSTEM == SYSTEM_BUCK
     for(int i = 0; i < nSim; i++) yref[i] = (i < 75) ? 3 :

@@ -30,7 +30,7 @@
  *
  * Default for every system: an ARX plant with the controller's structure
  * (na, nb, nd). A system with a different true model provides its own
- * version of the functions below, selected by #if ACTIVE_SYSTEM (see the
+ * version of the functions below, selected by SYSTEM_FILE and PLANT_MODEL (see the
  * inverted pendulum).
  */
 #include <cmath>
