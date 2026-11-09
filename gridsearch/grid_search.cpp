@@ -509,7 +509,8 @@ int main(int argc, char **argv)
                     if (status != "ok") failed++;
                     std::cout << "[" << d << "/" << points.size() << "] point " << k << ":";
                     for (size_t i = 0; i < g.params.size(); i++) std::cout << " " << g.params[i].name << "=" << points[k][i];
-                    if (status == "ok") std::cout << "  meanRmse " << m.meanRmse << ", runs with violations " << m.runsViolY << "/" << m.runsViolDy << "\n";
+                    if (status == "ok") std::cout << "  meanRmse " << m.meanRmse << ", runs with violations: y " << m.runsViolY
+                                                  << ", dy " << m.runsViolDy << " (of " << m.runs << ")\n";
                     else std::cout << "  " << status << ": " << message << "\n";
                 }
                 if (!keep && status == "ok") fs::remove_all(dir);
@@ -519,8 +520,9 @@ int main(int argc, char **argv)
         for (int j = 0; j < jobs; j++) pool.emplace_back(worker);
         for (auto &t : pool) t.join();
 
-        std::cout << "Done: " << done << " points, " << failed << " failed (their build directories are kept in "
-                  << buildRoot.string() << ").\n";
+        std::cout << "Done: " << done << " points, " << failed << " failed.";
+        if (failed > 0) std::cout << " Their build directories (build.log, run.log) are in " << buildRoot.string() << ".";
+        std::cout << "\n";
         return 0;
     }
     catch (const std::exception &e)
