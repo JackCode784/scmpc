@@ -1,0 +1,23 @@
+# Example grid: inverted pendulum, floating point, default modes.
+# Every setting not given here keeps its value in the sources.
+# Run from the repository root:
+#   gridsearch/grid_search gridsearch/example_grid.txt --jobs 4
+# Results: gridsearch/results/example_grid.csv (plot: gridsearch/plotGridSearch.m)
+
+system  SYSTEM_INVERTED_PENDULUM
+flag    FIXED             off
+flag    CONVERSIONS_MODE  on
+flag    NRMLZ             on
+flag    USE_SCENS_COST    on
+flag    USE_SCENS_CONSTR  on
+runs    10
+seed    1
+
+# hyperparameter (hyperparams.h)   values to try
+param   mpc::predHrzn     10 15 20
+param   mads::iter        5 10
+param   scen::log2nScen   2 4
+
+# Fixed point: set FIXED on and give the ap_types headers, e.g.
+# flag       FIXED on
+# ap_include /path/to/HLS_arbitrary_Precision_Types/include
