@@ -109,8 +109,7 @@ typedef ap_ufixed<32, 12, AP_RND_CONV, AP_SAT>  cost_type;
 
    A random true plant draws l and m uniformly in nominal*(1 +- REL_UNC);
    with PLANT_MODEL == PLANT_MODEL_PHYSICS its output comes from the non linear model
-   with those l, m, with 1 from the nonlinear equation - the same physical
-   population either way, so the two are directly comparable.
+   with those l, m.
 
    The nonlinear equation is integrated with PENDULUM_EULER_SUBSTEPS
    forward-Euler sub-steps per sample, input held constant over the
