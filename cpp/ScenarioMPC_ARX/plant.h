@@ -33,6 +33,7 @@
  * version of the functions below, selected by SYSTEM_FILE and PLANT_MODEL (see the
  * inverted pendulum).
  */
+#pragma once
 #include <cmath>
 #include <cstdio>
 #include <random>
@@ -131,7 +132,7 @@ inline void plantPush(ArxPlant &p, double yMeas, double uEarly, double u, double
     p.uEarly = uEarly; p.uLate = u; p.fEarly = fEarly;
 }
 
-#define SCMPC_TESTBENCH
+#define SYSTEM_TESTBENCH_PASS
 #include SYSTEM_FILE      /* second pass: the system's test-bench section */
 #ifndef PLANT_TAG         /* no model of its own for this PLANT_MODEL: the ARX plant */
   using Plant = ArxPlant;

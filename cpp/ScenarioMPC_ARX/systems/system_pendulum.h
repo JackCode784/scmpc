@@ -2,8 +2,7 @@
 #pragma once
 #include "../testbench_config.h"
 #include "../setup.h"
-#ifndef SYSTEM_MODEL_DONE
-#define SYSTEM_MODEL_DONE
+#ifndef SYSTEM_TESTBENCH_PASS
 constexpr int   na    = 2;
 constexpr int   nb    = 1;
 constexpr int   nd    = 2;
@@ -99,10 +98,7 @@ typedef ap_ufixed<WORD_LENGTH,3> input_weight_type; /* weightR = 2^log2R */
  * (max 4096), 20 fractional. */
 typedef ap_ufixed<32, 12, AP_RND_CONV, AP_SAT>  cost_type;
 #endif /* FIXED */
-#endif /* SYSTEM_MODEL_DONE */
-
-#if defined(SCMPC_TESTBENCH) && !defined(SYSTEM_TESTBENCH_DONE)
-#define SYSTEM_TESTBENCH_DONE
+#else /* SYSTEM_MODEL_DONE */
 /* ----------------------------------------------------------------------
    Inverted pendulum: thetaddot = g/l*sin(theta) + u/(m*l^2), y = theta.
    ----------------------------------------------------------------------
