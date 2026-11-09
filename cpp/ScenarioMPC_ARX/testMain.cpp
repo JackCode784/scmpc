@@ -78,6 +78,17 @@
 
 inline void generateReference(output_type yref[], int nSim);
 
+/* Every hyperparameter of hyperparams.h, one per line: name, value,
+ * description. Expanded from the same list that defines them, so none can
+ * be missing. */
+static void printHyperparams(FILE *f)
+{
+    #define SCMPC_HP_PRINT(ns, name, value, description) \
+        fprintf(f, "%-20s %4d   %s\n", #ns "::" #name, ns::name, description);
+    SCMPC_HYPERPARAMS(SCMPC_HP_PRINT)
+    #undef SCMPC_HP_PRINT
+}
+
 int main(void)
 {
     printf("\n=== SCMPC ARX simulation  |  system=%d  mode=%d ===\n\n",
@@ -112,6 +123,8 @@ int main(void)
     else
         snprintf(ctrlTag, sizeof ctrlTag, "%s_lat%d", TB_CTRL_TAG, int(testbench_settings::computeDelayFraction * 100.0 + 0.5));
     #endif
+    printf("Hyperparameters (hyperparams.h):\n");
+    printHyperparams(stdout);
     printf("\n\n");
 
     /* Number of simulations steps, directly from testbench_config.h */
@@ -140,6 +153,16 @@ int main(void)
     #endif
     FILE* summary = nullptr;
     char fileName[128];
+    /* The hyperparameters of this experiment, next to its output files */
+    if (testbench_settings::nRuns > 1)
+        snprintf(fileName, sizeof fileName, TB_OUT_DIR "runs_%s_%s_hyperparams.txt", ctrlTag, PLANT_TAG);
+    else
+        snprintf(fileName, sizeof fileName, TB_OUT_DIR "output_hyperparams.txt");
+    FILE *hpFile = fopen(fileName, "w");
+    if (!hpFile) { printf("ERROR: could not open %s for writing.\n", fileName); return 1; }
+    printHyperparams(hpFile);
+    fclose(hpFile);
+
     if (testbench_settings::nRuns > 1)
     {
         snprintf(fileName, sizeof fileName, TB_OUT_DIR "runs_%s_%s_summary.txt", ctrlTag, PLANT_TAG);

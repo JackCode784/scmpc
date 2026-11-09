@@ -414,28 +414,27 @@ extern norm_input_type  uHistCtrl[nb + nd - 1];
 
 
 /* ======================================================================
+   HYPERPARAMETERS - their values are in hyperparams.h, the single list:
+   namespaces mpc (horizons, weight exponents), scen (log2nScen) and mads.
+   Below: only what derives from them.
+   ====================================================================== */
+#include "hyperparams.h"
+
+/* ======================================================================
    MPC PARAMETERS
+   ======================================================================
+   Prediction horizon mpc::predHrzn = N; control horizon mpc::ctrlHrzn =
+   Nu <= N: the input sequence u(k), ..., u(k+Nu-1) is optimised, u is held
+   constant from step Nu to N ("input blocking").
    ====================================================================== */
 namespace mpc
 {
-    /** Prediction horizon N: controller optimises over the next N steps. */
-    constexpr int predHrzn = 15;
-
-    /**
-     * Control horizon Nu <= N: the input sequence u(k), ..., u(k+Nu-1) is
-     * optimised; u is held constant from step Nu to N ("input blocking").
-     */
-    constexpr int ctrlHrzn = 3;
-
     /* ======================================================================
         MPC COST-FUNCTION WEIGHTS
         ======================================================================
         Stage cost per step:  l(y, u) = mpc::weightQ*(y - y_ref)^2 + mpc::weightR*(u(k)-u(k-1))^2
         Terminal cost:        V_f(y)   = mpc::weightP*(y(k+N) - y_ref)^2
         ====================================================================== */
-    constexpr int log2Q = 4;
-    constexpr int log2P = 4;
-    constexpr int log2R = 2;
     static const output_weight_type weightQ = pow2(log2Q);   /* stage   output weight  */
     static const output_weight_type weightP = pow2(log2P);   /* terminal output weight */
 
@@ -459,7 +458,6 @@ namespace scen
      * The cost is evaluated on scen::nScen + 1 models simultaneously.
      * Must be a power of 2 (enables bit-shift index arithmetic in hardware).
      */
-    constexpr int log2nScen = 4;
     constexpr int nScen = 1 << log2nScen;
 }
 
@@ -521,31 +519,20 @@ extern norm_input_type uOptPrev[mpc::ctrlHrzn];
    MADS SOLVER PARAMETERS
    ======================================================================
    The Mesh Adaptive Direct Search (MADS) algorithm manages a frame size
-   updated multiple times in a single time step(success: mads::+frameExpStep, 
+   updated multiple times in a single time step(success: +mads::frameExpStep, 
    failure: -mads::frameExpStep).
    Sizes are stored in log-scale (frameExp, meshExp) as integers for
    efficient hardware arithmetic.
    ====================================================================== */
 namespace mads
 {
-    constexpr int iter = 10;        /* MADS iterations per controller call     */
-    constexpr int frameExpStep = 1; /* frame-size update step. frameExp += frameExpStep on success, frameExpStep > 0 */
-
     /**
     * householderClamp = 2^{-gamma}: pre-computed saturation bound for the
     * housholder matrix With the 2^gamma factor in the poll step it matches 
     * the paper’s [−1, 1].
     * If gamma changes, householderClamp updates.
     */
-    constexpr int gamma = 1;        /* (integer >= 0) */
     static const householder_type householderClamp = householder_type(pow2(-gamma));
-    
-    constexpr int frameExpMin = -20;   /* frameExp minimum value */
-
-    /** D0[j]: initial log2 frame-size exponent for optimisation variable j.
-     * Initial frame size = 2^d0.  More negative -> finer initial mesh.
-     */
-    constexpr int d0 = -8;              
 }
 
 static_assert(mads::gamma >= 0, "gamma must be non negative.");
