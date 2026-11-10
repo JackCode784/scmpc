@@ -80,7 +80,7 @@ typedef ap_ufixed<8,8> output_weight_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> theta_type;    // normalized zonotope, |theta| <= 1
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_output_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> norm_input_type;
-typedef ap_fixed<WORD_LENGTH,-2> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
+typedef ap_fixed<WORD_LENGTH,-2,AP_RND_CONV,AP_SAT> norm_noise_type; // [-my*SIGMA_UNNORM, my*SIGMA_UNNORM]
 typedef ap_fixed<WORD_LENGTH,1,AP_TRN,AP_SAT> phi_type;
 typedef ap_fixed<WORD_LENGTH,2,AP_RND_CONV,AP_SAT> strip_center_type;
 

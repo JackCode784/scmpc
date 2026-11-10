@@ -65,11 +65,13 @@ typedef ap_fixed<WORD_LENGTH,0> noise_type; // [-SIGMA_UNNORM, SIGMA_UNNORM]
 typedef ap_ufixed<32,  9, AP_RND_CONV, AP_SAT>  cost_type;
 
    #ifdef NRMLZ
-   /* Strip/normalization constants (setup.h's computeStripCoeffs) */
-   typedef ap_ufixed<23,3> strip_coeff_type;       // myInvDmDg
-   typedef ap_ufixed<23,3> strip_q_coeff_type;     // qmyInvDmDg
-   typedef ap_fixed<22,3> strip_coeff_c0_type;     // myInvDmc0
-   typedef ap_ufixed<21,0> strip_q_coeff_c0_type;  // qmyInvDmc0
+   /* Strip/normalization constants (setup.h's computeStripCoeffs). Constants
+    * only, rounded once at initialization: AP_RND_CONV/AP_SAT cost no
+    * hardware and keep the error within 1/2 LSB (AP_TRN: 1 LSB, biased). */
+   typedef ap_ufixed<23,3,AP_RND_CONV,AP_SAT> strip_coeff_type;       // myInvDmDg
+   typedef ap_ufixed<23,3,AP_RND_CONV,AP_SAT> strip_q_coeff_type;     // qmyInvDmDg
+   typedef ap_fixed<22,3,AP_RND_CONV,AP_SAT> strip_coeff_c0_type;     // myInvDmc0
+   typedef ap_ufixed<21,0,AP_RND_CONV,AP_SAT> strip_q_coeff_c0_type;  // qmyInvDmc0
 
    /* Input weight weightR in normalized units.
     * FIXED multiplies by it (costFunctionArx), like floating point does. */

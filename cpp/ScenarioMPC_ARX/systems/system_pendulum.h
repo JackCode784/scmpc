@@ -62,11 +62,13 @@ typedef ap_fixed<WORD_LENGTH,0> noise_type;                       // SIGMA_UNNOR
  * marginally stable -1 - so these need far more fractional bits than the
  * buck converters': the buck types (20/19 fractional bits) would carry
  * myInvDmDg[1] at 0.25% and a2 at ~1e-6, i.e. ~0.1% of that margin.
+ * Constants only, rounded once at initialization: AP_RND_CONV/AP_SAT cost no
+ * hardware and keep the error within 1/2 LSB (AP_TRN: 1 LSB, biased).
  */
-typedef ap_ufixed<24,-9> strip_coeff_type;      // myInvDmDg  < 2^-9 = 1.95e-3, 33 fractional bits
-typedef ap_ufixed<24,-9> strip_q_coeff_type;    // qmyInvDmDg (0 here)
-typedef ap_fixed<25,3> strip_coeff_c0_type;     // myInvDmc0: 2.0 needs 3 integer bits; 22 fractional bits (2.4e-7)
-typedef ap_ufixed<21,0> strip_q_coeff_c0_type;  // qmyInvDmc0 (0 here)
+typedef ap_ufixed<24,-9,AP_RND_CONV,AP_SAT> strip_coeff_type;      // myInvDmDg  < 2^-9 = 1.95e-3, 33 fractional bits
+typedef ap_ufixed<24,-9,AP_RND_CONV,AP_SAT> strip_q_coeff_type;    // qmyInvDmDg (0 here)
+typedef ap_fixed<25,3,AP_RND_CONV,AP_SAT> strip_coeff_c0_type;     // myInvDmc0: 2.0 needs 3 integer bits; 22 fractional bits (2.4e-7)
+typedef ap_ufixed<21,0,AP_RND_CONV,AP_SAT> strip_q_coeff_c0_type;  // qmyInvDmc0 (0 here)
 /*
  * The passive-learning types in types.h (phi_type, proj_type, ...) are the
  * buck converters' ones: they compile in every CTRL_MODE, but are NOT
