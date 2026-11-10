@@ -54,11 +54,23 @@
 /** Random numbers and direction-vector coefficients for the MADS poll step. */
 typedef ap_fixed<WORD_LENGTH,2,AP_TRN,AP_SAT>  rand_type;
 
-/** Signed log2 frame-size exponent (small integer). */
-typedef ap_int<6>                                 mesh_exp_type;
+/** Signed log2 frame and mesh exponents (small integers). 7 bits: the mesh
+ * exponent is 2*frameExp for frameExp < 0, down to 2*mads::frameExpMin = -40;
+ * 6 bits wrapped it (e.g. -34 -> +30) once frameExp <= -17. Range checked
+ * by static_asserts in setup.h. */
+typedef ap_int<7>                                 mesh_exp_type;
 
 /** Elements of the poll-direction matrix (integer values). */
 typedef ap_fixed<24,13+1,AP_RND_CONV,AP_SAT> direction_type;
+
+/** One poll step, direction * 2^meshExp (generatePollMatrixArx), before it is
+ * added to the current point. A right shift of an ap_fixed keeps its format
+ * and rounds toward -inf, so shifting direction_type itself (10 fractional
+ * bits) turned every step below 2^-10 into 0 (positive direction) or -2^-10
+ * (negative one): one-sided polls. This workspace keeps 20 fractional bits,
+ * 4 more than norm_input_type, and the only rounding is the one into
+ * norm_input_type at the addition. 20 integer bits hold any direction. */
+typedef ap_fixed<40,20> poll_step_type;
 
 /* Householder matrix entries data types in [-4,3] */
 typedef ap_fixed<WORD_LENGTH,3,AP_TRN,AP_SAT> householder_type;

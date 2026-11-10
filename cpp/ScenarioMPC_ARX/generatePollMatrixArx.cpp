@@ -84,21 +84,19 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 			pollMatrix[i][j] = currU[i] + (mesh * directions[i][j]);
 		}
 		#else /* fixed point */
-		/* Use shift operation */
-		// for(int j = 0; j < 2 * nOpt; j++) pollMatrix[i][j] = currU[i] + (directions[i][j] << meshExp[i]);
-
-		/* Use multiplication */
-		/* BUG: expression directions[i][j] * (1 << meshExp[i]) returns wrong
-		value because 1 is an integer. */
+		/* step = direction * 2^meshExp, as a shift in poll_step_type (types.h:
+		 * shifting direction_type itself made fine steps one-sided), rounded
+		 * once into norm_input_type by the addition. */
 		for(int j = 0; j < 2*nOpt; j++)
 		{
 			#ifdef PRAGMAS
 			#pragma HLS UNROLL
 			#endif
-			pollMatrix[i][j] = currU[i] + (directions[i][j] << meshExp[i]);
+			const poll_step_type step = poll_step_type(directions[i][j]) << meshExp[i];
+			pollMatrix[i][j] = currU[i] + step;
 
 			#ifdef DEBUG_PRINT
-			double a = (directions[i][j] << meshExp[i]).to_double();
+			double a = step.to_double();
 			pollMatrix_f[i][j] = pollMatrix[i][j].to_double();
 			#endif
 		}

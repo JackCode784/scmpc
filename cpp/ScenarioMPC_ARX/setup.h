@@ -552,6 +552,15 @@ static_assert(mads::gamma >= 0, "gamma must be non negative.");
 #ifdef FIXED
 static_assert(mads::d0 >= -(1 << (mesh_exp_type::width - 1)) && mads::frameExpMin >= -(1 << (mesh_exp_type::width - 1)),
                 "MADS exponents do not fit mesh_exp_type.");
+/* frameExp moves by frameExpStep per iteration from d0, at most mads::iter
+ * times in a call; the mesh exponent is 2*frameExp for frameExp >= frameExpMin */
+static_assert(mads::d0 - mads::iter * mads::frameExpStep >= -(1 << (mesh_exp_type::width - 1)) &&
+              mads::d0 + mads::iter * mads::frameExpStep <  (1 << (mesh_exp_type::width - 1)) &&
+              2 * mads::frameExpMin >= -(1 << (mesh_exp_type::width - 1)),
+                "MADS frame/mesh exponents (d0 +- iter*frameExpStep, 2*frameExpMin) do not fit mesh_exp_type.");
+/* a poll step is at most 2^frameExp, at most 2^(d0 + iter*frameExpStep) */
+static_assert(mads::d0 + mads::iter * mads::frameExpStep < poll_step_type::iwidth - 1,
+                "The largest MADS poll step does not fit poll_step_type.");
 #endif
 
 /* ======================================================================
