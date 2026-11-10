@@ -111,8 +111,8 @@ where $J_P$ is the cost function optimized for SCMPC and $V(\hat{\mathcal{Z}}_{k
 
 Main files in `cpp/ScenarioMPC_ARX/`:
 - `setup.h`: experiment configuration and algorithm parameters.
-- `system_configs.h`: the controller's model of each system (nominal parameters, uncertainty zonotope, constraints).
-- `types.h`: fixed-point data types, per system.
+- `system_configs.h` and `systems/system_<name>.h`: the registry of the systems, and one file per system with the controller's model (dimensions, constraints, nominal parameters, uncertainty zonotope, its fixed-point types) and, optionally, its true plant for the test bench.
+- `types.h`: the fixed-point data types that are the same for every system.
 - `controller.cpp`: the top-level function synthesized to hardware.
 - `costFunctionArx.cpp`, `MADSARX.cpp`, `progressiveBarrierPollingArx.cpp`: cost evaluation and the MADS optimizer.
 - `testMain.cpp`, `plant.h` and `testbench_config.h`: test bench only; `plant.h` holds the *true* plant the controller is tested against (e.g. the nonlinear inverted pendulum), `testbench_config.h` the experiment settings.
@@ -128,10 +128,10 @@ Experiments are configured by editing the headers (`#define` mode flags and `con
 | | `DELAY_COMPENSATION` | the input computed at step $k$ is applied at $k+1$ |
 | | `ACTIVE_SYSTEM`, `CTRL_MODE` | system; SCMPC, passive or active learning |
 | | `PRAGMA_PROFILE` | hardware profile: `AREA`, `BALANCED` or `LATENCY` |
-| | `Nhor`, `NhorU`, `Nscen`, `MADS_ITER` | $N_y$, $N_u$, $S$ (a power of 2, with `log2Nscen`), $I$ |
-| `testbench_config.h` | `nRuns`, `randomTruePlant`, `testbenchSeed` (namespace `testbench_settings`) | number of closed-loop runs, a new random true plant per run, test-bench seed |
+| | `mpc::predHrzn`, `mpc::ctrlHrzn`, `scen::nScen`, `mads::iter` | $N_y$, $N_u$, $S$ ($= 2^{\texttt{scen::log2nScen}}$), $I$, and the weight exponents `mpc::log2Q`, `log2P`, `log2R` |
+| `testbench_config.h` | `nRuns`, `nSim`, `randomTruePlant`, `testbenchSeed` (namespace `testbench_settings`) | number of closed-loop runs and of steps per run, a new random true plant per run, test-bench seed |
 | | `computeDelayFraction` | controller latency emulated by the test bench, as a fraction of the sampling period |
-| `plant.h` | `PENDULUM_NONLINEAR` | the pendulum's true plant: nonlinear equation (1) or its ARX model (0) |
+| | `PLANT_MODEL` | the true plant: `PLANT_MODEL_ARX` (the controller's ARX structure) or `PLANT_MODEL_PHYSICS` (the system's own model, e.g. the pendulum's nonlinear equation; ARX for systems without one) |
 
 ## Running a simulation
 Any C++14 compiler works. From `cpp/ScenarioMPC_ARX/`:
@@ -263,7 +263,8 @@ Some additional tweaks and features that would be needed are:
 - [x] Add the sampling time $T_s$ to C.
 - [ ] Automatic test setups for C code;
 - [ ] Automatic workflow for Vitis fixed point simulations, synthesis and implementation;
-- [x] Automatic derivation of "good" hyperparameters values ($Q, R, \alpha, I, N_y, N_u, S$) for a system (by grid search if no optimal values are theoretically possible, MATLAB or C++);
+- [ ] Grid-search tool for the hyperparameters ($Q, R, \alpha, I, N_y, N_u, S$): a C++ driver that builds and runs the test bench for every combination, and a MATLAB plot of the results (branch `feat/grid-search`, to merge).
+- [ ] "Good" hyperparameter values for each system, found with the grid search (if no optimal values are theoretically possible).
 - [x] Scale definition of new systems (e.g. every system could describe a `struct/namespace` with constraints, dimensions, noise, initial conditions, initial zonotope, sampling time, everything in `system_configs.h`). 
 - [x] Give the possibility, for each system, to define a "true" plant and the controller's ARX model (already done with the pendulum).
 - [x] Refactor: use `struct/namespace` instead of defines and macros to merge together and set same-topic hyperparameters ($Q, R, \alpha, I, N_y, N_u, S$, number of simulation steps, etc.) and the various operation modes' parameters, as well as system constraints and properties.
@@ -276,5 +277,5 @@ Some additional tweaks and features that would be needed are:
 - [x] Use `constexpr` instead of `#define` for the system dimensions (`na`, `nb`, `nd` (formerly `nk`), `nGens`, `nTheta`, `nOpt`): they are scoped and typed, and give the same hardware. Only what the preprocessor itself must see stays a macro: `ACTIVE_SYSTEM` and the system ids, the mode flags, and the arguments of `HLS_PRAGMA(...)`.
 - [x] Write the per-system initial values (`THETA_NOMINAL_UNNORM`, `GENERATORS_UNNORM`, `THETA_TRUE_INIT`, `Y_HIST_UNNORM`, `U_HIST_UNNORM`) as `constexpr double` arrays, read directly by `initControllerState` and `plant.h`. This removes the macro lists and the `*_TABLE` copies in `setup.h`, and a `static_assert` can check each array's length. Do it together with the renaming of point 1.
 - [x] Derive the initial warm start (`U_PREV_UNNORM`) from the initial input history instead of giving it per system: it must be the same operating point anyway, and its length `NhorU` is a tuning parameter, not a property of the system.
-- [x] Per-system tuning parameters ($N_y, N_u, S, I$ and the weight exponents `log2Q`, `log2P`, `log2R`) in their own file (e.g. `tuning.h`), separate from the system models in `system_configs.h`, with a global default. Per-system `log2R` is also what the buck converters' fixed-point build needs.
+- [ ] Per-system tuning parameters ($N_y, N_u, S, I$ and the weight exponents `log2Q`, `log2P`, `log2R`) in their own file (e.g. `tuning.h`), separate from the system models in `system_configs.h`, with a global default. Per-system `log2R` is also what the buck converters' fixed-point build needs. The single list of hyperparameters, `hyperparams.h`, exists (branch `feat/hyperparams`), but it is global: the per-system values are still missing.
 - [x] Compile-time computation of $D_G$ and keep it as a separate variable (diagnostics, denormalized zonotopes over time,...).
