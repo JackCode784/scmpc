@@ -100,13 +100,17 @@ static std::string replaceOnce(const std::string &text, const std::regex &re,
     int count = 0;
     while (std::getline(in, line))
     {
+        /* Windows (CRLF) files: match without the '\r', which ECMAScript's
+         * '.' does not match, and put it back so the file keeps its line ends */
+        const bool cr = !line.empty() && line.back() == '\r';
+        if (cr) line.pop_back();
         std::smatch m;
         if (std::regex_search(line, m, re))
         {
             count++;
             line = m.prefix().str() + replacement(m) + m.suffix().str();
         }
-        result += line + "\n";
+        result += line + (cr ? "\r\n" : "\n");
     }
     if (count != 1)
         throw std::runtime_error(what + ": expected exactly one matching line, found " + std::to_string(count));
