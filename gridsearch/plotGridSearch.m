@@ -1,6 +1,6 @@
 function T = plotGridSearch(csvFile)
 %PLOTGRIDSEARCH Plot the results of gridsearch/grid_search.
-%   T = plotGridSearch('gridsearch/results/example_grid.csv')
+%   T = plotGridSearch('results/example_grid.csv')
 %
 %   One point per grid point that built and ran (status "ok"):
 %     x = estimated latency of one controller() call [us] (BALANCED profile,

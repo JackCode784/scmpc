@@ -16,7 +16,7 @@ gridsearch/grid_search gridsearch/example_grid.txt --jobs 4
 Then, in MATLAB:
 
 ```matlab
-T = plotGridSearch('gridsearch/results/example_grid.csv');
+T = plotGridSearch('results/example_grid.csv');
 ```
 
 Options:
