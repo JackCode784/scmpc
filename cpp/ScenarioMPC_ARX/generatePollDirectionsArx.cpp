@@ -81,10 +81,10 @@ void generatePollDirectionsArx(const rand_type randomVector[nOpt], const mesh_ex
 		
 		for(int j = 0; j < nOpt; j++)
 		{
-			/* BUG: B[i][j] = 0 at least when i = j = 0 --- should be -256 */
-			// B[i][j] = (direction_type)(hls::round(mesh[i] * H[i][j]));	// old, needs mesh[nOpt] defined, don't know if it works
-			// B[i][j] = H[i][j] << (frameMeshDiff[i]+mads::gamma);	// doesn't work
-			B[i][j] = H[i][j] * (1 << (frameMeshDiff[i]+mads::gamma));	// this works
+			/* The product is exact; assigning it to direction_type (an integer
+			 * type, AP_RND_INF) rounds it like round() in the float branch.
+			 * (H << k would keep householder_type's format and overflow.) */
+			B[i][j] = H[i][j] * (1 << (frameMeshDiff[i]+mads::gamma));
 			directions[i][j] = B[i][j];
 			directions[i][j + nOpt] = -B[i][j];
 			

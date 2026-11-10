@@ -60,8 +60,15 @@ typedef ap_fixed<WORD_LENGTH,2,AP_TRN,AP_SAT>  rand_type;
  * by static_asserts in setup.h. */
 typedef ap_int<7>                                 mesh_exp_type;
 
-/** Elements of the poll-direction matrix (integer values). */
-typedef ap_fixed<24,13+1,AP_RND_CONV,AP_SAT> direction_type;
+/** Elements of the poll-direction matrix: integers, round(H * 2^(frameExp -
+ * meshExp + gamma)) as in Ravera et al., eq. 10, so that every poll point lies
+ * on the mesh. AP_RND_INF rounds ties away from zero, like round() in the
+ * float build. |H| <= 2^-gamma makes |direction| <= 2^(-frameExp) for
+ * frameExp < 0: 19 bits hold it down to frameExp = -17; below that it
+ * saturates, but every step is then smaller than half an LSB of
+ * norm_input_type and rounds to 0 anyway. (It had 10 fractional bits, which
+ * put the poll points off the mesh.) */
+typedef ap_fixed<19,19,AP_RND_INF,AP_SAT> direction_type;
 
 /** One poll step, direction * 2^meshExp (generatePollMatrixArx), before it is
  * added to the current point. A right shift of an ap_fixed keeps its format
