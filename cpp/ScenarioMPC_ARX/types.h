@@ -138,6 +138,9 @@ typedef ap_fixed<26,5,AP_TRN,AP_WRAP> arx_acc_type;
 /** Raw 12-bit ADC/DAC sample, integer range {0, ..., 4095}. */
 typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_input_type;
 typedef ap_ufixed<12, 12, AP_RND_CONV, AP_SAT>  digital_output_type;
+/** conv::uConvOffset, in codes: one fractional bit holds the half-code bias
+ * of a symmetric range (2047.5), which digital_input_type would round. */
+typedef ap_fixed<14, 13, AP_RND_CONV, AP_SAT>   ctrl2dig_offset_type;
 #endif
 
 #else
@@ -170,6 +173,7 @@ typedef int          mesh_exp_type;
 typedef int          direction_type;
 typedef double       dig2ctrl_type;
 typedef double       ctrl2dig_type;
+typedef double       ctrl2dig_offset_type;
 typedef double       phi_type;
 typedef double       strip_center_type;
 typedef double       output_type;
@@ -197,6 +201,9 @@ typedef double arx_acc_type;
 /* no conversion: the controller's ports carry the physical values */
 typedef input_type   digital_input_type;
 typedef output_type  digital_output_type;
+#ifdef FIXED
+typedef digital_input_type ctrl2dig_offset_type;
+#endif
 #endif
 
 #ifndef NRMLZ

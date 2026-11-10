@@ -6,7 +6,7 @@
 */
 digital_output_type ADConvertY(const output_type yAn)
 {
-	digital_output_type yDig = dig::yADCGain * yAn + dig::yBias;
+	digital_output_type yDig = double(dig::yADCGain * yAn) + dig::yBias;   /* rounded once, into the code type */
 	#ifndef FIXED
 	/* Emulate DAC saturation when using floating point */
 	yDig = (yDig < dig::codeMin) ? dig::codeMin : 
@@ -16,7 +16,7 @@ digital_output_type ADConvertY(const output_type yAn)
 	#ifdef DEBUG_PRINT
 	float YADCGain_f = dig::yADCGain.to_float();
 	float yAn_f = yAn.to_float();
-	float YBias_f = dig::yBias.to_float();
+	float YBias_f = float(dig::yBias);
 	float yDig_f = yDig.to_float();
 	float YADCGAINF = float(dig::codeRange) / (YMAXPHYS - YMINPHYS); /* cross-check of dig::yADCGain: the ADC spans the PHYSICAL range */
 	#endif
@@ -26,12 +26,12 @@ digital_output_type ADConvertY(const output_type yAn)
 
 input_type DAConvertU(const digital_input_type uDig)
 {
-	input_type uAn = (uDig - dig::uBias) * dig::uDACGain;
+	input_type uAn = (double(uDig) - dig::uBias) * double(dig::uDACGain);
 	
 	#ifdef DEBUG_PRINT
 	float UDACGainf = dig::uDACGain.to_float();
 	float UDigf = uDig.to_float();
-	float UBiasf = dig::uBias.to_float();
+	float UBiasf = float(dig::uBias);
 	float uAn_f = uAn.to_float();
 	#endif
 
@@ -123,7 +123,7 @@ digital_input_type ctrlU2dig(const norm_input_type uCtrl)
 // 	// 	#ifdef FIXED
 // 	// 	float UADCGainf = dig::uADCGain.to_float();
 // 	// 	float uAnf = uAn.to_float();
-// 	// 	float UBiasf = dig::uBias.to_float();
+// 	// 	float UBiasf = float(dig::uBias);
 // 	// #endif
 // 	digital_input_type uDig = dig::uADCGain * uAn + dig::uBias;
 // 	return uDig;

@@ -579,11 +579,14 @@ namespace dig
     constexpr int codeRange = codeMax - codeMin;   // max - min digital codes
 
     static const output_adc_coeff_type yADCGain = codeRange / (YMAXPHYS - YMINPHYS);
-    static const digital_output_type  yBias    = (codeMin*YMAXPHYS - codeMax*YMINPHYS) / (YMAXPHYS - YMINPHYS);
+    /* The biases are exact doubles: for a symmetric range they are a half
+     * code (4095/2 = 2047.5), which an integer code type would round. They
+     * are rounded once, where a code is produced (ADConvertY, ctrlU2dig). */
+    constexpr double yBias = (codeMin*YMAXPHYS - codeMax*YMINPHYS) / (YMAXPHYS - YMINPHYS);
     constexpr double yDACGain = (YMAXPHYS - YMINPHYS) / codeRange;
     constexpr double uADCGain = codeRange / (UMAXPHYS - UMINPHYS);
     static const input_dac_coeff_type uDACGain = (UMAXPHYS - UMINPHYS) / codeRange;
-    static const digital_input_type   uBias    = (codeMin*UMAXPHYS - codeMax*UMINPHYS) / (UMAXPHYS - UMINPHYS);
+    constexpr double uBias = (codeMin*UMAXPHYS - codeMax*UMINPHYS) / (UMAXPHYS - UMINPHYS);
     #else
     constexpr double yADCGain = 1.0;
     constexpr double yDACGain = 1.0;
@@ -749,7 +752,7 @@ namespace conv
     static const dig2ctrl_type yConvCoeff = double(nrmlz::yNormGain)*double(dig::yDACGain);
     static const ctrl2dig_type uConvCoeff = double(dig::uADCGain)*double(nrmlz::uNormGainInverse);
     static const norm_output_type yConvOffset = double(nrmlz::yNormOffset) - double(dig::yDACGain)*double(dig::yBias)*double(nrmlz::yNormGain);
-    static const digital_input_type uConvOffset = double(dig::uBias) - double(nrmlz::uNormOffset)*double(nrmlz::uNormGainInverse)*double(dig::uADCGain);
+    static const ctrl2dig_offset_type uConvOffset = double(dig::uBias) - double(nrmlz::uNormOffset)*double(nrmlz::uNormGainInverse)*double(dig::uADCGain);
 }
 /* ======================================================================
    FUNCTION PROTOTYPES
