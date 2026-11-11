@@ -54,15 +54,9 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 	#endif
 
 	// fill the columns with polling points
+	#ifndef FIXED
 	for (int i = 0; i < nOpt; i++)
 	{
-		#ifdef PRAGMAS
-		/* Row i of pollMatrix only depends on row i of directions/currU:
-		 * independent across i, so fully unrolling (nOpt rows) is cheap. */
-		#pragma HLS UNROLL
-		#endif
-
-		#ifndef FIXED
 		mesh_type mesh = 1;
 
 		if (meshExp[i] < 0)
@@ -75,32 +69,39 @@ void generatePollMatrixArx(const norm_input_type currU[nOpt], const mesh_exp_typ
 			for (int j = 0; j < meshExp[i]; j++)
 				mesh *= 2;
 		}
-		
+
 		for (int j = 0; j < 2 * nOpt; j++)
-		{
-			#ifdef PRAGMAS
-			// #pragma HLS UNROLL
-			#endif
 			pollMatrix[i][j] = currU[i] + (mesh * directions[i][j]);
-		}
-		#else /* fixed point */
-		/* step = direction * 2^meshExp, as a shift in poll_step_type (types.h:
-		 * shifting direction_type itself made fine steps one-sided), rounded
-		 * once into norm_input_type by the addition. */
-		for(int j = 0; j < 2*nOpt; j++)
+	}
+	#else /* fixed point */
+	/* step = direction * 2^meshExp, as a shift in poll_step_type (types.h:
+	 * shifting direction_type itself made fine steps one-sided), rounded
+	 * once into norm_input_type by the addition.
+	 * Every entry is independent of the others, so the loop order does not
+	 * change the result. Columns j outer and pipelined, rows i inner and
+	 * unrolled: nOpt copies of the 40-bit shift/round/saturate logic, reused
+	 * over the 2*nOpt columns, instead of one copy per entry (2*nOpt*nOpt,
+	 * ~250 LUTs each in csynth). Costs ~2*nOpt-1 cycles per call. */
+	for (int j = 0; j < 2 * nOpt; j++)
+	{
+		#ifdef PRAGMAS
+		/* One column per cycle: shares the per-row logic across columns
+		 * (see above). */
+		#pragma HLS PIPELINE II=1
+		#endif
+		for (int i = 0; i < nOpt; i++)
 		{
 			#ifdef PRAGMAS
+			/* Rows of a column are independent: one copy of the logic per row. */
 			#pragma HLS UNROLL
 			#endif
 			const poll_step_type step = poll_step_type(directions[i][j]) << meshExp[i];
 			pollMatrix[i][j] = currU[i] + step;
 
 			#ifdef DEBUG_PRINT
-			double a = step.to_double();
 			pollMatrix_f[i][j] = pollMatrix[i][j].to_double();
 			#endif
 		}
-		#endif
-
 	}
+	#endif
 }
